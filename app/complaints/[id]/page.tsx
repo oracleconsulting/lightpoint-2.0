@@ -9,6 +9,7 @@ import { TimelineView } from '@/components/complaint/TimelineView';
 import { ViolationChecker } from '@/components/analysis/ViolationChecker';
 import { PrecedentMatcher } from '@/components/analysis/PrecedentMatcher';
 import { LetterPreview } from '@/components/complaint/LetterPreview';
+import { LetterManager } from '@/components/complaint/LetterManager';
 import { getPracticeLetterhead } from '@/lib/practiceSettings';
 import Link from 'next/link';
 import { ArrowLeft, FileText, Sparkles, Send } from 'lucide-react';
@@ -185,7 +186,19 @@ export default function ComplaintDetailPage({ params }: { params: { id: string }
             )}
 
             {generatedLetter && (
-              <LetterPreview letter={generatedLetter} />
+              <>
+                <LetterPreview letter={generatedLetter} />
+                <LetterManager 
+                  complaintId={params.id}
+                  generatedLetter={generatedLetter}
+                  onLetterSaved={() => setGeneratedLetter(null)}
+                />
+              </>
+            )}
+
+            {/* Always show saved letters */}
+            {!generatedLetter && (
+              <LetterManager complaintId={params.id} />
             )}
 
             <TimelineView events={complaintData.timeline || []} />

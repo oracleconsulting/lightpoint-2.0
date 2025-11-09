@@ -290,6 +290,129 @@ export const appRouter = router({
         return { letter };
       }),
 
+    // Save generated letter (without locking)
+    save: publicProcedure
+      .input(z.object({
+        complaintId: z.string(),
+        letterType: z.enum(['initial_complaint', 'tier2_escalation', 'adjudicator_escalation', 'rebuttal', 'acknowledgement']),
+        letterContent: z.string(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { data, error } = await (supabaseAdmin as any)
+          .from('generated_letters')
+          .insert({
+            complaint_id: input.complaintId,
+            letter_type: input.letterType,
+            letter_content: input.letterContent,
+            notes: input.notes,
+          })
+          .select()
+          .single();
+        
+        if (error) throw new Error(error.message);
+        return data;
+      }),
+
+    // Lock letter (ready to send)
+    lock: publicProcedure
+      .input(z.object({
+        letterId: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        const { data, error } = await (supabaseAdmin as any)
+          .from('generated_letters')
+          .update({ locked_at: new Date().toISOString() })
+          .eq('id', input.letterId)
+          .select()
+          .single();
+        
+        if (error) throw new Error(error.message);
+        return data;
+      }),
+
+    // Mark letter as sent
+    markAsSent: publicProcedure
+      .input(z.object({
+        letterId: z.string(),
+        sentBy: z.string(),
+        sentMethod: z.enum(['post', 'email', 'post_and_email', 'fax']),
+        hmrcReference: z.string().optional(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { data, error } = await (supabaseAdmin as any)
+          .from('generated_letters')
+          .update({
+            sent_at: new Date().toISOString(),
+            sent_by: input.sentBy,
+            sent_method: input.sentMethod,
+            hmrc_reference: input.hmrcReference,
+            notes: input.notes,
+          })
+          .eq('id', input.letterId)
+          .select()
+          .single();
+        
+        if (error) throw new Error(error.message);
+        
+        // Also add to complaint timeline
+        const letter = data;
+        const { data: complaint } = await (supabaseAdmin as any)
+          .from('complaints')
+          .select('timeline')
+          .eq('id', letter.complaint_id)
+          .single();
+        
+        if (complaint) {
+          const timeline = (complaint as any).timeline || [];
+          timeline.push({
+            date: new Date().toISOString(),
+            type: 'letter_sent',
+            summary: `${letter.letter_type.replace('_', ' ')} sent to HMRC via ${input.sentMethod}`,
+            details: input.notes,
+          });
+          
+          await (supabaseAdmin as any)
+            .from('complaints')
+            .update({ timeline })
+            .eq('id', letter.complaint_id);
+        }
+        
+        return data;
+      }),
+
+    // List letters for a complaint
+    list: publicProcedure
+      .input(z.object({
+        complaintId: z.string(),
+      }))
+      .query(async ({ input }) => {
+        const { data, error } = await (supabaseAdmin as any)
+          .from('generated_letters')
+          .select('*')
+          .eq('complaint_id', input.complaintId)
+          .order('created_at', { ascending: false });
+        
+        if (error) throw new Error(error.message);
+        return data;
+      }),
+
+    // Get single letter
+    getById: publicProcedure
+      .input(z.string())
+      .query(async ({ input }) => {
+        const { data, error } = await (supabaseAdmin as any)
+          .from('generated_letters')
+          .select('*')
+          .eq('id', input)
+          .single();
+        
+        if (error) throw new Error(error.message);
+        return data;
+      }),
+  }),
+
     generateResponse: publicProcedure
       .input(z.object({
         complaintId: z.string(),
