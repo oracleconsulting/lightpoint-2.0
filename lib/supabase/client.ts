@@ -36,7 +36,7 @@ export function createServerClient() {
 }
 
 // Backward compatibility - lazy initialization
-let _supabaseAdmin: ReturnType<typeof createClient> | null = null;
+let _supabaseAdmin: any = null;
 export const supabaseAdmin = new Proxy({} as ReturnType<typeof createClient>, {
   get(target, prop) {
     if (!_supabaseAdmin) {
