@@ -19,12 +19,7 @@ export function ComplaintWizard({ organizationId, userId }: ComplaintWizardProps
   const [files, setFiles] = useState<File[]>([]);
   const [formData, setFormData] = useState({
     clientReference: '',
-    hmrcDepartment: '',
-    complaintTypes: [] as string[],
     complaintContext: '',
-    keyDates: '',
-    financialImpact: '',
-    clientObjective: '',
   });
 
   const createComplaint = trpc.complaints.create.useMutation({
@@ -49,17 +44,8 @@ export function ComplaintWizard({ organizationId, userId }: ComplaintWizardProps
       organizationId,
       createdBy: userId,
       clientReference: formData.clientReference,
-      hmrcDepartment: formData.hmrcDepartment,
-      complaintType: formData.complaintTypes.join(', ') || 'To be determined',
-    });
-  };
-
-  const toggleComplaintType = (type: string) => {
-    setFormData({
-      ...formData,
-      complaintTypes: formData.complaintTypes.includes(type)
-        ? formData.complaintTypes.filter(t => t !== type)
-        : [...formData.complaintTypes, type]
+      hmrcDepartment: 'To be determined',
+      complaintType: 'To be determined',
     });
   };
 
@@ -75,177 +61,67 @@ export function ComplaintWizard({ organizationId, userId }: ComplaintWizardProps
       {step === 1 && (
         <Card>
           <CardHeader>
-            <CardTitle>Complaint Details</CardTitle>
+            <CardTitle>Upload Documents & Provide Context</CardTitle>
             <CardDescription>
-              Provide context to help assess the complaint basis and identify applicable precedents
+              Our AI will analyze your documents against HMRC Charter commitments and precedent cases to identify potential complaint grounds automatically
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Basic Details */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium">Client Reference *</label>
-                <Input
-                  placeholder="CLIENT-001"
-                  value={formData.clientReference}
-                  onChange={(e) =>
-                    setFormData({ ...formData, clientReference: e.target.value })
-                  }
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Anonymized identifier only
-                </p>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium">HMRC Department *</label>
-                <select
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  value={formData.hmrcDepartment}
-                  onChange={(e) =>
-                    setFormData({ ...formData, hmrcDepartment: e.target.value })
-                  }
-                >
-                  <option value="">Select department</option>
-                  <option value="VAT">VAT</option>
-                  <option value="Self Assessment">Self Assessment</option>
-                  <option value="PAYE">PAYE</option>
-                  <option value="Corporation Tax">Corporation Tax</option>
-                  <option value="CIS">CIS</option>
-                  <option value="Compliance">Compliance</option>
-                  <option value="Debt Management">Debt Management</option>
-                  <option value="Tax Credits">Tax Credits</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Complaint Type - Multi-select */}
+            {/* Client Reference */}
             <div>
-              <label className="text-sm font-medium">Complaint Type *</label>
-              <p className="text-xs text-muted-foreground mb-2">
-                Select all that apply, or choose "To be determined" if you'll identify issues from the context
+              <label className="text-sm font-medium">Client Reference *</label>
+              <Input
+                placeholder="CLIENT-001 or Anonymous Case"
+                value={formData.clientReference}
+                onChange={(e) =>
+                  setFormData({ ...formData, clientReference: e.target.value })
+                }
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Anonymized identifier only (e.g., CLIENT-001, Case-ABC, or "Anonymous")
               </p>
-              <div className="grid grid-cols-2 gap-3 p-4 border rounded-md bg-muted/30">
-                {[
-                  'To be determined (see context)',
-                  'Unreasonable delay',
-                  'Poor communication',
-                  'Incorrect advice',
-                  'Penalty error',
-                  'Lost correspondence',
-                  'Failure to respond',
-                  'Discourteous behaviour',
-                  'System error',
-                  'Other',
-                ].map((type) => (
-                  <label
-                    key={type}
-                    className="flex items-center space-x-2 cursor-pointer hover:bg-background p-2 rounded transition-colors"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={formData.complaintTypes.includes(type)}
-                      onChange={() => toggleComplaintType(type)}
-                      className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                    />
-                    <span className="text-sm">{type}</span>
-                  </label>
-                ))}
-              </div>
-              {formData.complaintTypes.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <p className="text-xs text-muted-foreground w-full">Selected:</p>
-                  {formData.complaintTypes.map((type) => (
-                    <span
-                      key={type}
-                      className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary text-xs rounded-md"
-                    >
-                      {type}
-                      <button
-                        type="button"
-                        onClick={() => toggleComplaintType(type)}
-                        className="hover:bg-primary/20 rounded-full p-0.5"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
             </div>
 
-            {/* Context - Large Text Area */}
+            {/* Context - The most important field */}
             <div>
-              <label className="text-sm font-medium">Complaint Context *</label>
+              <label className="text-sm font-medium">What's the situation? *</label>
               <textarea
-                className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                placeholder="Provide detailed context about the issue:
-- What happened?
-- When did it start?
-- What actions have been taken so far?
-- Why is this problematic for the client?
-- What Charter commitments may have been breached?"
+                className="flex min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                placeholder="Tell us what's happened in your own words:
+
+• What is the issue with HMRC?
+• What has happened so far?
+• How has this impacted the client?
+• What would the client like to achieve?
+
+Don't worry about identifying specific Charter violations or complaint types - our AI will analyze your documents and context to identify these automatically."
                 value={formData.complaintContext}
                 onChange={(e) =>
                   setFormData({ ...formData, complaintContext: e.target.value })
                 }
               />
               <p className="text-xs text-muted-foreground mt-1">
-                This context helps identify Charter violations and similar precedents
+                💡 Tip: Be as detailed as possible. This context helps our AI identify relevant Charter commitments and similar precedent cases.
               </p>
             </div>
 
-            {/* Key Dates */}
-            <div>
-              <label className="text-sm font-medium">Key Dates & Timeline</label>
-              <textarea
-                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                placeholder="e.g.,
-- 15 Jan 2024: VAT return submitted
-- 10 Feb 2024: Repayment requested
-- 15 Mar 2024: Chased - no response
-- 20 Apr 2024: Still no repayment (8 weeks overdue)"
-                value={formData.keyDates}
-                onChange={(e) =>
-                  setFormData({ ...formData, keyDates: e.target.value })
-                }
-              />
-            </div>
-
-            {/* Financial Impact */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium">Financial Impact</label>
-                <Input
-                  placeholder="e.g., £15,000 repayment outstanding"
-                  value={formData.financialImpact}
-                  onChange={(e) =>
-                    setFormData({ ...formData, financialImpact: e.target.value })
-                  }
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Cash flow impact, penalties, interest, etc.
-                </p>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium">Client Objective</label>
-                <Input
-                  placeholder="e.g., Repayment + compensation"
-                  value={formData.clientObjective}
-                  onChange={(e) =>
-                    setFormData({ ...formData, clientObjective: e.target.value })
-                  }
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  What does the client want to achieve?
-                </p>
-              </div>
+            <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+              <h3 className="font-medium text-sm mb-2 flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                What happens next?
+              </h3>
+              <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+                <li>Upload all relevant HMRC correspondence (letters, emails, etc.)</li>
+                <li>Our AI analyzes the documents against HMRC Charter commitments</li>
+                <li>We identify complaint grounds and match similar precedent cases</li>
+                <li>We extract key dates, departments, and financial impacts automatically</li>
+                <li>You review and refine the AI's analysis before submitting</li>
+              </ol>
             </div>
 
             <Button
               onClick={() => setStep(2)}
-              disabled={!formData.clientReference || !formData.hmrcDepartment || formData.complaintTypes.length === 0 || !formData.complaintContext}
+              disabled={!formData.clientReference || !formData.complaintContext}
               className="w-full"
             >
               Continue to Document Upload
@@ -262,9 +138,9 @@ export function ComplaintWizard({ organizationId, userId }: ComplaintWizardProps
           
           <Card>
             <CardHeader>
-              <CardTitle>Upload Supporting Documents</CardTitle>
+              <CardTitle>Upload All Correspondence & Evidence</CardTitle>
               <CardDescription>
-                Upload all relevant HMRC correspondence, evidence, and supporting documents
+                Upload all HMRC letters, emails, and evidence. Our AI will analyze them to identify Charter violations, extract key dates, and match precedent cases.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -282,7 +158,7 @@ export function ComplaintWizard({ organizationId, userId }: ComplaintWizardProps
                   <Upload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <p className="text-sm font-medium">Click to upload or drag and drop</p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    PDF, DOC, DOCX (Max 10MB per file)
+                    PDF, DOC, DOCX • Multiple files supported • Max 10MB per file
                   </p>
                 </label>
               </div>
@@ -314,14 +190,14 @@ export function ComplaintWizard({ organizationId, userId }: ComplaintWizardProps
                 </div>
               )}
 
-              <div className="bg-muted p-4 rounded-lg text-sm">
-                <p className="font-medium mb-2">💡 Tip: Upload documents that show:</p>
-                <ul className="space-y-1 text-muted-foreground ml-4 list-disc">
-                  <li>Original HMRC letters and correspondence</li>
-                  <li>Evidence of delays (submission dates, chase emails)</li>
-                  <li>Previous attempts to resolve the issue</li>
-                  <li>Financial impact documentation</li>
-                  <li>Any relevant supporting evidence</li>
+              <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                <p className="font-medium text-sm mb-2">📄 Best Practice:</p>
+                <ul className="space-y-1 text-xs text-muted-foreground ml-4 list-disc">
+                  <li>Upload ALL correspondence chronologically (even if you have 50+ documents)</li>
+                  <li>Include chase emails/letters showing lack of response</li>
+                  <li>Include any acknowledgement or reference numbers from HMRC</li>
+                  <li>Include evidence of financial impact (statements, penalty notices, etc.)</li>
+                  <li>The more context you provide, the better our AI can assess the case</li>
                 </ul>
               </div>
 
@@ -330,7 +206,7 @@ export function ComplaintWizard({ organizationId, userId }: ComplaintWizardProps
                 className="w-full"
                 disabled={files.length === 0}
               >
-                Create Complaint & Upload Documents
+                Create Complaint & Analyze Documents
               </Button>
 
               <p className="text-xs text-center text-muted-foreground">
