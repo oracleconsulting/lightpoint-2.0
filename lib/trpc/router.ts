@@ -266,7 +266,7 @@ export const appRouter = router({
         
         if (error) throw new Error(error.message);
         
-        const totalMinutes = data.reduce((sum, log) => sum + log.minutes_spent, 0);
+        const totalMinutes = (data as any[]).reduce((sum: number, log: any) => sum + log.minutes_spent, 0);
         
         return {
           logs: data,
