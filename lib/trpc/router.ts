@@ -52,6 +52,7 @@ export const appRouter = router({
       .query(async ({ input }) => {
         try {
           console.log('📋 Fetching complaints for org:', input.organizationId);
+          console.log('📋 Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 30));
           
           let query = supabaseAdmin
             .from('complaints')
@@ -62,13 +63,19 @@ export const appRouter = router({
             query = query.eq('status', input.status);
           }
           
+          console.log('📋 Executing Supabase query...');
           const { data, error } = await query.order('created_at', { ascending: false });
           
           console.log('📋 Supabase response:', { 
             hasData: !!data, 
             dataCount: data?.length, 
             hasError: !!error,
-            errorDetails: error 
+            errorDetails: error ? {
+              message: error.message,
+              details: error.details,
+              hint: error.hint,
+              code: error.code
+            } : null
           });
           
           if (error) {
@@ -76,9 +83,11 @@ export const appRouter = router({
             throw new Error(`Supabase error: ${error.message} (${error.code || 'no code'})`);
           }
           
+          console.log('✅ Successfully fetched complaints:', data?.length || 0);
           return data;
         } catch (err: any) {
           console.error('❌ Complaints list error:', err);
+          console.error('❌ Error stack:', err.stack);
           throw err;
         }
       }),
