@@ -150,23 +150,59 @@ export const appRouter = router({
         
         if (!document) throw new Error('Document not found');
         
-        // Search knowledge base
+        // Get the complaint details including context
+        const { data: complaint } = await supabaseAdmin
+          .from('complaints')
+          .select('*')
+          .eq('id', (document as any).complaint_id)
+          .single();
+        
+        // Get ALL documents for this complaint for comprehensive analysis
+        const { data: allDocuments } = await supabaseAdmin
+          .from('documents')
+          .select('*')
+          .eq('complaint_id', (document as any).complaint_id);
+        
+        // Combine all document text and complaint context
+        const allDocumentText = (allDocuments as any[])
+          ?.map((doc: any) => JSON.stringify(doc.processed_data))
+          .join('\n\n--- NEXT DOCUMENT ---\n\n') || '';
+        
+        const complaintContext = (complaint as any)?.timeline?.[0]?.summary || 
+                                (complaint as any)?.complaint_context || 
+                                'No additional context provided';
+        
+        const fullContext = `
+COMPLAINT CONTEXT:
+${complaintContext}
+
+ALL DOCUMENTS:
+${allDocumentText}
+        `.trim();
+        
+        console.log('📋 Analyzing with full context:', {
+          documentCount: (allDocuments as any[])?.length || 0,
+          contextLength: fullContext.length,
+          hasComplaintContext: !!complaintContext
+        });
+        
+        // Search knowledge base using combined context
         const guidance = await searchKnowledgeBase(
-          JSON.stringify((document as any).processed_data),
+          fullContext,
           0.7,
           5
         );
         
-        // Search precedents
+        // Search precedents using combined context
         const precedents = await searchPrecedents(
-          JSON.stringify((document as any).processed_data),
+          fullContext,
           0.7,
           5
         );
         
-        // Analyze with OpenRouter
+        // Analyze with OpenRouter using ALL context
         const analysis = await analyzeComplaint(
-          sanitizeForLLM((document as any).processed_data),
+          sanitizeForLLM(fullContext),
           JSON.stringify(guidance),
           JSON.stringify(precedents)
         );
