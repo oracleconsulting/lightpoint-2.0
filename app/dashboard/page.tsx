@@ -11,8 +11,17 @@ import { Plus, FileText, AlertCircle, CheckCircle, TrendingUp, Clock } from 'luc
 const MOCK_ORGANIZATION_ID = '00000000-0000-0000-0000-000000000001';
 
 export default function DashboardPage() {
-  const { data: complaints, isLoading } = trpc.complaints.list.useQuery({
+  const { data: complaints, isLoading, error } = trpc.complaints.list.useQuery({
     organizationId: MOCK_ORGANIZATION_ID,
+  });
+
+  // Debug logging
+  console.log('🔍 Dashboard State:', { 
+    isLoading, 
+    hasData: !!complaints, 
+    dataLength: complaints?.length,
+    error: error?.message,
+    orgId: MOCK_ORGANIZATION_ID 
   });
 
   const getStatusBadge = (status: string) => {
@@ -127,6 +136,12 @@ export default function DashboardPage() {
           <CardContent>
             {isLoading ? (
               <p className="text-center text-muted-foreground py-8">Loading complaints...</p>
+            ) : error ? (
+              <div className="text-center py-12 text-red-500">
+                <AlertCircle className="h-12 w-12 mx-auto mb-4" />
+                <p className="font-medium mb-2">Error loading complaints</p>
+                <p className="text-sm">{error.message}</p>
+              </div>
             ) : complaints && complaints.length > 0 ? (
               <div className="space-y-4">
                 {complaints.map((complaint: any) => (
