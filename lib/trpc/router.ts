@@ -109,7 +109,7 @@ export const appRouter = router({
           .eq('id', input.complaintId)
           .single();
         
-        const currentTimeline = complaint?.timeline || [];
+        const currentTimeline = (complaint as any)?.timeline || [];
         const updatedTimeline = [...currentTimeline, input.event];
         
         const { data, error } = await (supabaseAdmin as any)
