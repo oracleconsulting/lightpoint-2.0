@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { supabaseAdmin } from '@/lib/supabase/client';
 import { processDocument } from '@/lib/documentProcessor';
 import { analyzeComplaint, generateComplaintLetter, generateResponse } from '@/lib/openrouter/client';
-import { searchKnowledgeBase, searchPrecedents } from '@/lib/vectorSearch';
+import { searchKnowledgeBase, searchKnowledgeBaseMultiAngle, searchPrecedents } from '@/lib/vectorSearch';
 import { logTime } from '@/lib/timeTracking';
 import { sanitizeForLLM } from '@/lib/privacy';
 
@@ -186,11 +186,12 @@ ${allDocumentText}
           hasComplaintContext: !!complaintContext
         });
         
-        // Search knowledge base using combined context
-        const guidance = await searchKnowledgeBase(
+        // Use multi-angle search for comprehensive knowledge base coverage
+        console.log('🔍 Performing multi-angle knowledge base search...');
+        const guidance = await searchKnowledgeBaseMultiAngle(
           fullContext,
           0.7,
-          5
+          10
         );
         
         // Search precedents using combined context
@@ -199,6 +200,11 @@ ${allDocumentText}
           0.7,
           5
         );
+        
+        console.log('📚 Search results:', {
+          guidanceCount: guidance.length,
+          precedentsCount: precedents.length
+        });
         
         // Analyze with OpenRouter using ALL context
         const analysis = await analyzeComplaint(

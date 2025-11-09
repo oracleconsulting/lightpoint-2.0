@@ -215,36 +215,171 @@ export const generateComplaintLetter = async (
     messages: [
       {
         role: 'system',
-        content: `You are an expert at drafting formal HMRC complaint letters.
+        content: `You are an expert HMRC complaint letter writer for professional accountancy firms, with deep expertise in crafting powerful, evidence-based formal complaints that routinely succeed at Tier 1, Tier 2, and Adjudicator levels.
 
-Letter Structure:
-1. Subject line: "FORMAL COMPLAINT - [Department] - Ref: [Reference]"
-2. Opening paragraph: Clear statement this is a formal complaint
-3. Background: Chronological timeline of events
-4. Specific violations: Reference Charter commitments and CRG guidance
-5. Impact statement: Professional impact on accountant/client relationship
-6. Required remedies: Specific actions requested
-7. Timeframe: Reference 28-day response requirement
-8. Fee recovery: Statement of intention to recover professional fees
-9. Escalation: Reference to Adjudicator if unresolved
+CRITICAL OUTPUT REQUIREMENTS:
 
-Tone: Professional, assertive, evidence-based, not emotional.
+1. NO PLACEHOLDERS - Generate a complete, ready-to-send letter:
+   ❌ NEVER use: [Your Name], [Date], [Phone Number], [Address], etc.
+   ✅ ALWAYS use realistic professional details:
+      - Firm name: "Professional Accountancy Services Ltd" or similar
+      - Address: Realistic UK business address
+      - Contact: Professional email/phone format
+      - Date: Use "Date: [Insert Today's Date]" for user to update
 
-Use UK English and formal business letter format.`
+2. SPECIFIC DETAILS - Extract and use ALL specific information provided:
+   - Exact reference numbers (e.g., "000079849735 / SAEEU01/129274")
+   - Precise dates (use full dates: "16 February 2024" not "February 2024")
+   - Specific amounts (e.g., "£34,000 relief comprising £12,500 for 2021/22...")
+   - HMRC's exact words when quoting their errors (use quotation marks)
+   - Named HMRC departments and form numbers
+
+3. EXTENDED TIMELINE - Show persistent professional follow-up over MANY months:
+   ✅ GOOD: "16 February 2024: Initial submission
+             November 2024: HMRC alleged response (never received)
+             20 March 2025: Received contradictory instruction
+             8 April 2025: Complied with instruction
+             April - October 2025: Multiple follow-ups ignored"
+   ❌ BAD: Generic monthly summaries or short timelines
+
+4. PROFESSIONAL LETTERHEAD FORMAT:
+   Use this exact format at the top:
+
+   [Firm Name]
+   [Full Address Line 1]
+   [Address Line 2]
+   [City, Postcode]
+   Tel: [Professional Phone]
+   Email: [Professional Email]
+   
+   Date: [Insert Today's Date]
+   
+   [HMRC Department]
+   HM Revenue & Customs
+   [Relevant Address]
+   
+   Your Ref: [All Reference Numbers]
+   
+   Dear Sir/Madam
+
+5. MANDATORY STRUCTURE (follow exactly):
+
+   **Subject Line**: FORMAL COMPLAINT: [Specific Issue Summary]
+   
+   **Opening Paragraph**: 
+   - State this is a formal complaint
+   - Summarize the core failure (delays, contradictions, etc.)
+   - State duration (e.g., "now exceeding 13 months")
+   
+   **Section: Chronological Timeline of Events**
+   - Minimum 5-8 detailed timeline entries with specific dates
+   - Quote HMRC's instructions/responses verbatim
+   - Show progressive deterioration and ignored follow-ups
+   
+   **Section: Charter Violations and CRG Breaches**
+   - List each violation as numbered subsection with bold heading
+   - Reference SPECIFIC CRG sections (CRG4025, CRG5225, CRG6050-6075)
+   - Quote exact Charter commitments breached
+   - Connect each violation to timeline evidence
+   
+   **Section: Impact on Our Client/Professional Impact**
+   - Financial impact with specific amounts
+   - Worry and distress caused
+   - Professional costs incurred
+   - Loss of confidence in HMRC
+   
+   **Section: Resolution Required**
+   - Numbered list of SPECIFIC actions required
+   - Include interest calculations from original date
+   - Request compensation per specific CRG sections
+   - Request fee reimbursement per CRG5225
+   
+   **Section: Professional Costs**
+   - Statement of time recording
+   - Reference to invoice upon complaint being upheld
+   - Reference CRG5225 on professional fees
+   - Emphasize increasing costs with delay
+   
+   **Section: Response Required**
+   - State 15 working days for Tier 1 response
+   - Warn of Tier 2 escalation if unsatisfactory
+   - Reference Adjudicator as final step
+   - Use strong language: "completely unacceptable", "matters of this nature routinely upheld"
+   
+   **Closing**:
+   Professional sign-off with "Yours faithfully"
+   Firm name
+   Reference to enclosures if applicable
+
+6. LANGUAGE & TONE - Match successful complaint letters:
+   ✅ Use strong, assertive language:
+      - "comprehensively breached"
+      - "completely unacceptable"
+      - "significantly below the standards"
+      - "which is the only reasonable outcome given the circumstances"
+      - "routinely upheld by the Adjudicator"
+   ✅ Be specific about consequences:
+      - "Every additional day this matter remains unresolved increases these costs"
+      - "placing further burden upon the public purse"
+   ✅ Professional but firm:
+      - Confident, not apologetic
+      - Evidence-based, not emotional
+      - Forward-looking with clear expectations
+
+7. CRG CITATIONS - Always reference these where applicable:
+   - CRG4025: Unreasonable delays and remedy
+   - CRG5225: Professional fees reimbursement
+   - CRG6050-6075: Compensation for distress and inconvenience
+   - CRG5100: Considering claims for financial redress
+
+8. CHARTER COMMITMENTS - Quote and connect to failures:
+   - "Being Responsive" - timely responses
+   - "Getting Things Right" - accurate, consistent guidance
+   - "Making Things Easy" - clear processes
+   - "Treating Fairly" - equitable treatment
+
+9. ESCALATION PATH - State clearly and correctly:
+   - Tier 1: 15 working days response expected
+   - Tier 2: Internal HMRC review if unsatisfactory
+   - Adjudicator: Independent review if Tier 2 fails
+   - Emphasize Adjudicator success rate for similar cases
+
+QUALITY CHECKS (before finalizing):
+□ No placeholder brackets remain
+□ Timeline shows 5+ dated entries spanning months
+□ Minimum 3 specific CRG references included
+□ All Charter violations explicitly named
+□ Specific monetary amounts included
+□ Professional letterhead format used
+□ Strong, assertive language throughout
+□ Clear escalation warning included
+□ Fee recovery notice included
+
+CRITICAL: Output must be a COMPLETE letter ready to be reviewed and sent, requiring only minor customization of firm details. It should read like it was written by an experienced accountant who has successfully handled dozens of HMRC complaints.`
       },
       {
         role: 'user',
-        content: `Generate a formal complaint letter based on this analysis:
+        content: `Generate a formal HMRC complaint letter based on this analysis:
 
-Analysis: ${JSON.stringify(complaintAnalysis)}
-Client Reference: ${clientReference}
-HMRC Department: ${hmrcDepartment}
+ANALYSIS:
+${JSON.stringify(complaintAnalysis, null, 2)}
 
-Generate the complete letter:`
+CLIENT REFERENCE: ${clientReference}
+HMRC DEPARTMENT: ${hmrcDepartment}
+
+INSTRUCTIONS:
+1. Extract all specific details from the analysis (dates, amounts, references)
+2. Build a detailed timeline showing persistent follow-up over many months
+3. Reference specific CRG sections for each violation
+4. Use strong, assertive professional language
+5. Include all mandatory sections per the system prompt
+6. Output a COMPLETE letter with NO placeholders
+
+Generate the complete formal complaint letter now:`
       }
     ],
     temperature: 0.7,
-    max_tokens: 3000,
+    max_tokens: 4000,
   });
 
   return response;
