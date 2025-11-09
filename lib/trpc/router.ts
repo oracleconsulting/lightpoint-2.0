@@ -25,7 +25,7 @@ export const appRouter = router({
           .insert({
             organization_id: input.organizationId,
             created_by: input.createdBy,
-            client_reference: input.clientReference,
+            complaint_reference: input.clientReference,
             complaint_type: input.complaintType,
             hmrc_department: input.hmrcDepartment,
             status: 'assessment',
