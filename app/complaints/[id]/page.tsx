@@ -65,6 +65,9 @@ export default function ComplaintDetailPage({ params }: { params: { id: string }
     );
   }
 
+  // Type assertion for complaint to fix TypeScript inference
+  const complaintData = complaint as any;
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -84,12 +87,12 @@ export default function ComplaintDetailPage({ params }: { params: { id: string }
         <div className="mb-8">
           <div className="flex justify-between items-start">
             <div>
-              <h1 className="text-3xl font-bold mb-2">{complaint.client_reference}</h1>
+              <h1 className="text-3xl font-bold mb-2">{complaintData.complaint_reference}</h1>
               <p className="text-muted-foreground">
-                {complaint.hmrc_department} • {complaint.complaint_type}
+                {complaintData.client_name_encrypted || 'Client'} • {complaintData.status}
               </p>
             </div>
-            <Badge>{complaint.status}</Badge>
+            <Badge>{complaintData.status}</Badge>
           </div>
         </div>
 
@@ -138,11 +141,11 @@ export default function ComplaintDetailPage({ params }: { params: { id: string }
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Total Time:</span>
-                      <span className="font-medium">{timeData.totalHours}h</span>
+                      <span className="font-medium">{(timeData as any).totalHours}h</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Activities:</span>
-                      <span className="font-medium">{timeData.logs.length}</span>
+                      <span className="font-medium">{(timeData as any).logs.length}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -163,7 +166,7 @@ export default function ComplaintDetailPage({ params }: { params: { id: string }
               <LetterPreview letter={generatedLetter} />
             )}
 
-            <TimelineView events={complaint.timeline || []} />
+            <TimelineView events={complaintData.timeline || []} />
 
             {!analysisData && !generatedLetter && (
               <Card>
