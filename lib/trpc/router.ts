@@ -6,6 +6,7 @@ import { analyzeComplaint, generateComplaintLetter, generateResponse } from '@/l
 import { searchKnowledgeBase, searchKnowledgeBaseMultiAngle, searchPrecedents } from '@/lib/vectorSearch';
 import { logTime } from '@/lib/timeTracking';
 import { sanitizeForLLM } from '@/lib/privacy';
+import { prepareAnalysisContext, estimateTokens } from '@/lib/contextManager';
 
 export const appRouter = router({
   // Complaints
@@ -180,40 +181,27 @@ export const appRouter = router({
           .select('*')
           .eq('complaint_id', (document as any).complaint_id);
         
-        // Combine all document text and complaint context
-        const allDocumentText = (allDocuments as any[])
-          ?.map((doc: any) => JSON.stringify(doc.processed_data))
-          .join('\n\n--- NEXT DOCUMENT ---\n\n') || '';
-        
+        // Extract complaint context
         const complaintContext = (complaint as any)?.timeline?.[0]?.summary || 
                                 (complaint as any)?.complaint_context || 
                                 'No additional context provided';
         
-        const fullContext = `
-COMPLAINT CONTEXT:
-${complaintContext}
-
-ALL DOCUMENTS:
-${allDocumentText}
-        `.trim();
-        
-        console.log('📋 Analyzing with full context:', {
+        console.log('📋 Starting analysis:', {
           documentCount: (allDocuments as any[])?.length || 0,
-          contextLength: fullContext.length,
-          hasComplaintContext: !!complaintContext
+          complaintContextLength: complaintContext.length
         });
         
         // Use multi-angle search for comprehensive knowledge base coverage
         console.log('🔍 Performing multi-angle knowledge base search...');
         const guidance = await searchKnowledgeBaseMultiAngle(
-          fullContext,
+          complaintContext, // Use complaint context for search, not full docs
           0.7,
           10
         );
         
         // Search precedents using combined context
         const precedents = await searchPrecedents(
-          fullContext,
+          complaintContext,
           0.7,
           5
         );
@@ -223,11 +211,21 @@ ${allDocumentText}
           precedentsCount: precedents.length
         });
         
-        // Analyze with OpenRouter using ALL context
+        // SMART CONTEXT MANAGEMENT - Prepare context within token budget
+        const managedContext = prepareAnalysisContext(
+          complaintContext,
+          allDocuments as any[],
+          guidance,
+          precedents
+        );
+        
+        console.log('✅ Context prepared, estimated tokens:', estimateTokens(managedContext));
+        
+        // Analyze with OpenRouter using managed context
         const analysis = await analyzeComplaint(
-          sanitizeForLLM(fullContext),
-          JSON.stringify(guidance),
-          JSON.stringify(precedents)
+          sanitizeForLLM(managedContext),
+          JSON.stringify(guidance.slice(0, 5)), // Top 5 guidance only
+          JSON.stringify(precedents.slice(0, 3)) // Top 3 precedents only
         );
         
         // Log time (optional - don't fail if this fails)
