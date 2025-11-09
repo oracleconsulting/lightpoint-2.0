@@ -23,7 +23,12 @@ export default function ComplaintDetailPage({ params }: { params: { id: string }
 
   const analyzeDocument = trpc.analysis.analyzeDocument.useMutation({
     onSuccess: (data) => {
+      console.log('✅ Analysis complete:', data);
       setAnalysisData(data);
+    },
+    onError: (error) => {
+      console.error('❌ Analysis failed:', error);
+      alert(`Analysis failed: ${error.message}`);
     },
   });
 
@@ -34,9 +39,16 @@ export default function ComplaintDetailPage({ params }: { params: { id: string }
   });
 
   const handleAnalyze = () => {
+    console.log('🔍 Analyze button clicked');
+    console.log('Documents:', documents);
+    
     if (documents && documents.length > 0) {
-      // Type assertion since we know documents exist at this point
-      analyzeDocument.mutate({ documentId: (documents as any[])[0].id });
+      const firstDocId = (documents as any[])[0].id;
+      console.log(`📄 Analyzing document: ${firstDocId}`);
+      analyzeDocument.mutate({ documentId: firstDocId });
+    } else {
+      console.error('❌ No documents available to analyze');
+      alert('No documents available. Please upload documents first.');
     }
   };
 
