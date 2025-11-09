@@ -94,12 +94,25 @@ export const analyzeComplaint = async (
 - Complaint Resolution Guidance (CRG)
 - Standard timeframes and service standards
 - Precedent cases and outcomes
+- HMRC complaints escalation process
 
 Analyze documents for:
 1. Specific Charter violations
 2. Unreasonable delays (beyond standard timeframes)
 3. CRG guidance breaches
 4. Applicable precedents
+
+HMRC Complaints Escalation Process:
+- Tier 1: Initial complaint handled by HMRC complaints team (15 working days for response)
+- Tier 2: Review of Tier 1 decision if not satisfied (internal HMRC review)
+- Adjudicator: Independent external review if still not satisfied with Tier 2 decision
+- Ombudsman: Final independent review if needed
+
+When recommending escalation:
+- First mention Tier 1 complaint with expected response time
+- If no response or unsatisfactory: escalate to Tier 2 review
+- If Tier 2 fails: escalate to the Adjudicator's Office
+- Never skip directly to Adjudicator without mentioning Tier 1 and Tier 2
 
 CRITICAL: Respond with ONLY valid JSON (no markdown, no code blocks, no explanations).
 

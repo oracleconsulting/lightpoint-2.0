@@ -242,12 +242,16 @@ ${allDocumentText}
         // Generate letter
         const letter = await generateComplaintLetter(
           input.analysis,
-          (complaint as any).client_reference,
+          (complaint as any).complaint_reference,
           (complaint as any).hmrc_department || 'HMRC'
         );
         
-        // Log time
-        await logTime(input.complaintId, 'letter_generation', 45);
+        // Log time (optional - don't fail if this fails)
+        try {
+          await logTime(input.complaintId, 'letter_generation', 45);
+        } catch (timeError) {
+          console.warn('⚠️ Failed to log time, but continuing:', timeError);
+        }
         
         return { letter };
       }),
@@ -275,8 +279,12 @@ ${allDocumentText}
           input.responseType
         );
         
-        // Log time
-        await logTime(input.complaintId, 'response_drafting', 40);
+        // Log time (optional - don't fail if this fails)
+        try {
+          await logTime(input.complaintId, 'response_drafting', 40);
+        } catch (timeError) {
+          console.warn('⚠️ Failed to log time, but continuing:', timeError);
+        }
         
         return { response };
       }),
