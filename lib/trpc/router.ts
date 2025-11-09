@@ -17,6 +17,7 @@ export const appRouter = router({
         clientReference: z.string(),
         complaintType: z.string().optional(),
         hmrcDepartment: z.string().optional(),
+        context: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
         const { data, error } = await (supabaseAdmin as any)
@@ -28,6 +29,11 @@ export const appRouter = router({
             complaint_type: input.complaintType,
             hmrc_department: input.hmrcDepartment,
             status: 'assessment',
+            timeline: input.context ? [{
+              date: new Date().toISOString(),
+              type: 'context_provided',
+              summary: input.context,
+            }] : [],
           })
           .select()
           .single();

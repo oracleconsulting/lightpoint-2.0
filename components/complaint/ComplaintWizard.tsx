@@ -22,8 +22,37 @@ export function ComplaintWizard({ organizationId, userId }: ComplaintWizardProps
     complaintContext: '',
   });
 
+  const [isUploading, setIsUploading] = useState(false);
+
   const createComplaint = trpc.complaints.create.useMutation({
-    onSuccess: (data: any) => {
+    onSuccess: async (data: any) => {
+      // After creating complaint, upload all documents
+      if (files.length > 0) {
+        setIsUploading(true);
+        try {
+          for (const file of files) {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('complaintId', data.id);
+            formData.append('documentType', 'evidence');
+
+            const response = await fetch('/api/documents/upload', {
+              method: 'POST',
+              body: formData,
+            });
+
+            if (!response.ok) {
+              console.error(`Failed to upload ${file.name}`);
+            }
+          }
+        } catch (error) {
+          console.error('Error uploading files:', error);
+        } finally {
+          setIsUploading(false);
+        }
+      }
+      
+      // Navigate to the complaint page
       router.push(`/complaints/${data.id}`);
     },
   });
@@ -46,6 +75,7 @@ export function ComplaintWizard({ organizationId, userId }: ComplaintWizardProps
       clientReference: formData.clientReference,
       hmrcDepartment: 'To be determined',
       complaintType: 'To be determined',
+      context: formData.complaintContext,
     });
   };
 
@@ -204,9 +234,9 @@ Don't worry about identifying specific Charter violations or complaint types - o
               <Button 
                 onClick={handleSubmit} 
                 className="w-full"
-                disabled={files.length === 0}
+                disabled={files.length === 0 || createComplaint.isPending || isUploading}
               >
-                Create Complaint & Analyze Documents
+                {isUploading ? 'Uploading Documents...' : createComplaint.isPending ? 'Creating Complaint...' : 'Create Complaint & Analyze Documents'}
               </Button>
 
               <p className="text-xs text-center text-muted-foreground">
