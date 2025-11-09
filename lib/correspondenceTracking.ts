@@ -100,7 +100,7 @@ export const checkEscalationTriggers = async (complaintId: string) => {
         summary: 'Complaint automatically escalated due to overdue responses',
       };
       
-      await supabaseAdmin
+      await (supabaseAdmin as any)
         .from('complaints')
         .update({
           timeline: [...timeline, escalationEvent],
