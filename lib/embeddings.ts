@@ -30,6 +30,13 @@ export const generateEmbedding = async (text: string): Promise<number[]> => {
     }
 
     const data = await response.json();
+    
+    // OpenRouter returns the same format as OpenAI
+    if (!data.data || !data.data[0] || !data.data[0].embedding) {
+      console.error('Unexpected OpenRouter response:', JSON.stringify(data).substring(0, 200));
+      throw new Error('Invalid embedding response from OpenRouter');
+    }
+    
     return data.data[0].embedding;
   } catch (error) {
     console.error('Error generating embedding:', error);
@@ -68,6 +75,12 @@ export const generateEmbeddingsBatch = async (texts: string[]): Promise<number[]
     }
 
     const data = await response.json();
+    
+    if (!data.data || !Array.isArray(data.data)) {
+      console.error('Unexpected OpenRouter response:', JSON.stringify(data).substring(0, 200));
+      throw new Error('Invalid embeddings response from OpenRouter');
+    }
+    
     return data.data.map((item: any) => item.embedding);
   } catch (error) {
     console.error('Error generating embeddings:', error);

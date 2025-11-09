@@ -1,19 +1,48 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Client-side supabase client (lazy initialization)
+let _supabase: ReturnType<typeof createClient> | null = null;
+export const supabase = new Proxy({} as ReturnType<typeof createClient>, {
+  get(target, prop) {
+    if (!_supabase) {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+      
+      if (!supabaseUrl || !supabaseAnonKey) {
+        throw new Error('Missing Supabase environment variables');
+      }
+      
+      _supabase = createClient(supabaseUrl, supabaseAnonKey);
+    }
+    return (_supabase as any)[prop];
+  }
+});
 
 // Server-side client with service key for admin operations
-export const supabaseAdmin = createClient(
-  supabaseUrl,
-  process.env.SUPABASE_SERVICE_KEY!,
-  {
+export function createServerClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const serviceKey = process.env.SUPABASE_SERVICE_KEY!;
+  
+  if (!url || !serviceKey) {
+    throw new Error('Missing Supabase environment variables');
+  }
+  
+  return createClient(url, serviceKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false
     }
+  });
+}
+
+// Backward compatibility - lazy initialization
+let _supabaseAdmin: ReturnType<typeof createClient> | null = null;
+export const supabaseAdmin = new Proxy({} as ReturnType<typeof createClient>, {
+  get(target, prop) {
+    if (!_supabaseAdmin) {
+      _supabaseAdmin = createServerClient();
+    }
+    return (_supabaseAdmin as any)[prop];
   }
-);
+});
 

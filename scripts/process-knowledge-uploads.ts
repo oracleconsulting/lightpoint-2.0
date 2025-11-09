@@ -20,9 +20,12 @@
  * 3. Documents are automatically categorized and uploaded
  */
 
-import 'dotenv/config';
-import fs from 'fs';
+// Load environment variables FIRST
+import dotenv from 'dotenv';
 import path from 'path';
+dotenv.config({ path: path.join(__dirname, '../.env.local') });
+
+import fs from 'fs';
 // @ts-ignore
 import pdfParse from 'pdf-parse';
 import { addToKnowledgeBase } from '../lib/vectorSearch';
