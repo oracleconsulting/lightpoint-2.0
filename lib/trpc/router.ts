@@ -171,8 +171,12 @@ export const appRouter = router({
           JSON.stringify(precedents)
         );
         
-        // Log time
-        await logTime((document as any).complaint_id, 'analysis', 20);
+        // Log time (optional - don't fail if this fails)
+        try {
+          await logTime((document as any).complaint_id, 'analysis', 20);
+        } catch (timeError) {
+          console.warn('⚠️ Failed to log time, but continuing:', timeError);
+        }
         
         return {
           analysis,
