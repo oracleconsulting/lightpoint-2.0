@@ -35,7 +35,7 @@ export const logTime = async (
  */
 export const getComplaintTime = async (complaintId: string) => {
   try {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await (supabaseAdmin as any)
       .from('time_logs')
       .select('activity_type, minutes_spent, automated, created_at')
       .eq('complaint_id', complaintId)
@@ -43,10 +43,10 @@ export const getComplaintTime = async (complaintId: string) => {
     
     if (error) throw error;
     
-    const totalMinutes = data.reduce((sum, log) => sum + log.minutes_spent, 0);
-    const automaticMinutes = data
-      .filter(log => log.automated)
-      .reduce((sum, log) => sum + log.minutes_spent, 0);
+    const totalMinutes = (data as any[]).reduce((sum: number, log: any) => sum + log.minutes_spent, 0);
+    const automaticMinutes = (data as any[])
+      .filter((log: any) => log.automated)
+      .reduce((sum: number, log: any) => sum + log.minutes_spent, 0);
     const manualMinutes = totalMinutes - automaticMinutes;
     
     return {
