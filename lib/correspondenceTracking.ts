@@ -127,7 +127,7 @@ export const getComplaintsNeedingAttention = async (organizationId: string) => {
     
     const now = new Date();
     
-    const needingAttention = complaints.filter(complaint => {
+    const needingAttention = (complaints as any[]).filter((complaint: any) => {
       const timeline = complaint.timeline || [];
       return timeline.some((event: any) => {
         if (event.responseDeadline) {
