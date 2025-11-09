@@ -146,27 +146,27 @@ export const appRouter = router({
         
         // Search knowledge base
         const guidance = await searchKnowledgeBase(
-          JSON.stringify(document.processed_data),
+          JSON.stringify((document as any).processed_data),
           0.7,
           5
         );
         
         // Search precedents
         const precedents = await searchPrecedents(
-          JSON.stringify(document.processed_data),
+          JSON.stringify((document as any).processed_data),
           0.7,
           5
         );
         
         // Analyze with OpenRouter
         const analysis = await analyzeComplaint(
-          sanitizeForLLM(document.processed_data),
+          sanitizeForLLM((document as any).processed_data),
           JSON.stringify(guidance),
           JSON.stringify(precedents)
         );
         
         // Log time
-        await logTime(document.complaint_id, 'analysis', 20);
+        await logTime((document as any).complaint_id, 'analysis', 20);
         
         return {
           analysis,
@@ -196,8 +196,8 @@ export const appRouter = router({
         // Generate letter
         const letter = await generateComplaintLetter(
           input.analysis,
-          complaint.client_reference,
-          complaint.hmrc_department || 'HMRC'
+          (complaint as any).client_reference,
+          (complaint as any).hmrc_department || 'HMRC'
         );
         
         // Log time
@@ -224,7 +224,7 @@ export const appRouter = router({
         
         // Generate response
         const response = await generateResponse(
-          complaint,
+          complaint as any,
           input.correspondence,
           input.responseType
         );
