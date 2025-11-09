@@ -35,16 +35,16 @@ export const trackCorrespondence = async (
     
     const updatedTimeline = [...currentTimeline, event];
     
-    // Update complaint with explicit any type
-    const { data, error } = await (supabaseAdmin
+    // Update complaint
+    const { data, error } = await (supabaseAdmin as any)
       .from('complaints')
       .update({
         timeline: updatedTimeline,
         updated_at: new Date().toISOString(),
-      } as any)
+      })
       .eq('id', complaintId)
       .select()
-      .single());
+      .single();
     
     if (error) throw error;
     
