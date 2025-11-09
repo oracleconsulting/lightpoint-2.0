@@ -79,7 +79,7 @@ export const appRouter = router({
         status: z.enum(['assessment', 'draft', 'active', 'escalated', 'resolved', 'closed']),
       }))
       .mutation(async ({ input }) => {
-        const { data, error } = await supabaseAdmin
+        const { data, error } = await (supabaseAdmin as any)
           .from('complaints')
           .update({ status: input.status, updated_at: new Date().toISOString() })
           .eq('id', input.id)
@@ -112,7 +112,7 @@ export const appRouter = router({
         const currentTimeline = complaint?.timeline || [];
         const updatedTimeline = [...currentTimeline, input.event];
         
-        const { data, error } = await supabaseAdmin
+        const { data, error } = await (supabaseAdmin as any)
           .from('complaints')
           .update({ 
             timeline: updatedTimeline,
