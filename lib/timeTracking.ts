@@ -14,6 +14,7 @@ export const logTime = async (
       .from('time_logs')
       .insert({
         complaint_id: complaintId,
+        user_id: null, // Automated activities have no user
         activity_type: activityType,
         minutes_spent: minutesSpent,
         automated,
@@ -21,7 +22,10 @@ export const logTime = async (
       .select()
       .single();
     
-    if (error) throw error;
+    if (error) {
+      console.error('❌ Failed to log time:', error);
+      throw new Error('Failed to log time');
+    }
     
     return data;
   } catch (error) {
