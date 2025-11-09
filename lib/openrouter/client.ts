@@ -401,6 +401,7 @@ Generate the complete formal complaint letter now:`
 
 /**
  * Generate response to HMRC correspondence
+ * Uses Claude Opus 4.1 (superior writing for responses and rebuttals)
  */
 export const generateResponse = async (
   complaintContext: any,
@@ -412,9 +413,11 @@ export const generateResponse = async (
     rebuttal: 'Generate a professional rebuttal addressing inadequate responses, referencing original violations and requesting proper resolution.',
     escalation: 'Generate a formal escalation letter to the Adjudicator, summarizing the complaint journey and HMRC\'s inadequate response.'
   };
+  
+  console.log(`✍️ Response Generation (${responseType}): Using Claude Opus 4.1`);
 
   const response = await callOpenRouter({
-    model: DEFAULT_MODEL,
+    model: LETTER_MODEL, // Opus 4.1 for professional responses
     messages: [
       {
         role: 'system',
