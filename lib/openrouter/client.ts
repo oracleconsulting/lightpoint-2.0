@@ -31,8 +31,8 @@ interface OpenRouterResponse {
 }
 
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
-// Using Claude Opus 4.1 (latest as of Nov 2024)
-const DEFAULT_MODEL = 'anthropic/claude-opus-4-20250514';
+// Using Claude Opus 4.1 (latest model)
+const DEFAULT_MODEL = 'anthropic/claude-opus-4.1';
 
 /**
  * Call OpenRouter API with Claude Opus 4.1
