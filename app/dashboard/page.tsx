@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { Plus, FileText, AlertCircle, CheckCircle, TrendingUp, Clock } from 'lucide-react';
 
 // Mock data for demo - replace with actual auth
-const MOCK_ORGANIZATION_ID = 'org-1';
+const MOCK_ORGANIZATION_ID = '00000000-0000-0000-0000-000000000001';
 
 export default function DashboardPage() {
   const { data: complaints, isLoading } = trpc.complaints.list.useQuery({
