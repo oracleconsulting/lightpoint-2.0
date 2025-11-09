@@ -9,8 +9,9 @@ import Link from 'next/link';
 import { ArrowLeft, FileText, FolderOpen } from 'lucide-react';
 
 // Mock data - replace with actual auth
-const MOCK_ORGANIZATION_ID = 'org-1';
-const MOCK_USER_ID = 'user-1';
+// Using UUIDs that match the test data in COMPLETE_SETUP.sql
+const MOCK_ORGANIZATION_ID = '00000000-0000-0000-0000-000000000001';
+const MOCK_USER_ID = '00000000-0000-0000-0000-000000000002';
 
 export default function NewComplaintPage() {
   const [mode, setMode] = useState<'select' | 'single' | 'batch'>('select');
