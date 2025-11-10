@@ -188,29 +188,29 @@ Dear Sir/Madam
 We are writing to lodge a formal complaint regarding [core issue].
 [2-3 factual sentences explaining the problem]
 
-**6. CHRONOLOGICAL TIMELINE OF EVENTS**
+**6. CHRONOLOGICAL TIMELINE OF EVENTS** ← Section heading MUST be bold
+
+**[Full Date e.g., 16 February 2024]:** [Factual description of event]. [Additional context if needed].
 
 **[Full Date]:** [Factual description of event]. [Additional context if needed].
 
-**[Full Date]:** [Factual description of event]. [Additional context if needed].
+[Continue chronologically - be specific with dates when known, each date MUST be bold with **double asterisks**]
 
-[Continue chronologically - be specific with dates, each date MUST be bold]
-
-**7. CHARTER VIOLATIONS AND CRG BREACHES**
+**7. CHARTER VIOLATIONS AND CRG BREACHES** ← Section heading MUST be bold
 
 This handling represents a breach of multiple HMRC Charter commitments and Complaints Resolution Guidance standards:
 
-**1. [CRG Reference e.g., CRG4025] - [Violation Name e.g., Unreasonable Delay]**
+**1. [CRG Reference e.g., CRG4025] - [Violation Name e.g., Unreasonable Delay]** ← Violation header MUST be bold
 
-[Factual explanation of how HMRC breached this standard. Include specific timelines, percentages, or comparisons. State why this matters.]
+[Factual explanation of how HMRC breached this standard. Include specific timelines, percentages, or comparisons. State why this matters. Add 2-3 sentences for fullness - explain the breach, quantify the excess, and state the impact.]
 
-**2. [CRG Reference] - [Violation Name]**
+**2. [CRG Reference] - [Violation Name]** ← MUST be bold
 
-[Factual explanation...]
+[Factual explanation with 2-3 sentences...]
 
-[Continue numbering for all violations - typically 3-7. CRG reference FIRST, then violation name]
+[Continue numbering for all violations - typically 3-7. CRG reference FIRST, then violation name. Each violation header MUST be bold.]
 
-**8. IMPACT ON OUR CLIENT AND PROFESSIONAL PRACTICE**
+**8. IMPACT ON OUR CLIENT AND PROFESSIONAL PRACTICE** ← Section heading MUST be bold
 
 The financial impact extends beyond the £[X] [relief/refund] our client cannot access:
 
@@ -220,11 +220,11 @@ The financial impact extends beyond the £[X] [relief/refund] our client cannot 
 
 **Public purse impact:** [Brief description of wasted HMRC resources]
 
-**9. PROFESSIONAL COSTS**
+**9. PROFESSIONAL COSTS** ← Section heading MUST be bold
 
 Per CRG5225, our client is entitled to reimbursement of professional fees directly attributable to HMRC's errors. Our standard charge-out rate is £${chargeOutRate || 185} per hour. The time spent addressing these failures includes [brief description of tasks]. A detailed invoice will be submitted once this complaint is upheld.
 
-**10. RESOLUTION REQUIRED**
+**10. RESOLUTION REQUIRED** ← Section heading MUST be bold
 
 We require the following specific actions:
 
@@ -232,11 +232,11 @@ We require the following specific actions:
 2. [Specific action required]
 3. [Continue numbered list - typically 5-7 items]
 
-**11. RESPONSE DEADLINE**
+**11. RESPONSE DEADLINE** ← Section heading MUST be bold
 
 We require a substantive response to this complaint within 15 working days of receipt. Failure to provide an adequate response will result in immediate escalation to Tier 2, and subsequently to the Adjudicator's Office if necessary.
 
-**12. CLOSING**
+**12. CLOSING** ← Section heading MUST be bold
 
 We trust HMRC will treat this matter with the appropriate urgency.
 
@@ -247,7 +247,7 @@ Yours faithfully,
 [Firm Name]
 Chartered Accountants
 
-**13. ENCLOSURES**
+**13. ENCLOSURES** ← Section heading MUST be bold
 
 Enc: Copies of:
 - [Specific document or correspondence]
@@ -256,21 +256,21 @@ Enc: Copies of:
 
 ---
 
-STRUCTURING REQUIREMENTS:
+CRITICAL FORMATTING RULES (APPLY TO ALL LETTERS):
 
-1. **Dates**: Use full dates (e.g., "5 February 2024") not ranges
-2. **Timeline**: Strictly chronological, one event per entry
-3. **Violations**: Number clearly (1, 2, 3...), not bullets
+1. **Dates**: Use full dates (e.g., "16 February 2024") when known, or month+year if specific date unknown
+2. **Timeline**: Strictly chronological, one event per entry, EVERY date MUST be bold
+3. **Violations**: Number clearly (1, 2, 3...), not bullets, EVERY violation header MUST be bold
 4. **Voice**: Organizational ("We", "Our firm") not first-person ("I")
-5. **Headings**: Professional style (not ALL CAPS aggressive style)
+5. **Headings**: EVERY section heading MUST be bold using **double asterisks**
 6. **Costs**: Separate Professional Costs section (section 9)
 7. **Enclosures**: List specific documents, not "complete correspondence"
 8. **CRG Citations**: CRG reference FIRST, then violation name (e.g., "**1. CRG4025 - Unreasonable Delay**")
-9. **Bold Formatting**: ALL section headings MUST be bold (use **double asterisks**)
-10. **Bold Dates**: ALL dates in timeline MUST be bold (e.g., "**16 February 2024:**")
+9. **Bold Everything Important**: Section headings, dates, violation headers ALL MUST use **double asterisks**
+10. **Violation Detail**: Each violation should have 2-3 full sentences explaining breach, quantifying excess, stating impact
 
 Extract all relevant information from the fact sheet and organize it into this exact structure.
-Do NOT add tone or emotion - just organize facts professionally with proper formatting.`
+Do NOT add tone or emotion - just organize facts professionally with ALL proper bold formatting.`
       },
       {
         role: 'user',
@@ -407,14 +407,23 @@ CRITICAL TONE GUIDELINES:
 - Bold formatting (**double asterisks**) on headings and dates
 
 **Critical formatting requirements:**
-- ALL section headings MUST be bold (e.g., **Chronological Timeline of Events**)
-- ALL dates in timeline MUST be bold (e.g., **16 February 2024:**)
-- Violation numbers MUST be bold (e.g., **1. CRG4025 - Unreasonable Delay**)
+- ALL section headings MUST remain bold (e.g., **Chronological Timeline of Events**)
+- ALL dates in timeline MUST remain bold (e.g., **16 February 2024:**)
+- Violation numbers MUST remain bold (e.g., **1. CRG4025 - Unreasonable Delay**)
+- PRESERVE all **double asterisks** from the structured letter
+- DO NOT remove bold formatting - it's required for professional presentation
+
+**Gold standard language patterns:**
+- Use "comprehensive administrative failure" (not "wholly unacceptable")
+- Use "significant breach" (not "egregious example")
+- Use "multiple breaches" (not "comprehensive breaches")
+- Use "clear breach" (not "fundamental breach")
+- Balance firmness with professionalism throughout
 
 **Temperature calibration:**
 This prompt uses temperature 0.4 for consistent professional output (not 0.7).
 
-Transform the structured letter into a firm, professional complaint that demonstrates clear failures without aggressive language, with all formatting preserved.`
+Transform the structured letter into a firm, professional complaint that demonstrates clear failures without aggressive language, preserving ALL bold formatting exactly as provided.`
       },
       {
         role: 'user',
