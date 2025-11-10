@@ -77,6 +77,7 @@ const callOpenRouter = async (request: OpenRouterRequest): Promise<string> => {
 /**
  * STAGE 1: Deep Analysis with Sonnet 4.5
  * Extract all facts without any tone or structure
+ * INCLUDES extraction of precedent examples for reference
  */
 export const stage1_extractFacts = async (
   complaintAnalysis: any,
@@ -100,6 +101,13 @@ DO NOT add tone, style, or persuasive language. Just extract:
 4. Communication facts (what was sent, when, by whom, method)
 5. System failure facts (contradictions, lost correspondence, departmental issues)
 6. Impact facts (client distress, wasted time, mounting costs)
+7. **PRECEDENT EXAMPLES** (successful complaint letters showing structure and tone)
+
+CRITICAL: If the analysis includes precedents or similar cases, extract:
+- Key phrases used in successful complaints
+- Structure patterns (how timeline was presented, how violations were numbered)
+- Tone examples (level of firmness, memorable phrases)
+- Compensation amounts awarded in similar cases
 
 Format as a structured fact sheet with clear sections.
 Use bullet points for clarity.
@@ -115,7 +123,7 @@ ${JSON.stringify(complaintAnalysis, null, 2)}
 CLIENT REFERENCE: ${clientReference}
 HMRC DEPARTMENT: ${hmrcDepartment}
 
-Extract a complete fact sheet now:`
+Extract a complete fact sheet now (include any precedent examples found):`
       }
     ],
     temperature: 0.2, // Low temperature for factual extraction
@@ -128,6 +136,7 @@ Extract a complete fact sheet now:`
 /**
  * STAGE 2: Structure with Opus 4.1
  * Organize facts into proper HMRC complaint letter structure
+ * USES precedent structure patterns if available
  */
 export const stage2_structureLetter = async (
   factSheet: string,
@@ -142,6 +151,13 @@ export const stage2_structureLetter = async (
       {
         role: 'system',
         content: `You are a legal secretary organizing facts into a formal HMRC complaint letter structure.
+
+CRITICAL: If the fact sheet includes PRECEDENT EXAMPLES from successful complaints, 
+USE THEIR STRUCTURE as your guide. Copy the way they:
+- Organize timeline entries
+- Number Charter violations
+- Break down professional costs
+- List enclosures
 
 Use this EXACT structure:
 
@@ -240,6 +256,7 @@ Create the structured letter now (objective tone, perfect structure):`
 /**
  * STAGE 3: Add Professional Fury with Opus 4.1
  * Transform structured letter into powerful, authentic complaint
+ * USES precedent tone examples if available
  */
 export const stage3_addTone = async (
   structuredLetter: string
@@ -254,6 +271,14 @@ export const stage3_addTone = async (
         content: `You are a senior partner with 20 years of experience, personally frustrated by HMRC's incompetence.
 
 Take the structured letter and enhance it with authentic professional fury while keeping the EXACT structure.
+
+CRITICAL: If the structured letter mentions PRECEDENT TONE EXAMPLES from successful complaints,
+USE THEIR LANGUAGE as inspiration. Notice how they:
+- Express frustration professionally
+- Use memorable phrases
+- Cite personal experience
+- Create vivid imagery
+- Show specific counts
 
 **What to add:**
 
