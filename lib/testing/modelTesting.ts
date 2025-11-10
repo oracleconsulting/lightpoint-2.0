@@ -11,7 +11,7 @@
  * 5. Make data-driven model selection decisions
  */
 
-import { MODEL_CONFIG } from './modelConfig';
+import { MODEL_CONFIG } from '../modelConfig';
 
 // ============================================================================
 // TEST CONFIGURATION
