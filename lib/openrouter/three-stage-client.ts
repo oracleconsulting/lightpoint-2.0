@@ -141,20 +141,22 @@ Extract a complete fact sheet now (include any precedent examples found):`
  * USES precedent structure patterns if available
  * 
  * Model: Sonnet 4.5 - Clean legal structure, 200K context, excellent reasoning
+ * 
+ * GOLD STANDARD: Professional headings, organizational voice, clear structure
  */
 export const stage2_structureLetter = async (
   factSheet: string,
   practiceLetterhead?: string,
   chargeOutRate?: number
 ): Promise<string> => {
-  console.log('🏗️ STAGE 2: Structuring letter with Sonnet 4.5 (clean legal structure)');
+  console.log('🏗️ STAGE 2: Structuring letter with Sonnet 4.5 (professional structure)');
   
   const response = await callOpenRouter({
     model: STRUCTURE_MODEL,
     messages: [
       {
         role: 'system',
-        content: `You are a legal secretary organizing facts into a formal HMRC complaint letter structure.
+        content: `You are organizing facts into a formal HMRC complaint letter structure following UK professional standards.
 
 CRITICAL: If the fact sheet includes PRECEDENT EXAMPLES from successful complaints, 
 USE THEIR STRUCTURE as your guide. Copy the way they:
@@ -163,182 +165,244 @@ USE THEIR STRUCTURE as your guide. Copy the way they:
 - Break down professional costs
 - List enclosures
 
-Use this EXACT structure:
+Use this EXACT GOLD STANDARD structure:
 
-**LETTERHEAD**
-[Practice details]
-[Date - after all timeline events]
+**1. LETTERHEAD**
+${practiceLetterhead || '[Firm Name]\n[Address]\n[Contact details]'}
+[Date - use today's date or date after all timeline events]
 
 HMRC Complaints Team
 HM Revenue & Customs
 BX9 1AA
 
-**FORMAL COMPLAINT - [BRIEF SUMMARY]**
-**Client Reference: [REF]**
-**Complaint Category: [CATEGORIES]**
+**2. REFERENCE LINE**
+Your Ref: [Tax matter type] - Client Reference: [CLIENT REF]
 
-Dear Sir/Madam,
+**3. SALUTATION**
+Dear Sir/Madam
 
-**OPENING PARAGRAPH**
-State the core issue factually in 3-4 sentences.
+**4. SUBJECT LINE (Bold)**
+**FORMAL COMPLAINT: [Brief Description] - [Duration] Delay, [Key Issues]**
 
-**TIMELINE OF FAILURES**
-**[Date]:** Description
-**[Date]:** Description
-[Continue chronologically]
+**5. OPENING PARAGRAPH**
+We are writing to lodge a formal complaint regarding [core issue].
+[2-3 factual sentences explaining the problem]
 
-**CHARTER & COMPLAINTS REFORM VIOLATIONS**
-Your handling violates multiple Charter commitments and CRG standards:
+**6. CHRONOLOGICAL TIMELINE OF EVENTS**
 
-**1. [CRG/Charter] - [Type] ([Severity])**
-[Factual description]
+**[Full Date]:** [Factual description of event]. [Additional context if needed].
 
-**2. [CRG/Charter] - [Type] ([Severity])**
-[Factual description]
+**[Full Date]:** [Factual description of event]. [Additional context if needed].
 
-[Continue for all violations]
+[Continue chronologically - be specific with dates]
 
-**IMPACT & COSTS**
-The financial impact extends beyond the £[X] relief my client cannot access:
+**7. CHARTER VIOLATIONS AND CRG BREACHES**
 
-- **Professional time wasted:** [X] hours at £${chargeOutRate || 185}/hour = £[Y]
-  - [Task]: [X] hours
-  - [Task]: [X] hours
-  
-- **Client distress:** [Description]
-- **Public purse:** [Description]
+This handling represents a breach of multiple HMRC Charter commitments and Complaints Resolution Guidance standards:
 
-These costs continue mounting daily.
+**1. [Violation Name] - [CRG Reference]**
 
-**RESOLUTION REQUIRED**
-Given the severity and duration of failures, I require:
+[Factual explanation of how HMRC breached this standard. Include specific timelines, percentages, or comparisons. State why this matters.]
 
-1. **[Action]**
-2. **[Action]**
-[Continue numbered list]
+**2. [Violation Name] - [CRG Reference]**
 
-**ESCALATION WARNING**
-[State 15-day deadline and escalation path]
+[Factual explanation...]
 
-**RESPONSE REQUIRED BY: [DATE]**
-[State expectations and consequences]
+[Continue numbering for all violations - typically 3-7]
+
+**8. IMPACT ON OUR CLIENT AND PROFESSIONAL PRACTICE**
+
+The financial impact extends beyond the £[X] [relief/refund] our client cannot access:
+
+**Professional costs:** Per CRG5225, our client is entitled to reimbursement of professional fees directly attributable to HMRC's errors. Our standard charge-out rate is £${chargeOutRate || 185} per hour. The time spent addressing these failures includes [brief description]. A detailed invoice will be submitted once this complaint is upheld.
+
+**Client distress:** [Brief factual description of impact]
+
+**Public purse impact:** [Brief description of wasted HMRC resources]
+
+**9. RESOLUTION REQUIRED**
+
+We require the following specific actions:
+
+1. [Specific action required]
+2. [Specific action required]
+3. [Continue numbered list - typically 5-7 items]
+
+**10. RESPONSE DEADLINE**
+
+We require a substantive response to this complaint within 15 working days of receipt. Failure to provide an adequate response will result in immediate escalation to Tier 2, and subsequently to the Adjudicator's Office if necessary.
+
+**11. CLOSING**
+
+We trust HMRC will treat this matter with the appropriate urgency.
 
 Yours faithfully,
 
 [Name]
 [Title]
-[Firm]
+[Firm Name]
+Chartered Accountants
 
-**Enclosed:**
-- [Specific document]
-- [Specific document]
+**12. ENCLOSURES**
 
-${practiceLetterhead ? `\nUSE THIS LETTERHEAD EXACTLY:\n${practiceLetterhead}\n` : 'Generate realistic UK accountancy firm details'}
+Enc: Copies of:
+- [Specific document or correspondence]
+- [Specific document or correspondence]
+- [Continue list]
 
-Be objective and factual. No emotional language yet - that comes in Stage 3.
-Focus on getting dates, numbers, and structure perfect.`
+---
+
+STRUCTURING REQUIREMENTS:
+
+1. **Dates**: Use full dates (e.g., "5 February 2024") not ranges
+2. **Timeline**: Strictly chronological, one event per entry
+3. **Violations**: Number clearly (1, 2, 3...), not bullets
+4. **Voice**: Organizational ("We", "Our firm") not first-person ("I")
+5. **Headings**: Professional style (not ALL CAPS aggressive style)
+6. **Costs**: Mention entitlement, give rate, defer detailed invoice
+7. **Enclosures**: List specific documents, not "complete correspondence"
+
+Extract all relevant information from the fact sheet and organize it into this exact structure.
+Do NOT add tone or emotion - just organize facts professionally.`
       },
       {
         role: 'user',
-        content: `Organize these facts into a structured complaint letter:
+        content: `Organize these facts into the professional complaint letter structure:
 
-FACTS:
 ${factSheet}
 
-CHARGE-OUT RATE: £${chargeOutRate || 185}/hour
+${chargeOutRate ? `\nCharge-out rate: £${chargeOutRate}/hour\n` : ''}
 
-Create the structured letter now (objective tone, perfect structure):`
+Create the structured letter now (facts only, no tone yet):`
       }
     ],
-    temperature: 0.3, // Low temperature for structural consistency
-    max_tokens: 4000,
+    temperature: 0.3,
+    max_tokens: 3000,
   });
 
   return response;
 };
 
 /**
- * STAGE 3: Add Professional Fury with Claude Opus 4.1
- * Transform structured letter into powerful, authentic complaint
+ * STAGE 3: Add Professional Tone with Claude Opus 4.1
+ * Transform structured letter into firm but professional complaint
  * USES precedent tone examples if available
  * 
  * Model: Opus 4.1 - Frontier writing quality, worth the premium cost
+ * 
+ * CRITICAL: Use PROFESSIONAL tone, NOT "fury"
+ * Gold standard: Firm, measured, organizational voice
  */
 export const stage3_addTone = async (
   structuredLetter: string
 ): Promise<string> => {
-  console.log('🔥 STAGE 3: Adding professional fury with Opus 4.1 (frontier writing)');
+  console.log('✍️ STAGE 3: Adding professional tone with Opus 4.1 (measured, firm)');
   
   const response = await callOpenRouter({
     model: TONE_MODEL,
     messages: [
       {
         role: 'system',
-        content: `You are a senior partner with 20 years of experience, personally frustrated by HMRC's incompetence.
+        content: `You are transforming a structured complaint letter into professional, firm language suitable for an HMRC complaint.
 
-Take the structured letter and enhance it with authentic professional fury while keeping the EXACT structure.
+CRITICAL TONE GUIDELINES:
 
-CRITICAL: If the structured letter mentions PRECEDENT TONE EXAMPLES from successful complaints,
-USE THEIR LANGUAGE as inspiration. Notice how they:
-- Express frustration professionally
-- Use memorable phrases
-- Cite personal experience
-- Create vivid imagery
-- Show specific counts
+1. **Use ORGANIZATIONAL voice** - NOT first-person singular:
+   ✅ "We are writing to lodge a formal complaint..."
+   ✅ "Our firm has experienced..."
+   ✅ "The client has been deprived..."
+   ❌ "I have rarely encountered..."
+   ❌ "In my twenty years..."
+   
+2. **Use MEASURED professional language** - NOT aggressive:
+   ✅ "This represents a comprehensive failure of..."
+   ✅ "These delays are significantly below the standards..."
+   ✅ "The combination of failures is particularly concerning"
+   ❌ "your incompetence"
+   ❌ "phantom letter"
+   ❌ "would be comedic if..."
+   ❌ "breathtaking consistency"
+   ❌ "abandoned by HMRC"
 
-**What to add:**
+3. **Professional section headings**:
+   ✅ "Chronological Timeline of Events"
+   ✅ "Charter Violations and CRG Breaches"
+   ✅ "Impact on Our Client and Professional Practice"
+   ❌ "TIMELINE OF FAILURES"
+   ❌ "CHARTER & COMPLAINTS REFORM VIOLATIONS"
 
-1. **Opening punch** - Start with impact, not bureaucracy:
-   "In twenty years of practice, I have rarely encountered such comprehensive failure..."
+4. **Maintain FIRMNESS through**:
+   - Specific facts: "14+ months vs 30-day standard = 1,400% excess"
+   - Clear citations: "This comprehensively breaches CRG4025"
+   - Professional disapproval: "completely unacceptable"
+   - Logical consequences: "We will immediately escalate to Tier 2"
+   
+5. **Express concern professionally**:
+   ✅ "particularly concerning"
+   ✅ "significantly below acceptable standards"
+   ✅ "comprehensive failure of service delivery"
+   ✅ "We are disappointed to report..."
+   ❌ "shocking"
+   ❌ "outrageous"
+   ❌ "ridiculous"
 
-2. **Memorable phrases** - Make failures vivid:
-   - "phantom letter" (for lost correspondence)
-   - "would be comedic if the consequences weren't so serious"
-   - "The left hand has no idea what the right hand instructed"
-   - "This isn't a delay - it's an abandonment"
-   
-3. **Specific frustration** - Count everything:
-   - "Four separate attempts" not "multiple attempts"
-   - "Each promised callback never materialised"
-   - "Nine months of absolute silence"
-   
-4. **Personal authority** - Use your experience:
-   - "In twenty years of handling HMRC matters..."
-   - "I have rarely encountered..."
-   - "One of the most severe examples..."
-   
-5. **Power calculations** - Make numbers sting:
-   - "1,400% excess over reasonable timescales"
-   - "180 working days beyond your Charter promise"
-   
-6. **Escalation confidence** - No doubt:
-   - "The Adjudicator routinely upholds complaints with far shorter delays"
-   - "The evidence here is incontrovertible"
-   
+6. **AVOID entirely**:
+   - Sarcasm or mockery
+   - Personal attacks ("your incompetence")
+   - Hyperbolic language ("breathtaking", "comedic")
+   - Rhetorical questions
+   - First-person singular ("I")
+   - Emotional phrases
+
+7. **Standard professional phrases** to USE:
+   - "We are writing to lodge a formal complaint regarding..."
+   - "This represents a significant breach of..."
+   - "The combination of... represents a comprehensive failure..."
+   - "significantly below the standards taxpayers have a right to expect"
+   - "We trust HMRC will act swiftly to resolve this matter"
+   - "Given the evidence outlined above..."
+   - "These delays are completely unacceptable"
+
+8. **Closing tone**:
+   ✅ "We trust HMRC will treat this matter with appropriate urgency"
+   ✅ "We look forward to a substantive response"
+   ✅ "Failure to respond adequately will result in immediate escalation"
+   ❌ "Make no mistake, we will escalate"
+   ❌ "We have limited optimism"
+
+9. **Precedent language** (if provided):
+   - USE professional phrases from precedents
+   - ADAPT (don't copy verbatim) successful patterns
+   - AVOID any aggressive phrases even if in precedents
+
+**What to enhance:**
+- Make timeline entries clear and factual
+- Emphasize patterns of failure professionally
+- Calculate percentages and excesses
+- State impact clearly but without emotion
+- Request specific remedies firmly
+
 **What NOT to change:**
-- DON'T change the structure
-- DON'T change dates, numbers, or facts
-- DON'T add sarcasm or excessive editorializing
-- DON'T make it apologetic or tentative
+- Structure must remain EXACTLY as provided
+- All dates, numbers, facts must be preserved
+- Professional headings as given
+- Factual accuracy
 
-**Tone guide:**
-- Professional but genuinely angry
-- Specific, not generic
-- Confident, not arrogant
-- Direct, not rambling
+**Temperature calibration:**
+This prompt uses temperature 0.4 for consistent professional output (not 0.7).
 
-Transform this into a letter that makes HMRC sit up and take notice.`
+Transform the structured letter into a firm, professional complaint that demonstrates clear failures without aggressive language.`
       },
       {
         role: 'user',
-        content: `Add authentic professional fury to this structured letter:
+        content: `Add professional, measured tone to this structured letter:
 
 ${structuredLetter}
 
-Transform it now (keep structure, add power):`
+Transform it now (firm but professional, organizational voice, no "I"):`
       }
     ],
-    temperature: 0.7, // Higher temperature for creative language
+    temperature: 0.4, // Lower temperature for consistent professional output
     max_tokens: 4000,
   });
 
