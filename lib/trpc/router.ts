@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { supabaseAdmin } from '@/lib/supabase/client';
 import { processDocument } from '@/lib/documentProcessor';
 import { analyzeComplaint, generateComplaintLetter, generateResponse } from '@/lib/openrouter/client';
+import { generateComplaintLetterThreeStage } from '@/lib/openrouter/three-stage-client';
 import { searchKnowledgeBase, searchKnowledgeBaseMultiAngle, searchPrecedents } from '@/lib/vectorSearch';
 import { logTime } from '@/lib/timeTracking';
 import { sanitizeForLLM } from '@/lib/privacy';
@@ -260,6 +261,7 @@ export const appRouter = router({
         analysis: z.any(),
         practiceLetterhead: z.string().optional(), // Optional: custom practice details
         chargeOutRate: z.number().optional(), // Optional: custom charge-out rate
+        useThreeStage: z.boolean().optional(), // Optional: use three-stage pipeline (default: true)
       }))
       .mutation(async ({ input }) => {
         // Get complaint details
@@ -271,14 +273,30 @@ export const appRouter = router({
         
         if (!complaint) throw new Error('Complaint not found');
         
-        // Generate letter with optional practice letterhead and rate
-        const letter = await generateComplaintLetter(
-          input.analysis,
-          (complaint as any).complaint_reference,
-          (complaint as any).hmrc_department || 'HMRC',
-          input.practiceLetterhead, // Pass practice details if provided
-          input.chargeOutRate // Pass charge-out rate if provided
-        );
+        // Use three-stage pipeline by default, or single-stage if specified
+        const useThreeStage = input.useThreeStage !== false; // Default to true
+        
+        let letter: string;
+        
+        if (useThreeStage) {
+          console.log('🚀 Using THREE-STAGE pipeline for letter generation');
+          letter = await generateComplaintLetterThreeStage(
+            input.analysis,
+            (complaint as any).complaint_reference,
+            (complaint as any).hmrc_department || 'HMRC',
+            input.practiceLetterhead,
+            input.chargeOutRate
+          );
+        } else {
+          console.log('📝 Using SINGLE-STAGE letter generation (legacy)');
+          letter = await generateComplaintLetter(
+            input.analysis,
+            (complaint as any).complaint_reference,
+            (complaint as any).hmrc_department || 'HMRC',
+            input.practiceLetterhead,
+            input.chargeOutRate
+          );
+        }
         
         // Log time (optional - don't fail if this fails)
         try {
