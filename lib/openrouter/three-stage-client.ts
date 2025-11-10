@@ -194,33 +194,37 @@ We are writing to lodge a formal complaint regarding [core issue].
 
 **[Full Date]:** [Factual description of event]. [Additional context if needed].
 
-[Continue chronologically - be specific with dates]
+[Continue chronologically - be specific with dates, each date MUST be bold]
 
 **7. CHARTER VIOLATIONS AND CRG BREACHES**
 
 This handling represents a breach of multiple HMRC Charter commitments and Complaints Resolution Guidance standards:
 
-**1. [Violation Name] - [CRG Reference]**
+**1. [CRG Reference e.g., CRG4025] - [Violation Name e.g., Unreasonable Delay]**
 
 [Factual explanation of how HMRC breached this standard. Include specific timelines, percentages, or comparisons. State why this matters.]
 
-**2. [Violation Name] - [CRG Reference]**
+**2. [CRG Reference] - [Violation Name]**
 
 [Factual explanation...]
 
-[Continue numbering for all violations - typically 3-7]
+[Continue numbering for all violations - typically 3-7. CRG reference FIRST, then violation name]
 
 **8. IMPACT ON OUR CLIENT AND PROFESSIONAL PRACTICE**
 
 The financial impact extends beyond the £[X] [relief/refund] our client cannot access:
 
-**Professional costs:** Per CRG5225, our client is entitled to reimbursement of professional fees directly attributable to HMRC's errors. Our standard charge-out rate is £${chargeOutRate || 185} per hour. The time spent addressing these failures includes [brief description]. A detailed invoice will be submitted once this complaint is upheld.
+**Client financial impact:** [Brief description of cash flow, lost opportunity, etc.]
 
 **Client distress:** [Brief factual description of impact]
 
 **Public purse impact:** [Brief description of wasted HMRC resources]
 
-**9. RESOLUTION REQUIRED**
+**9. PROFESSIONAL COSTS**
+
+Per CRG5225, our client is entitled to reimbursement of professional fees directly attributable to HMRC's errors. Our standard charge-out rate is £${chargeOutRate || 185} per hour. The time spent addressing these failures includes [brief description of tasks]. A detailed invoice will be submitted once this complaint is upheld.
+
+**10. RESOLUTION REQUIRED**
 
 We require the following specific actions:
 
@@ -228,11 +232,11 @@ We require the following specific actions:
 2. [Specific action required]
 3. [Continue numbered list - typically 5-7 items]
 
-**10. RESPONSE DEADLINE**
+**11. RESPONSE DEADLINE**
 
 We require a substantive response to this complaint within 15 working days of receipt. Failure to provide an adequate response will result in immediate escalation to Tier 2, and subsequently to the Adjudicator's Office if necessary.
 
-**11. CLOSING**
+**12. CLOSING**
 
 We trust HMRC will treat this matter with the appropriate urgency.
 
@@ -243,7 +247,7 @@ Yours faithfully,
 [Firm Name]
 Chartered Accountants
 
-**12. ENCLOSURES**
+**13. ENCLOSURES**
 
 Enc: Copies of:
 - [Specific document or correspondence]
@@ -259,11 +263,14 @@ STRUCTURING REQUIREMENTS:
 3. **Violations**: Number clearly (1, 2, 3...), not bullets
 4. **Voice**: Organizational ("We", "Our firm") not first-person ("I")
 5. **Headings**: Professional style (not ALL CAPS aggressive style)
-6. **Costs**: Mention entitlement, give rate, defer detailed invoice
+6. **Costs**: Separate Professional Costs section (section 9)
 7. **Enclosures**: List specific documents, not "complete correspondence"
+8. **CRG Citations**: CRG reference FIRST, then violation name (e.g., "**1. CRG4025 - Unreasonable Delay**")
+9. **Bold Formatting**: ALL section headings MUST be bold (use **double asterisks**)
+10. **Bold Dates**: ALL dates in timeline MUST be bold (e.g., "**16 February 2024:**")
 
 Extract all relevant information from the fact sheet and organize it into this exact structure.
-Do NOT add tone or emotion - just organize facts professionally.`
+Do NOT add tone or emotion - just organize facts professionally with proper formatting.`
       },
       {
         role: 'user',
@@ -357,11 +364,14 @@ CRITICAL TONE GUIDELINES:
 7. **Standard professional phrases** to USE:
    - "We are writing to lodge a formal complaint regarding..."
    - "This represents a significant breach of..."
-   - "The combination of... represents a comprehensive failure..."
+   - "The combination of... represents multiple breaches..."
    - "significantly below the standards taxpayers have a right to expect"
    - "We trust HMRC will act swiftly to resolve this matter"
    - "Given the evidence outlined above..."
    - "These delays are completely unacceptable"
+   - "clear breach of" (not "fundamental breach")
+   - "significant" (not "egregious")
+   - "multiple breaches" (not "comprehensive breaches")
 
 8. **Closing tone**:
    ✅ "We trust HMRC will treat this matter with appropriate urgency"
@@ -375,6 +385,13 @@ CRITICAL TONE GUIDELINES:
    - ADAPT (don't copy verbatim) successful patterns
    - AVOID any aggressive phrases even if in precedents
 
+10. **Language refinements** (measured professional terms):
+   - Use "significant breach" NOT "egregious example"
+   - Use "multiple breaches" NOT "comprehensive breaches"
+   - Use "clear breach" NOT "fundamental breach"
+   - Use "completely" NOT "wholly"
+   - "Comprehensive failure" is acceptable but use sparingly
+
 **What to enhance:**
 - Make timeline entries clear and factual
 - Emphasize patterns of failure professionally
@@ -387,11 +404,17 @@ CRITICAL TONE GUIDELINES:
 - All dates, numbers, facts must be preserved
 - Professional headings as given
 - Factual accuracy
+- Bold formatting (**double asterisks**) on headings and dates
+
+**Critical formatting requirements:**
+- ALL section headings MUST be bold (e.g., **Chronological Timeline of Events**)
+- ALL dates in timeline MUST be bold (e.g., **16 February 2024:**)
+- Violation numbers MUST be bold (e.g., **1. CRG4025 - Unreasonable Delay**)
 
 **Temperature calibration:**
 This prompt uses temperature 0.4 for consistent professional output (not 0.7).
 
-Transform the structured letter into a firm, professional complaint that demonstrates clear failures without aggressive language.`
+Transform the structured letter into a firm, professional complaint that demonstrates clear failures without aggressive language, with all formatting preserved.`
       },
       {
         role: 'user',
