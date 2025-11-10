@@ -101,7 +101,7 @@ export async function keywordSearch(
       score: score / 10, // Normalize to 0-1 range (roughly)
       source: 'keyword' as const
     };
-  }).sort((a, b) => b.score - a.score);
+  }).sort((a: any, b: any) => b.score - a.score);
 }
 
 // ============================================================================
