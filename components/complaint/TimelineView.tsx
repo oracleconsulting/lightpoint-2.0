@@ -42,6 +42,7 @@ interface TimelineViewProps {
 
 export function TimelineView({ events, documents = [], letters = [] }: TimelineViewProps) {
   const [viewingDoc, setViewingDoc] = useState<Document | null>(null);
+  const [viewingLetter, setViewingLetter] = useState<Letter | null>(null);
 
   // Fetch signed URL when viewing a document
   const { data: signedUrlData, isLoading: isLoadingUrl, error: urlError } = trpc.documents.getSignedUrl.useQuery(
@@ -245,73 +246,7 @@ export function TimelineView({ events, documents = [], letters = [] }: TimelineV
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => {
-                                // Create a modal/new window to show full letter
-                                const letterWindow = window.open('', '_blank', 'width=800,height=600');
-                                if (letterWindow) {
-                                  letterWindow.document.write(`
-                                    <!DOCTYPE html>
-                                    <html>
-                                    <head>
-                                      <title>${(event as any).letterData.letter_type.replace(/_/g, ' ').toUpperCase()}</title>
-                                      <style>
-                                        body {
-                                          font-family: 'Times New Roman', serif;
-                                          max-width: 800px;
-                                          margin: 40px auto;
-                                          padding: 20px;
-                                          line-height: 1.6;
-                                          color: #333;
-                                        }
-                                        h1 {
-                                          color: #2563eb;
-                                          margin-bottom: 20px;
-                                        }
-                                        .meta {
-                                          color: #666;
-                                          font-size: 0.9em;
-                                          margin-bottom: 30px;
-                                          padding-bottom: 10px;
-                                          border-bottom: 2px solid #e5e7eb;
-                                        }
-                                        .content {
-                                          white-space: pre-wrap;
-                                        }
-                                        .print-btn {
-                                          position: fixed;
-                                          top: 20px;
-                                          right: 20px;
-                                          padding: 10px 20px;
-                                          background: #2563eb;
-                                          color: white;
-                                          border: none;
-                                          border-radius: 6px;
-                                          cursor: pointer;
-                                          font-size: 14px;
-                                        }
-                                        .print-btn:hover {
-                                          background: #1d4ed8;
-                                        }
-                                        @media print {
-                                          .print-btn { display: none; }
-                                        }
-                                      </style>
-                                    </head>
-                                    <body>
-                                      <button class="print-btn" onclick="window.print()">🖨️ Print Letter</button>
-                                      <h1>${(event as any).letterData.letter_type.replace(/_/g, ' ').toUpperCase()}</h1>
-                                      <div class="meta">
-                                        Generated: ${format(new Date((event as any).letterData.created_at), 'PPP p')}<br>
-                                        ${(event as any).letterData.locked_at ? '🔒 Locked' : ''} 
-                                        ${(event as any).letterData.sent_at ? '✉️ Sent' : ''}
-                                      </div>
-                                      <div class="content">${(event as any).letterData.letter_content}</div>
-                                    </body>
-                                    </html>
-                                  `);
-                                  letterWindow.document.close();
-                                }
-                              }}
+                              onClick={() => setViewingLetter((event as any).letterData)}
                             >
                               <Eye className="h-4 w-4 mr-2" />
                               View Full Letter
@@ -344,6 +279,93 @@ export function TimelineView({ events, documents = [], letters = [] }: TimelineV
           )}
         </div>
       </CardContent>
+
+      {/* Letter Viewer Modal */}
+      {viewingLetter && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setViewingLetter(null)}>
+          <Card className="w-full max-w-4xl max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <CardHeader className="border-b bg-muted/30">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-2xl text-blue-600">
+                    {viewingLetter.letter_type.replace(/_/g, ' ').toUpperCase()}
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Generated: {format(new Date(viewingLetter.created_at), 'PPP p')}
+                  </p>
+                  <div className="flex gap-2 mt-2">
+                    {viewingLetter.locked_at && (
+                      <Badge variant="outline" className="bg-blue-100 text-blue-700">
+                        🔒 Locked
+                      </Badge>
+                    )}
+                    {viewingLetter.sent_at && (
+                      <Badge variant="outline" className="bg-green-100 text-green-700">
+                        ✉️ Sent
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const printWindow = window.open('', '_blank');
+                      if (printWindow) {
+                        printWindow.document.write(`
+                          <!DOCTYPE html>
+                          <html>
+                          <head>
+                            <title>Print Letter</title>
+                            <style>
+                              body {
+                                font-family: 'Times New Roman', serif;
+                                max-width: 800px;
+                                margin: 40px auto;
+                                padding: 20px;
+                                line-height: 1.6;
+                                color: #333;
+                              }
+                              pre {
+                                font-family: 'Times New Roman', serif;
+                                white-space: pre-wrap;
+                                margin: 0;
+                              }
+                            </style>
+                          </head>
+                          <body>
+                            <pre>${viewingLetter.letter_content}</pre>
+                            <script>window.print(); window.close();</script>
+                          </body>
+                          </html>
+                        `);
+                        printWindow.document.close();
+                      }
+                    }}
+                  >
+                    🖨️ Print
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setViewingLetter(null)}
+                  >
+                    ✕
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
+              <div className="font-serif" style={{ fontFamily: "'Times New Roman', serif", lineHeight: '1.6' }}>
+                <pre className="whitespace-pre-wrap font-serif text-base leading-relaxed">
+                  {viewingLetter.letter_content}
+                </pre>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </Card>
   );
 }
