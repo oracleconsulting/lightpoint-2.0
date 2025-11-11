@@ -72,10 +72,7 @@ export function FollowUpManager({
   const handleGenerateFollowUp = async () => {
     setGenerating(true);
     try {
-      // Get current analysis
-      const analysis = await utils.client.analysis.getByComplaintId.query(complaintId);
-      
-      // Generate follow-up letter with context
+      // Prepare follow-up context
       const followUpContext = `
 FOLLOW-UP LETTER CONTEXT:
 
@@ -99,31 +96,22 @@ INSTRUCTIONS:
 - Include all previous reference numbers
       `.trim();
 
-      const response = await fetch('/api/trpc/letters.generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          complaintId,
-          analysis: { ...analysis, additionalContext: followUpContext },
-          isFollowUp: true,
-        }),
-      });
-
-      if (!response.ok) throw new Error('Failed to generate follow-up');
-
-      // Log time (20 minutes for follow-up)
+      // For now, just alert with the context - user can manually generate
+      // TODO: Implement proper follow-up letter generation flow
+      alert(`Follow-up letter generation coming soon!\n\nFor now:\n1. Add your context above\n2. Generate a new letter with this information\n3. The system will include follow-up language automatically`);
+      
+      // Log time for preparing follow-up
       await utils.client.time.logActivity.mutate({
         complaintId,
-        activity: isOverdue ? 'Follow-up Letter (Overdue)' : 'Follow-up Letter',
+        activity: isOverdue ? 'Follow-up Letter Preparation (Overdue)' : 'Follow-up Letter Preparation',
         duration: 20,
       });
 
-      alert('Follow-up letter generated successfully!');
       setAdditionalContext('');
       onFollowUpGenerated?.();
     } catch (error) {
-      console.error('Follow-up generation error:', error);
-      alert('Failed to generate follow-up letter');
+      console.error('Follow-up preparation error:', error);
+      alert('Failed to prepare follow-up');
     } finally {
       setGenerating(false);
     }
