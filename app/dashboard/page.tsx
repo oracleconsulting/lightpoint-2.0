@@ -13,6 +13,7 @@ const MOCK_ORGANIZATION_ID = '00000000-0000-0000-0000-000000000001';
 
 export default function DashboardPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string | 'all'>('all');
   
   const utils = trpc.useUtils();
   const { data: complaints, isLoading, error } = trpc.complaints.list.useQuery({
@@ -79,10 +80,16 @@ export default function DashboardPage() {
 
   const stats = {
     total: complaints?.length || 0,
+    assessment: complaints?.filter((c: any) => c.status === 'assessment').length || 0,
     active: complaints?.filter((c: any) => c.status === 'active').length || 0,
     escalated: complaints?.filter((c: any) => c.status === 'escalated').length || 0,
     resolved: complaints?.filter((c: any) => c.status === 'resolved').length || 0,
   };
+
+  // Filter complaints based on selected status
+  const filteredComplaints = statusFilter === 'all' 
+    ? complaints 
+    : complaints?.filter((c: any) => c.status === statusFilter);
 
   return (
     <div className="min-h-screen bg-background">
@@ -111,9 +118,12 @@ export default function DashboardPage() {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <Card>
+        {/* Stats - Clickable for filtering */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+          <Card 
+            className={`cursor-pointer transition-all hover:shadow-md ${statusFilter === 'all' ? 'ring-2 ring-primary' : ''}`}
+            onClick={() => setStatusFilter('all')}
+          >
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -125,7 +135,25 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card 
+            className={`cursor-pointer transition-all hover:shadow-md ${statusFilter === 'assessment' ? 'ring-2 ring-primary' : ''}`}
+            onClick={() => setStatusFilter('assessment')}
+          >
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Assessment</p>
+                  <p className="text-3xl font-bold">{stats.assessment}</p>
+                </div>
+                <FileText className="h-8 w-8 text-blue-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className={`cursor-pointer transition-all hover:shadow-md ${statusFilter === 'active' ? 'ring-2 ring-primary' : ''}`}
+            onClick={() => setStatusFilter('active')}
+          >
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -137,7 +165,10 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card 
+            className={`cursor-pointer transition-all hover:shadow-md ${statusFilter === 'escalated' ? 'ring-2 ring-primary' : ''}`}
+            onClick={() => setStatusFilter('escalated')}
+          >
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -149,7 +180,10 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card 
+            className={`cursor-pointer transition-all hover:shadow-md ${statusFilter === 'resolved' ? 'ring-2 ring-primary' : ''}`}
+            onClick={() => setStatusFilter('resolved')}
+          >
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -165,7 +199,20 @@ export default function DashboardPage() {
         {/* Complaints List */}
         <Card>
           <CardHeader>
-            <CardTitle>Recent Complaints</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>
+                {statusFilter === 'all' ? 'All Complaints' : `${statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)} Complaints`}
+              </CardTitle>
+              {statusFilter !== 'all' && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setStatusFilter('all')}
+                >
+                  Clear Filter
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -176,9 +223,9 @@ export default function DashboardPage() {
                 <p className="font-medium mb-2">Error loading complaints</p>
                 <p className="text-sm">{error.message}</p>
               </div>
-            ) : complaints && complaints.length > 0 ? (
+            ) : filteredComplaints && filteredComplaints.length > 0 ? (
               <div className="space-y-4">
-                {complaints.map((complaint: any) => (
+                {filteredComplaints.map((complaint: any) => (
                   <div key={complaint.id} className="border rounded-lg p-4 hover:bg-muted transition-colors relative group">
                     <Link href={`/complaints/${complaint.id}`} className="block">
                       <div className="flex items-start justify-between">
@@ -216,13 +263,21 @@ export default function DashboardPage() {
             ) : (
               <div className="text-center py-12">
                 <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground mb-4">No complaints yet</p>
-                <Link href="/complaints/new">
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create First Complaint
+                <p className="text-muted-foreground mb-4">
+                  {statusFilter === 'all' ? 'No complaints yet' : `No ${statusFilter} complaints`}
+                </p>
+                {statusFilter !== 'all' ? (
+                  <Button onClick={() => setStatusFilter('all')} variant="outline">
+                    View All Complaints
                   </Button>
-                </Link>
+                ) : (
+                  <Link href="/complaints/new">
+                    <Button>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create First Complaint
+                    </Button>
+                  </Link>
+                )}
               </div>
             )}
           </CardContent>

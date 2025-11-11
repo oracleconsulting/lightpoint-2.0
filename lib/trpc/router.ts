@@ -719,6 +719,35 @@ export const appRouter = router({
         
         return data;
       }),
+
+    logActivity: publicProcedure
+      .input(z.object({
+        complaintId: z.string(),
+        activity: z.string(),
+        duration: z.number(), // minutes
+        rate: z.number().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { data, error } = await supabaseAdmin
+          .from('time_logs')
+          .insert({
+            complaint_id: input.complaintId,
+            activity_type: input.activity,
+            duration_minutes: input.duration,
+            hourly_rate: input.rate || 250,
+            logged_at: new Date().toISOString(),
+          })
+          .select()
+          .single();
+        
+        if (error) {
+          console.error('Time logging error:', error);
+          // Don't throw - time logging is optional
+          return null;
+        }
+        
+        return data;
+      }),
   }),
 });
 

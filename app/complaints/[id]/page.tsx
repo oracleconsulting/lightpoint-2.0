@@ -7,6 +7,10 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { DocumentUploader } from '@/components/complaint/DocumentUploader';
 import { TimelineView } from '@/components/complaint/TimelineView';
 import { OCRFailureCard } from '@/components/complaint/OCRFailureCard';
+import { StatusManager } from '@/components/complaint/StatusManager';
+import { TimeTracker } from '@/components/complaint/TimeTracker';
+import { ResponseUploader } from '@/components/complaint/ResponseUploader';
+import { FollowUpManager } from '@/components/complaint/FollowUpManager';
 import { ViolationChecker } from '@/components/analysis/ViolationChecker';
 import { PrecedentMatcher } from '@/components/analysis/PrecedentMatcher';
 import { ReAnalysisPrompt } from '@/components/analysis/ReAnalysisPrompt';
@@ -25,6 +29,14 @@ export default function ComplaintDetailPage({ params }: { params: { id: string }
   const { data: complaint, isLoading } = trpc.complaints.getById.useQuery(params.id);
   const { data: documents } = trpc.documents.list.useQuery(params.id);
   const { data: timeData } = trpc.time.getComplaintTime.useQuery(params.id);
+  const { data: savedLetters } = trpc.letters.list.useQuery(params.id);
+
+  // Get practice settings for charge-out rate
+  const practiceSettings = typeof window !== 'undefined' ? 
+    JSON.parse(localStorage.getItem('lightpoint_practice_settings') || 'null') : null;
+
+  // Auto-log time for analysis
+  const logTime = trpc.time.logActivity.useMutation();
 
   const retryOCR = trpc.documents.retryOCR.useMutation({
     onSuccess: () => {
@@ -41,6 +53,17 @@ export default function ComplaintDetailPage({ params }: { params: { id: string }
     onSuccess: (data) => {
       console.log('✅ Analysis complete:', data);
       setAnalysisData(data);
+      
+      // Auto-log time for analysis (based on document count)
+      const docCount = (documents as any[] || []).length;
+      const estimatedMinutes = Math.min(30 + (docCount * 10), 60); // 30-60 minutes
+      
+      logTime.mutate({
+        complaintId: params.id,
+        activity: 'Initial Analysis',
+        duration: estimatedMinutes,
+        rate: practiceSettings?.chargeOutRate || 250,
+      });
     },
     onError: (error) => {
       console.error('❌ Analysis failed:', error);
@@ -60,6 +83,14 @@ export default function ComplaintDetailPage({ params }: { params: { id: string }
   const generateLetter = trpc.letters.generateComplaint.useMutation({
     onSuccess: (data) => {
       setGeneratedLetter(data.letter);
+      
+      // Auto-log time for letter generation
+      logTime.mutate({
+        complaintId: params.id,
+        activity: 'Letter Generation',
+        duration: 20,
+        rate: practiceSettings?.chargeOutRate || 250,
+      });
     },
   });
 
@@ -183,60 +214,86 @@ This precedent was manually added because it represents a novel complaint type n
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          {/* Left Column - Documents & Actions */}
+          {/* Left Column - Status, Actions & Time */}
           <div className="xl:col-span-1 space-y-6">
-            <DocumentUploader complaintId={params.id} />
+            {/* Status Manager */}
+            <StatusManager
+              complaintId={params.id}
+              currentStatus={complaintData.status}
+              onStatusChange={() => {
+                utils.complaints.getById.invalidate(params.id);
+              }}
+            />
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button 
-                  onClick={handleAnalyze}
-                  disabled={!documents || documents.length === 0 || analyzeDocument.isPending}
-                  className="w-full"
-                >
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  {analyzeDocument.isPending ? 'Analyzing...' : 'Analyze Complaint'}
-                </Button>
+            {/* Document Uploader - only for assessment/active */}
+            {(complaintData.status === 'assessment' || complaintData.status === 'active') && (
+              <DocumentUploader complaintId={params.id} />
+            )}
 
-                <Button 
-                  onClick={handleGenerateLetter}
-                  disabled={!analysisData || generateLetter.isPending}
-                  className="w-full"
-                  variant="outline"
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  {generateLetter.isPending ? 'Generating...' : 'Generate Letter'}
-                </Button>
-
-                <Button disabled className="w-full" variant="outline">
-                  <Send className="h-4 w-4 mr-2" />
-                  Send to Client
-                </Button>
-              </CardContent>
-            </Card>
-
-            {timeData && (
+            {/* Actions - only for assessment */}
+            {complaintData.status === 'assessment' && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Time Tracking</CardTitle>
+                  <CardTitle>Actions</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Total Time:</span>
-                      <span className="font-medium">{(timeData as any).totalHours}h</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Activities:</span>
-                      <span className="font-medium">{(timeData as any).logs.length}</span>
-                    </div>
-                  </div>
+                <CardContent className="space-y-3">
+                  <Button 
+                    onClick={handleAnalyze}
+                    disabled={!documents || documents.length === 0 || analyzeDocument.isPending}
+                    className="w-full"
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    {analyzeDocument.isPending ? 'Analyzing...' : 'Analyze Complaint'}
+                  </Button>
+
+                  <Button 
+                    onClick={handleGenerateLetter}
+                    disabled={!analysisData || generateLetter.isPending}
+                    className="w-full"
+                    variant="outline"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    {generateLetter.isPending ? 'Generating...' : 'Generate Letter'}
+                  </Button>
                 </CardContent>
               </Card>
             )}
+
+            {/* Response Uploader - only for active complaints */}
+            {complaintData.status === 'active' && (
+              <ResponseUploader
+                complaintId={params.id}
+                onResponseUploaded={() => {
+                  utils.documents.list.invalidate(params.id);
+                  utils.time.getComplaintTime.invalidate(params.id);
+                }}
+              />
+            )}
+
+            {/* Follow-Up Manager - for active/escalated complaints */}
+            {(complaintData.status === 'active' || complaintData.status === 'escalated') && savedLetters && (savedLetters as any[]).length > 0 && (
+              <FollowUpManager
+                complaintId={params.id}
+                lastLetterDate={(savedLetters as any[])[0]?.created_at}
+                hasResponse={documents && (documents as any[]).some((d: any) => d.document_type === 'response')}
+                onFollowUpGenerated={() => {
+                  utils.letters.list.invalidate(params.id);
+                  utils.time.getComplaintTime.invalidate(params.id);
+                }}
+              />
+            )}
+
+            {/* Time Tracker */}
+            <TimeTracker
+              complaintId={params.id}
+              entries={timeData?.logs?.map((log: any) => ({
+                activity: log.activity_type,
+                duration: log.duration_minutes,
+                rate: log.hourly_rate,
+                date: log.logged_at,
+              })) || []}
+              chargeOutRate={practiceSettings?.chargeOutRate || 250}
+            />
           </div>
 
           {/* Right Column - Analysis & Timeline */}
