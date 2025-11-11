@@ -524,11 +524,28 @@ export const appRouter = router({
         
         if (!document) throw new Error('Document not found');
         
+        const doc = document as any;
+        
+        // Download the file from storage
+        const { data: fileData, error: downloadError } = await supabaseAdmin
+          .storage
+          .from('complaint-documents')
+          .download(doc.storage_path);
+        
+        if (downloadError || !fileData) {
+          throw new Error(`Failed to download file: ${downloadError?.message || 'Unknown error'}`);
+        }
+        
+        // Convert blob to buffer
+        const arrayBuffer = await fileData.arrayBuffer();
+        const fileBuffer = Buffer.from(arrayBuffer);
+        
         // Re-process the document (will retry OCR)
         await processDocument(
-          (document as any).complaint_id,
-          (document as any).storage_path,
-          (document as any).filename
+          fileBuffer,
+          doc.complaint_id,
+          doc.document_type || 'evidence',
+          doc.filename
         );
         
         return { success: true };
