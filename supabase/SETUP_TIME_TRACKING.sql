@@ -149,12 +149,12 @@ ORDER BY tl.created_at DESC;
 SELECT 
   c.complaint_reference,
   COUNT(tl.id) as activity_count,
-  SUM(tl.minutes_spent) as total_minutes,
-  ROUND(SUM(tl.minutes_spent)::numeric / 60, 2) as total_hours
+  COALESCE(SUM(tl.minutes_spent), 0) as total_minutes,
+  ROUND(COALESCE(SUM(tl.minutes_spent), 0)::numeric / 60, 2) as total_hours
 FROM complaints c
 LEFT JOIN time_logs tl ON tl.complaint_id = c.id
 GROUP BY c.id, c.complaint_reference
-ORDER BY total_minutes DESC NULLS LAST;
+ORDER BY COALESCE(SUM(tl.minutes_spent), 0) DESC;
 
 -- ============================================================================
 -- READY TO USE!
