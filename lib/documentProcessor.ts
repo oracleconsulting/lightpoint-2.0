@@ -9,7 +9,7 @@ import mammoth from 'mammoth';
 import * as XLSX from 'xlsx';
 
 /**
- * Extract text from image using GPT-4 Vision (Claude Vision not available via OpenRouter yet)
+ * Extract text from image using Claude 3.5 Sonnet (best vision model available on OpenRouter)
  */
 const extractTextFromImage = async (imageBuffer: Buffer): Promise<string> => {
   try {
@@ -23,55 +23,150 @@ const extractTextFromImage = async (imageBuffer: Buffer): Promise<string> => {
     const base64Image = imageBuffer.toString('base64');
     const mimeType = detectImageMimeType(imageBuffer);
     
-    console.log(`🔍 Performing OCR on image (${mimeType})...`);
+    console.log(`🔍 Performing OCR on image (${mimeType}, ${Math.round(imageBuffer.length / 1024)}KB)...`);
     
-    // Use GPT-4 Vision for OCR via OpenRouter
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://lightpoint.app',
-        'X-Title': 'Lightpoint HMRC Complaint System',
-      },
-      body: JSON.stringify({
-        model: 'openai/gpt-4o',  // GPT-4o has vision capabilities
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: 'Extract ALL text from this image. This is an HMRC document. Preserve formatting, dates, reference numbers, amounts, and all details exactly as shown. Return ONLY the extracted text, no explanations.'
-              },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: `data:${mimeType};base64,${base64Image}`
-                }
-              }
-            ]
-          }
-        ],
-        max_tokens: 4000,
-        temperature: 0.1  // Low temperature for accurate OCR
-      }),
-    });
-    
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`OCR API error: ${response.status} - ${error}`);
+    // Compress large images if needed (max 5MB for API)
+    let processedImage = base64Image;
+    if (imageBuffer.length > 5 * 1024 * 1024) {
+      console.log('⚠️ Image too large, attempting compression...');
+      // For now, just warn - we'll handle compression if needed
     }
     
-    const data = await response.json();
-    const extractedText = data.choices[0].message.content;
+    // Try Claude 3.5 Sonnet first (best vision model on OpenRouter)
+    console.log('🤖 Attempting OCR with Claude 3.5 Sonnet...');
+    try {
+      const claudeResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://lightpoint.app',
+          'X-Title': 'Lightpoint HMRC Complaint System',
+        },
+        body: JSON.stringify({
+          model: 'anthropic/claude-3.5-sonnet',  // Excellent vision capabilities
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text: `You are performing OCR (Optical Character Recognition) on an HMRC tax document.
+
+INSTRUCTIONS:
+1. Extract ALL text visible in the image
+2. Preserve exact formatting, line breaks, and structure
+3. Include ALL dates, reference numbers, amounts, and details
+4. Maintain the document's original layout as much as possible
+5. If text is unclear, use [unclear] but transcribe your best interpretation
+6. Return ONLY the extracted text, no explanations or commentary
+
+This is critical for complaint analysis - accuracy is essential.`
+                },
+                {
+                  type: 'image',
+                  source: {
+                    type: 'base64',
+                    media_type: mimeType,
+                    data: processedImage
+                  }
+                }
+              ]
+            }
+          ],
+          max_tokens: 4000,
+          temperature: 0.1  // Low temperature for accurate OCR
+        }),
+      });
+      
+      if (!claudeResponse.ok) {
+        const errorText = await claudeResponse.text();
+        console.error(`❌ Claude OCR failed: ${claudeResponse.status} - ${errorText}`);
+        throw new Error(`Claude API error: ${claudeResponse.status}`);
+      }
+      
+      const claudeData = await claudeResponse.json();
+      
+      if (!claudeData.choices || !claudeData.choices[0] || !claudeData.choices[0].message) {
+        console.error('❌ Unexpected Claude response format:', JSON.stringify(claudeData));
+        throw new Error('Unexpected Claude response format');
+      }
+      
+      const extractedText = claudeData.choices[0].message.content;
+      console.log(`✅ Claude OCR extracted ${extractedText.length} characters from image`);
+      
+      return extractedText;
+      
+    } catch (claudeError: any) {
+      console.error('❌ Claude OCR failed:', claudeError.message);
+      console.log('🔄 Falling back to GPT-4o...');
+      
+      // Fallback to GPT-4o
+      const gptResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://lightpoint.app',
+          'X-Title': 'Lightpoint HMRC Complaint System',
+        },
+        body: JSON.stringify({
+          model: 'openai/gpt-4o',  // GPT-4o has vision capabilities
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text: `You are performing OCR (Optical Character Recognition) on an HMRC tax document.
+
+INSTRUCTIONS:
+1. Extract ALL text visible in the image
+2. Preserve exact formatting, line breaks, and structure
+3. Include ALL dates, reference numbers, amounts, and details
+4. Maintain the document's original layout as much as possible
+5. If text is unclear, use [unclear] but transcribe your best interpretation
+6. Return ONLY the extracted text, no explanations or commentary
+
+This is critical for complaint analysis - accuracy is essential.`
+                },
+                {
+                  type: 'image_url',
+                  image_url: {
+                    url: `data:${mimeType};base64,${processedImage}`
+                  }
+                }
+              ]
+            }
+          ],
+          max_tokens: 4000,
+          temperature: 0.1
+        }),
+      });
+      
+      if (!gptResponse.ok) {
+        const errorText = await gptResponse.text();
+        console.error(`❌ GPT-4o OCR also failed: ${gptResponse.status} - ${errorText}`);
+        throw new Error(`Both Claude and GPT-4o OCR failed. Last error: ${gptResponse.status} - ${errorText}`);
+      }
+      
+      const gptData = await gptResponse.json();
+      
+      if (!gptData.choices || !gptData.choices[0] || !gptData.choices[0].message) {
+        console.error('❌ Unexpected GPT response format:', JSON.stringify(gptData));
+        throw new Error('Unexpected GPT response format');
+      }
+      
+      const extractedText = gptData.choices[0].message.content;
+      console.log(`✅ GPT-4o OCR extracted ${extractedText.length} characters from image`);
+      
+      return extractedText;
+    }
     
-    console.log(`✅ OCR extracted ${extractedText.length} characters from image`);
-    
-    return extractedText;
   } catch (error: any) {
-    console.error('❌ Image OCR failed:', error.message);
-    return `[OCR failed for image: ${error.message}. Image stored for manual review.]`;
+    console.error('❌ Image OCR completely failed:', error.message);
+    console.error('Error stack:', error.stack);
+    return `[OCR failed for image: ${error.message}. Image stored for manual review. Please check server logs for details.]`;
   }
 };
 
