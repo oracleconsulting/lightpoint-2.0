@@ -23,7 +23,15 @@ export function DocumentViewer({ filename, fileType, storageUrl, onClose }: Docu
   
   const isPDF = fileType?.toLowerCase().includes('pdf') || filename.toLowerCase().endsWith('.pdf');
   
-  const isViewable = isImage || isPDF;
+  const isOfficeDoc = fileType?.toLowerCase().includes('word') ||
+                      fileType?.toLowerCase().includes('document') ||
+                      fileType?.toLowerCase().includes('spreadsheet') ||
+                      fileType?.toLowerCase().includes('excel') ||
+                      ['doc', 'docx', 'xls', 'xlsx'].some(ext => 
+                        filename.toLowerCase().endsWith(`.${ext}`)
+                      );
+  
+  const isViewable = isImage || isPDF || isOfficeDoc;
 
   return (
     <Card className={`mt-3 ${isFullscreen ? 'fixed inset-4 z-50' : ''}`}>
@@ -93,6 +101,10 @@ export function DocumentViewer({ filename, fileType, storageUrl, onClose }: Docu
                 src={storageUrl} 
                 alt={filename}
                 className="max-w-full max-h-full object-contain"
+                onError={(e) => {
+                  console.error('Image failed to load:', storageUrl);
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
               />
             </div>
           ) : isPDF ? (
@@ -100,7 +112,24 @@ export function DocumentViewer({ filename, fileType, storageUrl, onClose }: Docu
               src={`${storageUrl}#view=FitH`}
               className="w-full h-full border-0"
               title={filename}
+              onError={() => {
+                console.error('PDF failed to load:', storageUrl);
+              }}
             />
+          ) : isOfficeDoc ? (
+            <div className="w-full h-full">
+              <iframe
+                src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(storageUrl)}`}
+                className="w-full h-full border-0"
+                title={filename}
+                onError={() => {
+                  console.error('Office doc failed to load:', storageUrl);
+                }}
+              />
+              <div className="absolute bottom-4 right-4 bg-white p-2 rounded shadow text-xs text-muted-foreground">
+                Powered by Microsoft Office Online
+              </div>
+            </div>
           ) : null}
         </div>
       </CardContent>
