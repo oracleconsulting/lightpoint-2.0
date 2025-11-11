@@ -32,13 +32,22 @@ interface TimelineViewProps {
 
 export function TimelineView({ events, documents = [] }: TimelineViewProps) {
   const [viewingDoc, setViewingDoc] = useState<Document | null>(null);
-  const [viewingDocUrl, setViewingDocUrl] = useState<string | null>(null);
 
   // Fetch signed URL when viewing a document
-  const { data: signedUrlData } = trpc.documents.getSignedUrl.useQuery(
+  const { data: signedUrlData, isLoading: isLoadingUrl, error: urlError } = trpc.documents.getSignedUrl.useQuery(
     viewingDoc?.storage_path || '',
-    { enabled: !!viewingDoc }
+    { 
+      enabled: !!viewingDoc,
+      retry: 1
+    }
   );
+
+  console.log('TimelineView state:', { 
+    viewingDoc: viewingDoc?.filename, 
+    signedUrlData: signedUrlData?.signedUrl?.substring(0, 50),
+    isLoadingUrl,
+    urlError 
+  });
 
   const getEventIcon = (type: string) => {
     switch (type) {
@@ -136,7 +145,10 @@ export function TimelineView({ events, documents = [] }: TimelineViewProps) {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => setViewingDoc((event as any).documentData)}
+                              onClick={() => {
+                                console.log('View button clicked:', (event as any).documentData);
+                                setViewingDoc((event as any).documentData);
+                              }}
                               title="View document"
                             >
                               <Eye className="h-4 w-4" />
@@ -160,13 +172,27 @@ export function TimelineView({ events, documents = [] }: TimelineViewProps) {
                         </div>
                         
                         {/* Inline document viewer */}
-                        {viewingDoc && viewingDoc.id === (event as any).documentData.id && signedUrlData && (
-                          <DocumentViewer
-                            filename={viewingDoc.filename}
-                            fileType={viewingDoc.file_type}
-                            storageUrl={signedUrlData.signedUrl}
-                            onClose={() => setViewingDoc(null)}
-                          />
+                        {viewingDoc && viewingDoc.id === (event as any).documentData.id && (
+                          <>
+                            {isLoadingUrl && (
+                              <div className="mt-3 p-4 bg-muted rounded text-center">
+                                <p className="text-sm text-muted-foreground">Loading document...</p>
+                              </div>
+                            )}
+                            {urlError && (
+                              <div className="mt-3 p-4 bg-destructive/10 rounded">
+                                <p className="text-sm text-destructive">Failed to load document: {(urlError as any).message}</p>
+                              </div>
+                            )}
+                            {signedUrlData && (
+                              <DocumentViewer
+                                filename={viewingDoc.filename}
+                                fileType={viewingDoc.file_type}
+                                storageUrl={signedUrlData.signedUrl}
+                                onClose={() => setViewingDoc(null)}
+                              />
+                            )}
+                          </>
                         )}
                       </div>
                     )}
