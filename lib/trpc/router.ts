@@ -639,6 +639,8 @@ export const appRouter = router({
         category: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
+        console.log('📚 Adding precedent to knowledge base:', input.title);
+        
         // Generate embedding for the precedent
         const embedding = await generateEmbedding(input.content);
         
@@ -649,19 +651,25 @@ export const appRouter = router({
             title: input.title,
             content: input.content,
             category: input.category || 'precedents',
-            tags: ['user-added', 'precedent', 'novel-complaint'],
+            source: 'user_complaint',
             metadata: {
               complaint_id: input.complaintId,
               notes: input.notes,
               added_at: new Date().toISOString(),
-              source: 'manual_addition',
+              source_type: 'manual_addition',
+              tags: ['user-added', 'precedent', 'novel-complaint'],
             },
             embedding,
           })
           .select()
           .single();
         
-        if (error) throw new Error(error.message);
+        if (error) {
+          console.error('❌ Failed to add precedent:', error);
+          throw new Error(error.message);
+        }
+        
+        console.log('✅ Precedent added successfully:', data.id);
         
         return data;
       }),
