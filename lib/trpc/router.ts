@@ -639,27 +639,53 @@ export const appRouter = router({
         category: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
-        console.log('📚 Adding precedent to knowledge base:', input.title);
+        console.log('📚 Adding precedent from novel complaint:', input.title);
         
-        // Generate embedding for the precedent
+        // Get the complaint details to extract proper precedent fields
+        const { data: complaint, error: complaintError } = await supabaseAdmin
+          .from('complaints')
+          .select('*')
+          .eq('id', input.complaintId)
+          .single();
+        
+        if (complaintError) {
+          console.error('❌ Failed to fetch complaint:', complaintError);
+          throw new Error(complaintError.message);
+        }
+        
+        const complaintData = complaint as any;
+        
+        // Generate embedding for the precedent content
         const embedding = await generateEmbedding(input.content);
         
-        // Add to knowledge base as precedent
+        // Extract key arguments from the content (simplified extraction)
+        // In a real system, you might want to use AI to extract these properly
+        const keyArguments = [
+          `${complaintData.complaint_type || 'General'} complaint`,
+          input.notes || 'User-identified novel complaint pattern',
+        ].filter(Boolean);
+        
+        // Add to precedents table with proper schema
         const { data, error } = await (supabaseAdmin as any)
-          .from('knowledge_base')
+          .from('precedents')
           .insert({
-            title: input.title,
-            content: input.content,
-            category: input.category || 'precedents',
-            source: 'user_complaint',
+            complaint_type: complaintData.complaint_type || 'General',
+            issue_category: input.category || 'novel',
+            outcome: null, // Will be updated when complaint is resolved
+            resolution_time_days: null, // Will be updated when resolved
+            compensation_amount: null, // Will be updated if applicable
+            key_arguments: keyArguments,
+            effective_citations: [], // Can be populated from analysis if available
+            embedding,
             metadata: {
               complaint_id: input.complaintId,
+              complaint_reference: complaintData.complaint_reference,
               notes: input.notes,
               added_at: new Date().toISOString(),
-              source_type: 'manual_addition',
-              tags: ['user-added', 'precedent', 'novel-complaint'],
+              source_type: 'manual_user_addition',
+              tags: ['user-added', 'novel-complaint', 'pending-outcome'],
+              full_content: input.content, // Store the full analysis
             },
-            embedding,
           })
           .select()
           .single();
@@ -669,7 +695,7 @@ export const appRouter = router({
           throw new Error(error.message);
         }
         
-        console.log('✅ Precedent added successfully:', data.id);
+        console.log('✅ Precedent added successfully to precedents table:', data.id);
         
         return data;
       }),
