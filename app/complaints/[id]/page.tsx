@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { DocumentUploader } from '@/components/complaint/DocumentUploader';
 import { TimelineView } from '@/components/complaint/TimelineView';
+import { OCRFailureCard } from '@/components/complaint/OCRFailureCard';
 import { ViolationChecker } from '@/components/analysis/ViolationChecker';
 import { PrecedentMatcher } from '@/components/analysis/PrecedentMatcher';
 import { ReAnalysisPrompt } from '@/components/analysis/ReAnalysisPrompt';
@@ -20,9 +21,21 @@ export default function ComplaintDetailPage({ params }: { params: { id: string }
   const [analysisData, setAnalysisData] = useState<any>(null);
   const [generatedLetter, setGeneratedLetter] = useState<string | null>(null);
 
+  const utils = trpc.useUtils();
   const { data: complaint, isLoading } = trpc.complaints.getById.useQuery(params.id);
   const { data: documents } = trpc.documents.list.useQuery(params.id);
   const { data: timeData } = trpc.time.getComplaintTime.useQuery(params.id);
+
+  const retryOCR = trpc.documents.retryOCR.useMutation({
+    onSuccess: () => {
+      // Refresh documents list
+      utils.documents.list.invalidate(params.id);
+      alert('OCR retry complete! Check the document again.');
+    },
+    onError: (error) => {
+      alert(`OCR retry failed: ${error.message}`);
+    },
+  });
 
   const analyzeDocument = trpc.analysis.analyzeDocument.useMutation({
     onSuccess: (data) => {
@@ -228,6 +241,16 @@ This precedent was manually added because it represents a novel complaint type n
 
           {/* Right Column - Analysis & Timeline */}
           <div className="lg:col-span-2 space-y-6">
+            {/* OCR Failure warnings */}
+            {documents && (documents as any[]).map((doc) => (
+              <OCRFailureCard
+                key={doc.id}
+                document={doc}
+                onRetryOCR={(id) => retryOCR.mutate(id)}
+                isRetrying={retryOCR.isPending}
+              />
+            ))}
+            
             {analysisData && (
               <>
                 <ViolationChecker analysis={analysisData.analysis} />

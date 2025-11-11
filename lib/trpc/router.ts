@@ -511,6 +511,28 @@ export const appRouter = router({
         
         return data;
       }),
+
+    retryOCR: publicProcedure
+      .input(z.string())
+      .mutation(async ({ input }) => {
+        // Get the document
+        const { data: document } = await supabaseAdmin
+          .from('documents')
+          .select('*')
+          .eq('id', input)
+          .single();
+        
+        if (!document) throw new Error('Document not found');
+        
+        // Re-process the document (will retry OCR)
+        await processDocument(
+          (document as any).complaint_id,
+          (document as any).storage_path,
+          (document as any).filename
+        );
+        
+        return { success: true };
+      }),
   }),
 
   // Time tracking
