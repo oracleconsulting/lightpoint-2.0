@@ -594,7 +594,7 @@ export const appRouter = router({
     getComplaintTime: publicProcedure
       .input(z.string())
       .query(async ({ input }) => {
-        const { data, error } = await supabaseAdmin
+        const { data, error } = await (supabaseAdmin as any)
           .from('time_logs')
           .select('*')
           .eq('complaint_id', input)
@@ -619,7 +619,7 @@ export const appRouter = router({
         rate: z.number().optional(),
       }))
       .mutation(async ({ input }) => {
-        const { data, error } = await supabaseAdmin
+        const { data, error } = await (supabaseAdmin as any)
           .from('time_logs')
           .insert({
             complaint_id: input.complaintId,
