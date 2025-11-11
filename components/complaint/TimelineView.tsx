@@ -69,13 +69,14 @@ export function TimelineView({ events, documents = [] }: TimelineViewProps) {
   // Convert documents to timeline events and merge with existing events
   const documentEvents = documents.map(doc => ({
     date: doc.uploaded_at,
-    type: 'document',
+    type: 'document' as const,
     summary: `Document uploaded: ${doc.filename}`,
     documentData: doc,
   }));
 
-  // Merge and sort all events chronologically
-  const allEvents = [...events, ...documentEvents].sort((a, b) => 
+  // Merge and sort all events chronologically (union type for type safety)
+  type MergedEvent = TimelineEvent | (typeof documentEvents)[0];
+  const allEvents: MergedEvent[] = [...events, ...documentEvents].sort((a, b) => 
     new Date(b.date).getTime() - new Date(a.date).getTime()
   );
 
@@ -139,7 +140,8 @@ export function TimelineView({ events, documents = [] }: TimelineViewProps) {
                       </div>
                     )}
                     
-                    {event.responseDeadline && (
+                    {/* Response deadline (only for non-document events) */}
+                    {'responseDeadline' in event && event.responseDeadline && (
                       <div className="mt-2">
                         <Badge variant={isOverdue(event.responseDeadline) ? "destructive" : "secondary"}>
                           Response due: {format(new Date(event.responseDeadline), 'PP')}
