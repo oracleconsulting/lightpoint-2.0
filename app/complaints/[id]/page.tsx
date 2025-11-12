@@ -19,6 +19,7 @@ import { LetterManager } from '@/components/complaint/LetterManager';
 import { LetterRefinement } from '@/components/letter/LetterRefinement';
 import { StartComplaint } from '@/components/complaint/StartComplaint';
 import { getPracticeLetterhead } from '@/lib/practiceSettings';
+import { calculateLetterTime, calculateAnalysisTime } from '@/lib/timeCalculations';
 import Link from 'next/link';
 import { ArrowLeft, FileText, Sparkles, Send } from 'lucide-react';
 import { useState } from 'react';
@@ -58,14 +59,16 @@ export default function ComplaintDetailPage({ params }: { params: { id: string }
       
       // Auto-log time for analysis (based on document count)
       const docCount = (documents as any[] || []).length;
-      const estimatedMinutes = Math.min(30 + (docCount * 10), 60); // 30-60 minutes
+      const { minutes, description } = calculateAnalysisTime(docCount);
       
       logTime.mutate({
         complaintId: params.id,
         activity: 'Initial Analysis',
-        duration: estimatedMinutes,
+        duration: minutes,
         rate: practiceSettings?.chargeOutRate || 250,
       });
+      
+      console.log(`⏱️ Logged ${minutes} minutes for ${description}`);
     },
     onError: (error) => {
       console.error('❌ Analysis failed:', error);
@@ -86,13 +89,17 @@ export default function ComplaintDetailPage({ params }: { params: { id: string }
     onSuccess: (data) => {
       setGeneratedLetter(data.letter);
       
-      // Auto-log time for letter generation
+      // Auto-log time for letter generation (based on page count)
+      const { minutes, description, pages } = calculateLetterTime(data.letter);
+      
       logTime.mutate({
         complaintId: params.id,
         activity: 'Letter Generation',
-        duration: 20,
+        duration: minutes,
         rate: practiceSettings?.chargeOutRate || 250,
       });
+      
+      console.log(`⏱️ Logged ${minutes} minutes for ${pages}-page letter (${description})`);
     },
   });
 

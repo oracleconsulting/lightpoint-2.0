@@ -1,0 +1,244 @@
+/**
+ * Time Tracking & Billing Utilities
+ * Based on real-world HMRC complaint handling practices
+ */
+
+// ============================================================================
+// TIME BENCHMARKS (12-minute segments)
+// ============================================================================
+
+export const TIME_BENCHMARKS = {
+  // Letter Generation (based on page count)
+  LETTER_HALF_PAGE: 36,      // 0.5 pages = 36 minutes
+  LETTER_1_PAGE: 45,          // 1 page = 45 minutes
+  LETTER_1_5_PAGES: 60,       // 1.5 pages = 60 minutes
+  LETTER_2_PAGES: 90,         // 2 pages = 90 minutes
+  LETTER_2_5_PAGES: 120,      // 2.5 pages = 120 minutes
+  LETTER_3_PAGES: 150,        // 3 pages = 150 minutes (2.5 hours)
+  
+  // Analysis & Review
+  DOCUMENT_ANALYSIS_BASE: 36, // Base analysis = 36 minutes
+  DOCUMENT_ANALYSIS_PER_DOC: 12, // +12 min per additional document
+  
+  // File Management
+  FILE_OPENING: 12,           // Opening new complaint file
+  FILE_CLOSING: 12,           // Closing complaint file
+  FINAL_INVOICE: 12,          // Preparing final invoice
+  
+  // Client Communication
+  CLIENT_CALL_SHORT: 12,      // Short call (< 15 min)
+  CLIENT_CALL_MEDIUM: 24,     // Medium call (15-30 min)
+  CLIENT_CALL_LONG: 36,       // Long call (30+ min)
+  CLIENT_EMAIL: 12,           // Email correspondence
+  
+  // Response Handling
+  HMRC_RESPONSE_REVIEW: 24,   // Reviewing HMRC response (NOT BILLABLE - but track)
+  FOLLOW_UP_LETTER: 24,       // Follow-up/chasing letter
+  
+  // Escalation
+  TIER_2_ESCALATION: 36,      // Escalating to Tier 2
+  ADJUDICATOR_ESCALATION: 48, // Escalating to Adjudicator
+  
+  // Resolution
+  RESOLUTION_REVIEW: 24,      // Reviewing final resolution
+  CLIENT_UPDATE: 12,          // Updating client on outcome
+} as const;
+
+// ============================================================================
+// LETTER PAGE ESTIMATION
+// ============================================================================
+
+/**
+ * Estimates letter page count from content
+ * Assumes ~500 words per page in formal business letter format
+ */
+export function estimateLetterPageCount(letterContent: string): number {
+  const wordCount = letterContent.split(/\s+/).filter(w => w.length > 0).length;
+  const pages = wordCount / 500;
+  
+  // Round to nearest 0.5
+  return Math.round(pages * 2) / 2;
+}
+
+/**
+ * Calculates billable time for letter based on page count
+ */
+export function calculateLetterTime(letterContent: string): {
+  pages: number;
+  minutes: number;
+  description: string;
+} {
+  const pages = estimateLetterPageCount(letterContent);
+  
+  let minutes: number;
+  let description: string;
+  
+  if (pages <= 0.5) {
+    minutes = TIME_BENCHMARKS.LETTER_HALF_PAGE;
+    description = 'Half-page letter';
+  } else if (pages <= 1) {
+    minutes = TIME_BENCHMARKS.LETTER_1_PAGE;
+    description = '1-page letter';
+  } else if (pages <= 1.5) {
+    minutes = TIME_BENCHMARKS.LETTER_1_5_PAGES;
+    description = '1.5-page letter';
+  } else if (pages <= 2) {
+    minutes = TIME_BENCHMARKS.LETTER_2_PAGES;
+    description = '2-page letter';
+  } else if (pages <= 2.5) {
+    minutes = TIME_BENCHMARKS.LETTER_2_5_PAGES;
+    description = '2.5-page letter';
+  } else if (pages <= 3) {
+    minutes = TIME_BENCHMARKS.LETTER_3_PAGES;
+    description = '3-page letter';
+  } else {
+    // Custom calculation for 3+ pages
+    // Add 30 minutes per additional 0.5 page after 3 pages
+    const extraPages = pages - 3;
+    const extraTime = Math.ceil(extraPages / 0.5) * 30;
+    minutes = TIME_BENCHMARKS.LETTER_3_PAGES + extraTime;
+    description = `${pages}-page letter (custom)`;
+  }
+  
+  return { pages, minutes, description };
+}
+
+// ============================================================================
+// ANALYSIS TIME CALCULATION
+// ============================================================================
+
+/**
+ * Calculates time for initial analysis based on document count
+ */
+export function calculateAnalysisTime(documentCount: number): {
+  minutes: number;
+  description: string;
+} {
+  const minutes = TIME_BENCHMARKS.DOCUMENT_ANALYSIS_BASE + 
+                  ((documentCount - 1) * TIME_BENCHMARKS.DOCUMENT_ANALYSIS_PER_DOC);
+  
+  return {
+    minutes,
+    description: `Analysis of ${documentCount} document${documentCount > 1 ? 's' : ''}`,
+  };
+}
+
+// ============================================================================
+// TIME FORMATTING
+// ============================================================================
+
+/**
+ * Formats minutes into hours and minutes
+ */
+export function formatTimeHHMM(minutes: number): string {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  
+  if (hours === 0) {
+    return `${mins}m`;
+  } else if (mins === 0) {
+    return `${hours}h`;
+  } else {
+    return `${hours}h ${mins}m`;
+  }
+}
+
+/**
+ * Converts minutes to decimal hours for invoicing
+ */
+export function minutesToDecimalHours(minutes: number): number {
+  return Number((minutes / 60).toFixed(2));
+}
+
+/**
+ * Rounds time to nearest 12-minute segment (0.2 hours)
+ */
+export function roundTo12Minutes(minutes: number): number {
+  return Math.ceil(minutes / 12) * 12;
+}
+
+// ============================================================================
+// BILLING CALCULATION
+// ============================================================================
+
+/**
+ * Calculates billable value from minutes and hourly rate
+ */
+export function calculateBillableValue(minutes: number, hourlyRate: number): number {
+  const hours = minutes / 60;
+  return Number((hours * hourlyRate).toFixed(2));
+}
+
+/**
+ * Formats currency value
+ */
+export function formatCurrency(amount: number): string {
+  return `£${amount.toFixed(2)}`;
+}
+
+// ============================================================================
+// ACTIVITY TYPE DEFINITIONS
+// ============================================================================
+
+export const ACTIVITY_TYPES = {
+  // Core Activities (Billable)
+  INITIAL_ANALYSIS: 'Initial Analysis',
+  LETTER_GENERATION: 'Letter Generation',
+  LETTER_REFINEMENT: 'Letter Refinement',
+  FILE_OPENING: 'File Opening',
+  FILE_CLOSING: 'File Closing',
+  FINAL_INVOICE: 'Final Invoice Preparation',
+  
+  // Client Communication (Billable)
+  CLIENT_CALL: 'Client Phone Call',
+  CLIENT_EMAIL: 'Client Email Correspondence',
+  CLIENT_MEETING: 'Client Meeting',
+  CLIENT_UPDATE: 'Client Progress Update',
+  
+  // Follow-up (Billable)
+  FOLLOW_UP_LETTER: 'Follow-up Letter',
+  TIER_2_ESCALATION: 'Tier 2 Escalation',
+  ADJUDICATOR_ESCALATION: 'Adjudicator Escalation',
+  
+  // Resolution (Billable)
+  RESOLUTION_REVIEW: 'Resolution Review',
+  SETTLEMENT_NEGOTIATION: 'Settlement Negotiation',
+  
+  // HMRC Response Review (NOT Billable - track for records)
+  HMRC_RESPONSE_REVIEW: 'HMRC Response Review',
+} as const;
+
+// ============================================================================
+// BILLABILITY FLAGS
+// ============================================================================
+
+/**
+ * Determines if an activity type is billable to client
+ * HMRC no longer allows billing for reviewing their responses
+ */
+export function isBillableActivity(activityType: string): boolean {
+  const nonBillableActivities = [
+    ACTIVITY_TYPES.HMRC_RESPONSE_REVIEW,
+  ];
+  
+  return !nonBillableActivities.includes(activityType as any);
+}
+
+// ============================================================================
+// EXPORT ALL
+// ============================================================================
+
+export default {
+  TIME_BENCHMARKS,
+  ACTIVITY_TYPES,
+  estimateLetterPageCount,
+  calculateLetterTime,
+  calculateAnalysisTime,
+  formatTimeHHMM,
+  minutesToDecimalHours,
+  roundTo12Minutes,
+  calculateBillableValue,
+  formatCurrency,
+  isBillableActivity,
+};
+
