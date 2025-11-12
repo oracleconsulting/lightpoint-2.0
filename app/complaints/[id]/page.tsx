@@ -16,6 +16,8 @@ import { PrecedentMatcher } from '@/components/analysis/PrecedentMatcher';
 import { ReAnalysisPrompt } from '@/components/analysis/ReAnalysisPrompt';
 import { LetterPreview } from '@/components/complaint/LetterPreview';
 import { LetterManager } from '@/components/complaint/LetterManager';
+import { LetterRefinement } from '@/components/letter/LetterRefinement';
+import { StartComplaint } from '@/components/complaint/StartComplaint';
 import { getPracticeLetterhead } from '@/lib/practiceSettings';
 import Link from 'next/link';
 import { ArrowLeft, FileText, Sparkles, Send } from 'lucide-react';
@@ -162,6 +164,36 @@ This precedent was manually added because it represents a novel complaint type n
         analysis: analysisData.analysis,
         practiceLetterhead, // Pass practice details
         chargeOutRate: practiceSettings?.chargeOutRate, // Pass charge-out rate
+      });
+    }
+  };
+
+  const handleRefineLetter = (additionalContext: string) => {
+    // Re-analyze with the new context first
+    if (documents && documents.length > 0) {
+      const firstDocId = (documents as any[])[0].id;
+      console.log(`🔄 Re-analyzing with refinement context`);
+      
+      analyzeDocument.mutate({ 
+        documentId: firstDocId,
+        additionalContext 
+      }, {
+        onSuccess: (newAnalysis) => {
+          // Auto-generate letter with new analysis
+          console.log('✨ Auto-generating refined letter');
+          setAnalysisData(newAnalysis);
+          
+          const practiceLetterhead = getPracticeLetterhead();
+          const practiceSettings = typeof window !== 'undefined' ? 
+            JSON.parse(localStorage.getItem('lightpoint_practice_settings') || 'null') : null;
+          
+          generateLetter.mutate({
+            complaintId: params.id,
+            analysis: newAnalysis.analysis,
+            practiceLetterhead,
+            chargeOutRate: practiceSettings?.chargeOutRate,
+          });
+        }
       });
     }
   };
@@ -327,6 +359,23 @@ This precedent was manually added because it represents a novel complaint type n
             {generatedLetter && (
               <>
                 <LetterPreview letter={generatedLetter} />
+                
+                {/* Letter Refinement - add context and regenerate */}
+                <LetterRefinement
+                  onRefine={handleRefineLetter}
+                  isRefining={analyzeDocument.isPending || generateLetter.isPending}
+                />
+                
+                {/* Start Complaint Button */}
+                <StartComplaint
+                  complaintId={params.id}
+                  hasGeneratedLetter={!!generatedLetter}
+                  onComplaintStarted={() => {
+                    utils.complaints.getById.invalidate(params.id);
+                    utils.letters.list.invalidate({ complaintId: params.id });
+                  }}
+                />
+                
                 <LetterManager 
                   complaintId={params.id}
                   clientReference={complaintData.complaint_reference}
