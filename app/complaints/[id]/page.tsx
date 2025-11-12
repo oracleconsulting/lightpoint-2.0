@@ -19,7 +19,7 @@ import { LetterManager } from '@/components/complaint/LetterManager';
 import { LetterRefinement } from '@/components/letter/LetterRefinement';
 import { StartComplaint } from '@/components/complaint/StartComplaint';
 import { getPracticeLetterhead } from '@/lib/practiceSettings';
-import { calculateLetterTime, calculateAnalysisTime } from '@/lib/timeCalculations';
+import { calculateLetterTime, calculateAnalysisTime, TIME_BENCHMARKS } from '@/lib/timeCalculations';
 import Link from 'next/link';
 import { ArrowLeft, FileText, Sparkles, Send } from 'lucide-react';
 import { useState } from 'react';
@@ -40,6 +40,7 @@ export default function ComplaintDetailPage({ params }: { params: { id: string }
 
   // Auto-log time for analysis
   const logTime = trpc.time.logActivity.useMutation();
+  const deleteTimeByType = trpc.time.deleteActivityByType.useMutation();
 
   const retryOCR = trpc.documents.retryOCR.useMutation({
     onSuccess: () => {
@@ -175,8 +176,23 @@ This precedent was manually added because it represents a novel complaint type n
     }
   };
 
-  const handleRefineLetter = (additionalContext: string) => {
-    // Re-analyze with the new context first
+  const handleRefineLetter = async (additionalContext: string) => {
+    // First, delete old "Letter Generation" time logs
+    console.log('🗑️ Deleting old Letter Generation time logs');
+    await deleteTimeByType.mutateAsync({
+      complaintId: params.id,
+      activityType: 'Letter Generation',
+    });
+
+    // Log time for letter refinement (12 minutes)
+    await logTime.mutateAsync({
+      complaintId: params.id,
+      activity: 'Letter Refinement',
+      duration: TIME_BENCHMARKS.LETTER_REFINEMENT,
+      rate: practiceSettings?.chargeOutRate || 250,
+    });
+
+    // Re-analyze with the new context
     if (documents && documents.length > 0) {
       const firstDocId = (documents as any[])[0].id;
       console.log(`🔄 Re-analyzing with refinement context`);

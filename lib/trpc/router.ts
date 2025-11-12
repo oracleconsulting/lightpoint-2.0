@@ -638,6 +638,31 @@ export const appRouter = router({
         
         return data;
       }),
+
+    deleteActivityByType: publicProcedure
+      .input(z.object({
+        complaintId: z.string(),
+        activityType: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        console.log(`🗑️ Deleting time logs for ${input.complaintId} / ${input.activityType}`);
+        
+        const { error } = await (supabaseAdmin as any)
+          .from('time_logs')
+          .delete()
+          .eq('complaint_id', input.complaintId)
+          .eq('activity_type', input.activityType)
+          .eq('automated', true);
+        
+        if (error) {
+          console.error('Time log deletion error:', error);
+          // Don't throw - time logging is optional
+          return null;
+        }
+        
+        console.log(`✅ Deleted ${input.activityType} time logs`);
+        return { success: true };
+      }),
   }),
 
   // Knowledge base
