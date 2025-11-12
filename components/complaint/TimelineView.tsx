@@ -143,27 +143,27 @@ export function TimelineView({ events, documents = [], letters = [] }: TimelineV
                     {/* Document details */}
                     {event.type === 'document' && (event as any).documentData && (
                       <div className="mt-3 border rounded-lg p-3 bg-muted/30">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3 flex-1">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
                             <FileText className="h-8 w-8 text-muted-foreground flex-shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-sm truncate">
+                            <div className="flex-1 min-w-0 overflow-hidden">
+                              <p className="font-medium text-sm break-words line-clamp-2">
                                 {(event as any).documentData.filename}
                               </p>
-                              <div className="flex items-center gap-2 mt-1">
+                              <div className="flex items-center gap-2 mt-1 flex-wrap">
                                 <Badge 
                                   variant="outline" 
-                                  className={`text-xs ${getFileTypeColor((event as any).documentData.file_type)}`}
+                                  className={`text-xs flex-shrink-0 ${getFileTypeColor((event as any).documentData.file_type)}`}
                                 >
                                   {(event as any).documentData.file_type?.toUpperCase() || 'FILE'}
                                 </Badge>
-                                <span className="text-xs text-muted-foreground">
+                                <span className="text-xs text-muted-foreground flex-shrink-0">
                                   {formatFileSize((event as any).documentData.file_size)}
                                 </span>
                               </div>
                             </div>
                           </div>
-                          <div className="flex gap-1 ml-2">
+                          <div className="flex gap-1 flex-shrink-0">
                             <Button
                               variant="ghost"
                               size="sm"
