@@ -18,23 +18,14 @@ function LoginForm() {
   const [error, setError] = useState('');
   const [showResetPassword, setShowResetPassword] = useState(false);
   const [resetSent, setResetSent] = useState(false);
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const { signIn, resetPassword } = useAuth();
   const searchParams = useSearchParams();
   const supabase = createClientComponentClient();
 
-  // Force logout if coming from logout redirect OR if we detect a session
+  // Force logout if coming from logout redirect
   useEffect(() => {
     const forceLogout = async () => {
       const logoutParam = searchParams.get('logout') === 'true';
-      
-      // Don't check session if we're in the middle of logging in
-      if (isLoggingIn) {
-        return;
-      }
-      
-      // Check if there's an active session
-      const { data: { session } } = await supabase.auth.getSession();
       
       if (logoutParam) {
         console.log('🔴 Login page: logout=true detected, forcing signout');
@@ -54,28 +45,22 @@ function LoginForm() {
         } catch (error) {
           console.error('❌ Login page: Force signout error:', error);
         }
-      } else if (session) {
-        // If there's a session but NO logout param, redirect to dashboard
-        console.log('🔵 Login page: Session found, redirecting to dashboard');
-        window.location.href = '/dashboard';
       }
     };
     forceLogout();
-  }, [searchParams, supabase, isLoggingIn]);
+  }, [searchParams, supabase]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setIsLoggingIn(true);
     setError('');
 
     try {
       await signIn(email, password);
-      // signIn will handle the redirect to /dashboard
+      // signIn will handle the redirect to /dashboard via window.location.href
     } catch (err: any) {
       console.error('Login error:', err);
       setError(err.message || 'Failed to sign in. Please check your credentials.');
-      setIsLoggingIn(false);
     } finally {
       setLoading(false);
     }
