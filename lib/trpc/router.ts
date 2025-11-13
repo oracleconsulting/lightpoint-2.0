@@ -153,6 +153,50 @@ export const appRouter = router({
         return data;
       }),
 
+    assign: publicProcedure
+      .input(z.object({
+        complaintId: z.string(),
+        userId: z.string(),
+        assignedBy: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        console.log(`👤 Assigning complaint ${input.complaintId} to user ${input.userId}`);
+        
+        // Update complaint
+        const { data: complaint, error: complaintError } = await (supabaseAdmin as any)
+          .from('complaints')
+          .update({ 
+            assigned_to: input.userId,
+            updated_at: new Date().toISOString() 
+          })
+          .eq('id', input.complaintId)
+          .select()
+          .single();
+        
+        if (complaintError) {
+          console.error('❌ Failed to assign complaint:', complaintError);
+          throw new Error(complaintError.message);
+        }
+        
+        // Log assignment
+        const { error: assignmentError } = await (supabaseAdmin as any)
+          .from('complaint_assignments')
+          .insert({
+            complaint_id: input.complaintId,
+            assigned_to: input.userId,
+            assigned_by: input.assignedBy,
+            notes: 'Assigned via UI',
+          });
+        
+        if (assignmentError) {
+          console.warn('⚠️ Failed to log assignment (non-critical):', assignmentError);
+          // Don't throw - assignment succeeded even if logging failed
+        }
+        
+        console.log('✅ Complaint assigned successfully');
+        return complaint;
+      }),
+
     delete: publicProcedure
       .input(z.string())
       .mutation(async ({ input }) => {

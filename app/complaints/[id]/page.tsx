@@ -10,6 +10,7 @@ import { OCRFailureCard } from '@/components/complaint/OCRFailureCard';
 import { StatusManager } from '@/components/complaint/StatusManager';
 import { TimeTracker } from '@/components/complaint/TimeTracker';
 import { ManualTimeEntry } from '@/components/time/ManualTimeEntry';
+import { AssignComplaint } from '@/components/complaint/AssignComplaint';
 import { FlagToManagement, ComplaintTickets } from '@/components/tickets/FlagToManagement';
 import { ResponseUploader } from '@/components/complaint/ResponseUploader';
 import { FollowUpManager } from '@/components/complaint/FollowUpManager';
@@ -443,6 +444,15 @@ This precedent was manually added because it represents a novel complaint type n
               chargeOutRate={practiceSettings?.chargeOutRate || 250}
               onTimeDeleted={() => {
                 utils.time.getComplaintTime.invalidate(params.id);
+              }}
+            />
+
+            {/* Assign Complaint */}
+            <AssignComplaint
+              complaintId={params.id}
+              currentAssignedTo={(complaint as any)?.assigned_to}
+              onAssigned={() => {
+                utils.complaints.getById.invalidate(params.id);
               }}
             />
 
