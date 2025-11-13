@@ -141,10 +141,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsSigningOut(true);
     setUser(null);
     
-    console.log('🧹 Clearing storage and signing out...');
+    console.log('🧹 Clearing ALL storage synchronously...');
     
     try {
-      // Clear ALL Supabase auth data from storage FIRST
+      // Clear ALL Supabase auth data from storage SYNCHRONOUSLY
       const keys = Object.keys(localStorage);
       keys.forEach(key => {
         if (key.includes('supabase') || key.includes('auth')) {
@@ -162,28 +162,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       });
       
-      console.log('🔐 Calling Supabase signOut (with 3s timeout)...');
+      console.log('✅ All storage cleared');
       
-      // Try to sign out, but don't wait more than 3 seconds
-      await Promise.race([
-        supabase.auth.signOut(),
-        new Promise((resolve) => setTimeout(() => {
-          console.log('⏰ SignOut timeout - redirecting anyway');
-          resolve(null);
-        }, 3000))
-      ]);
+      // Fire Supabase signOut in background (don't wait)
+      supabase.auth.signOut().then(() => {
+        console.log('✅ Supabase signOut completed in background');
+      }).catch((error) => {
+        console.error('⚠️ Supabase signOut error (non-critical):', error);
+      });
       
-      console.log('✅ Supabase signOut completed (or timed out)');
-      
-      // Small delay to ensure everything is flushed
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      console.log('🚀 Executing redirect to /login?logout=true NOW');
+      console.log('🚀 Redirecting to /login?logout=true IMMEDIATELY');
       window.location.href = '/login?logout=true';
       
     } catch (error) {
       console.error('⚠️ Error during signOut:', error);
-      // Force redirect anyway
       console.log('🚀 Forcing redirect despite error');
       window.location.href = '/login?logout=true';
     }
