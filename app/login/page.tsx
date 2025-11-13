@@ -22,16 +22,41 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const supabase = createClientComponentClient();
 
-  // Force logout if coming from logout redirect
+  // Force logout if coming from logout redirect OR if we detect a session
   useEffect(() => {
     const forceLogout = async () => {
-      if (searchParams.get('logout') === 'true') {
-        console.log('🔴 Login page: logout=true detected, forcing signout');
+      const logoutParam = searchParams.get('logout') === 'true';
+      
+      // Check if there's an active session
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (logoutParam || session) {
+        if (logoutParam) {
+          console.log('🔴 Login page: logout=true detected, forcing signout');
+        }
+        if (session) {
+          console.log('🔴 Login page: Active session detected, forcing signout');
+        }
+        
         try {
+          // Clear all storage
+          localStorage.clear();
+          sessionStorage.clear();
+          
+          // Force signout
           await supabase.auth.signOut();
           console.log('✅ Login page: Forced signout complete');
-          // Remove the query parameter
-          window.history.replaceState({}, '', '/login');
+          
+          // Remove the query parameter and force a full page reload
+          if (logoutParam) {
+            window.history.replaceState({}, '', '/login');
+          }
+          
+          // Force a complete page reload to clear everything
+          setTimeout(() => {
+            window.location.reload();
+          }, 100);
+          
         } catch (error) {
           console.error('❌ Login page: Force signout error:', error);
         }
