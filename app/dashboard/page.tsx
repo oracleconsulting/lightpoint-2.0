@@ -19,6 +19,17 @@ export default function DashboardPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | 'all'>('all');
   
+  const handleLogout = async () => {
+    if (confirm('Are you sure you want to sign out?')) {
+      try {
+        await signOut();
+      } catch (error) {
+        console.error('Logout error:', error);
+        alert('Failed to sign out. Please try again.');
+      }
+    }
+  };
+  
   const utils = trpc.useUtils();
   const { data: complaints, isLoading, error } = trpc.complaints.list.useQuery({
     organizationId: MOCK_ORGANIZATION_ID,
@@ -138,7 +149,7 @@ export default function DashboardPage() {
                 New Complaint
               </Button>
             </Link>
-            <Button variant="ghost" onClick={() => signOut()} title="Sign Out">
+            <Button variant="ghost" onClick={handleLogout} title="Sign Out">
               <LogOut className="h-4 w-4" />
             </Button>
           </div>
