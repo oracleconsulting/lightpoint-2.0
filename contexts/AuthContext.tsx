@@ -127,26 +127,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     console.log('🔓 Signing out...');
     
+    // Immediate redirect - nothing should block this
+    const redirectNow = () => {
+      console.log('🚀 Forcing redirect to /login');
+      window.location.replace('/login');
+    };
+    
+    // Redirect in 50ms no matter what
+    const timeout = setTimeout(redirectNow, 50);
+    
     try {
-      // Clear user state first
+      // Clear user state
       setUser(null);
       
-      // Sign out from Supabase (don't wait for it to complete)
-      supabase.auth.signOut().catch((error) => {
-        console.error('⚠️ Supabase signOut error (non-blocking):', error);
-      });
+      // Try to sign out from Supabase (but don't let it block)
+      await Promise.race([
+        supabase.auth.signOut(),
+        new Promise((resolve) => setTimeout(resolve, 200))
+      ]);
       
       console.log('✅ Signed out successfully, redirecting...');
-      
-      // Immediate redirect - don't wait for anything
-      setTimeout(() => {
-        window.location.href = '/login';
-      }, 100);
+      clearTimeout(timeout);
+      redirectNow();
       
     } catch (error) {
-      console.error('❌ Sign out failed:', error);
-      // Redirect anyway to ensure logout
-      window.location.href = '/login';
+      console.error('⚠️ Sign out error (redirecting anyway):', error);
+      clearTimeout(timeout);
+      redirectNow();
     }
   };
 
