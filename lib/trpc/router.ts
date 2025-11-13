@@ -1000,6 +1000,63 @@ export const appRouter = router({
         
         return data;
       }),
+
+    invite: publicProcedure
+      .input(z.object({
+        email: z.string().email(),
+        full_name: z.string(),
+        role: z.enum(['admin', 'manager', 'analyst', 'viewer']),
+        job_title: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        console.log(`📧 Inviting user: ${input.email}`);
+        
+        // Get default organization
+        const orgId = '00000000-0000-0000-0000-000000000001';
+        
+        // Create user in auth.users via admin API
+        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+          input.email,
+          {
+            data: {
+              full_name: input.full_name,
+              role: input.role,
+              job_title: input.job_title,
+            },
+            redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/callback`,
+          }
+        );
+        
+        if (authError) {
+          console.error('❌ Failed to invite user:', authError);
+          throw new Error(authError.message);
+        }
+        
+        // Create profile in lightpoint_users
+        const { data: profile, error: profileError } = await (supabaseAdmin as any)
+          .from('lightpoint_users')
+          .insert({
+            id: authData.user.id,
+            organization_id: orgId,
+            email: input.email,
+            full_name: input.full_name,
+            role: input.role,
+            job_title: input.job_title,
+            is_active: true,
+          })
+          .select()
+          .single();
+        
+        if (profileError) {
+          console.error('❌ Failed to create user profile:', profileError);
+          // Try to delete the auth user if profile creation failed
+          await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+          throw new Error(profileError.message);
+        }
+        
+        console.log('✅ User invited successfully');
+        return profile;
+      }),
   }),
 
   // Tickets

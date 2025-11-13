@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { useUser } from '@/contexts/UserContext';
-import { Plus, FileText, AlertCircle, CheckCircle, TrendingUp, Clock, Building2, Trash2, Users, Shield } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { Plus, FileText, AlertCircle, CheckCircle, TrendingUp, Clock, Building2, Trash2, Users, Shield, LogOut } from 'lucide-react';
 import { useState } from 'react';
 
 // Mock data for demo - replace with actual auth
@@ -14,6 +15,7 @@ const MOCK_ORGANIZATION_ID = '00000000-0000-0000-0000-000000000001';
 
 export default function DashboardPage() {
   const { currentUser, canManageUsers } = useUser();
+  const { signOut } = useAuth();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | 'all'>('all');
   
@@ -101,8 +103,13 @@ export default function DashboardPage() {
           <div>
             <h1 className="text-2xl font-bold">Lightpoint</h1>
             <p className="text-sm text-muted-foreground">HMRC Complaint Management</p>
+            {currentUser && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Logged in as: <span className="font-medium">{currentUser.full_name || currentUser.email}</span>
+              </p>
+            )}
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
             <Link href="/settings">
               <Button variant="outline">
                 <Building2 className="h-4 w-4 mr-2" />
@@ -131,6 +138,9 @@ export default function DashboardPage() {
                 New Complaint
               </Button>
             </Link>
+            <Button variant="ghost" onClick={() => signOut()} title="Sign Out">
+              <LogOut className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </header>

@@ -33,11 +33,15 @@ export default function UsersPage() {
   });
 
   const { data: users, isLoading, refetch } = trpc.users.list.useQuery();
-  const createUser = trpc.users.create.useMutation({
+  const inviteUser = trpc.users.invite.useMutation({
     onSuccess: () => {
       refetch();
       setIsAddingUser(false);
       setFormData({ email: '', full_name: '', role: 'analyst', job_title: '', phone: '' });
+      alert('Invitation sent! User will receive an email to set their password.');
+    },
+    onError: (error) => {
+      alert(`Failed to invite user: ${error.message}`);
     },
   });
   const updateUser = trpc.users.update.useMutation({
@@ -87,7 +91,13 @@ export default function UsersPage() {
     if (editingUserId) {
       updateUser.mutate({ id: editingUserId, ...formData });
     } else {
-      createUser.mutate(formData);
+      // Use invite for new users
+      inviteUser.mutate({
+        email: formData.email,
+        full_name: formData.full_name,
+        role: formData.role,
+        job_title: formData.job_title,
+      });
     }
   };
 
@@ -217,8 +227,11 @@ export default function UsersPage() {
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={createUser.isPending || updateUser.isPending}>
-                  {createUser.isPending || updateUser.isPending ? 'Saving...' : editingUserId ? 'Update User' : 'Add User'}
+                <Button
+                  type="submit"
+                  disabled={inviteUser.isPending || updateUser.isPending}
+                >
+                  {inviteUser.isPending || updateUser.isPending ? 'Saving...' : editingUserId ? 'Update User' : 'Send Invite'}
                 </Button>
               </div>
             </form>

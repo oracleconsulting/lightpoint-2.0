@@ -1,4 +1,5 @@
 import { TRPCProvider } from '@/lib/trpc/Provider';
+import { AuthProvider } from '@/contexts/AuthContext';
 import { UserProvider } from '@/contexts/UserContext';
 import './globals.css';
 import type { Metadata } from 'next';
@@ -20,9 +21,11 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <TRPCProvider>
-          <UserProvider>
-            {children}
-          </UserProvider>
+          <AuthProvider>
+            <UserProvider>
+              {children}
+            </UserProvider>
+          </AuthProvider>
         </TRPCProvider>
       </body>
     </html>

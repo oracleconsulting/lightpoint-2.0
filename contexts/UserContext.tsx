@@ -1,6 +1,7 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { trpc } from '@/lib/trpc/Provider';
 
 interface User {
@@ -26,28 +27,34 @@ interface UserContextType {
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
+  const { user: authUser, loading: authLoading } = useAuth();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-  // Load user from localStorage on mount (or you can fetch from API)
-  useEffect(() => {
-    const storedUser = localStorage.getItem('lightpoint_current_user');
-    if (storedUser) {
-      try {
-        setCurrentUser(JSON.parse(storedUser));
-      } catch (e) {
-        console.error('Failed to parse stored user:', e);
-      }
-    }
-  }, []);
+  // Fetch user profile from lightpoint_users when auth user changes
+  const { data: userProfile, isLoading: profileLoading } = trpc.users.list.useQuery(undefined, {
+    enabled: !!authUser,
+  });
 
-  // Save to localStorage when user changes
   useEffect(() => {
-    if (currentUser) {
-      localStorage.setItem('lightpoint_current_user', JSON.stringify(currentUser));
-    } else {
-      localStorage.removeItem('lightpoint_current_user');
+    if (authUser && userProfile) {
+      // Find the user profile that matches the authenticated user
+      const profile = userProfile.find((u: any) => u.id === authUser.id);
+      if (profile) {
+        setCurrentUser({
+          id: profile.id,
+          email: profile.email,
+          full_name: profile.full_name,
+          role: profile.role,
+          organization_id: profile.organization_id,
+          job_title: profile.job_title,
+          phone: profile.phone,
+          is_active: profile.is_active,
+        });
+      }
+    } else if (!authUser) {
+      setCurrentUser(null);
     }
-  }, [currentUser]);
+  }, [authUser, userProfile]);
 
   const isAdmin = currentUser?.role === 'admin';
   const isManager = currentUser?.role === 'manager' || isAdmin;
