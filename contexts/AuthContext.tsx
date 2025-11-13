@@ -106,19 +106,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     console.log('🔵 AuthContext: signIn() starting...');
-    const { data, error } = await supabase.auth.signInWithPassword({
+    
+    // Add timeout to prevent hanging
+    const signInPromise = supabase.auth.signInWithPassword({
       email,
       password,
     });
+    
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Sign in timeout')), 5000)
+    );
+    
+    const { data, error } = await Promise.race([
+      signInPromise,
+      timeoutPromise
+    ]).catch((err) => {
+      console.warn('⏰ AuthContext: signIn timed out, but auth state changed - continuing anyway');
+      // If we timeout but auth succeeded (we can check the session)
+      return supabase.auth.getSession().then(({ data: sessionData }) => {
+        if (sessionData.session) {
+          console.log('✅ AuthContext: Session found despite timeout, continuing');
+          return { data: { user: sessionData.session.user }, error: null };
+        }
+        throw err;
+      });
+    }) as any;
     
     if (error) {
       console.error('🔴 AuthContext: signIn error:', error);
       throw error;
     }
     
-    console.log('✅ AuthContext: signIn successful, user:', data.user?.email);
+    console.log('✅ AuthContext: signIn successful, user:', data?.user?.email);
     
-    if (data.user) {
+    if (data?.user) {
       console.log('🔄 AuthContext: Syncing user profile...');
       await syncUserProfile(data.user);
       console.log('✅ AuthContext: User profile synced');
