@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSearchParams } from 'next/navigation';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +19,26 @@ export default function LoginPage() {
   const [showResetPassword, setShowResetPassword] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const { signIn, resetPassword } = useAuth();
+  const searchParams = useSearchParams();
+  const supabase = createClientComponentClient();
+
+  // Force logout if coming from logout redirect
+  useEffect(() => {
+    const forceLogout = async () => {
+      if (searchParams.get('logout') === 'true') {
+        console.log('🔴 Login page: logout=true detected, forcing signout');
+        try {
+          await supabase.auth.signOut();
+          console.log('✅ Login page: Forced signout complete');
+          // Remove the query parameter
+          window.history.replaceState({}, '', '/login');
+        } catch (error) {
+          console.error('❌ Login page: Force signout error:', error);
+        }
+      }
+    };
+    forceLogout();
+  }, [searchParams, supabase]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

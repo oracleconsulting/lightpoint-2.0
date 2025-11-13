@@ -178,14 +178,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Small delay to ensure everything is flushed
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      console.log('🚀 Executing redirect to /login NOW');
-      window.location.href = '/login';
+      console.log('🚀 Executing redirect to /login?logout=true NOW');
+      window.location.href = '/login?logout=true';
       
     } catch (error) {
       console.error('⚠️ Error during signOut:', error);
       // Force redirect anyway
       console.log('🚀 Forcing redirect despite error');
-      window.location.href = '/login';
+      window.location.href = '/login?logout=true';
     }
   };
 
