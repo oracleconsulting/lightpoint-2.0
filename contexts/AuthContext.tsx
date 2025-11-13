@@ -19,6 +19,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const router = useRouter();
   const supabase = createClientComponentClient();
 
@@ -45,19 +46,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event);
+        
+        // Don't do anything if we're in the middle of signing out
+        if (isSigningOut) {
+          console.log('⏭️ Skipping auth state change - signing out in progress');
+          return;
+        }
+        
         setUser(session?.user ?? null);
         
         if (session?.user) {
           await syncUserProfile(session.user);
         }
         
-        // Refresh the page to update server-side data
-        router.refresh();
+        // Only refresh if not signing out
+        if (event !== 'SIGNED_OUT') {
+          router.refresh();
+        }
       }
     );
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [isSigningOut]);
 
   const syncUserProfile = async (authUser: User) => {
     try {
@@ -127,9 +137,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     console.log('🔓 Signing out...');
     
+    // Set flag to prevent auth state listener from interfering
+    setIsSigningOut(true);
+    
     // Immediate redirect - nothing should block this
     const redirectNow = () => {
       console.log('🚀 Forcing redirect to /login');
+      // Use the most aggressive redirect possible
       window.location.replace('/login');
     };
     
