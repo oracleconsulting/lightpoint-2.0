@@ -141,15 +141,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsSigningOut(true);
     setUser(null);
     
-    console.log('🚀 IMMEDIATE REDIRECT - bypassing all async operations');
+    console.log('🧹 Clearing storage and signing out...');
     
     try {
-      // Clear ALL Supabase auth data from storage
+      // Clear ALL Supabase auth data from storage FIRST
       const keys = Object.keys(localStorage);
       keys.forEach(key => {
         if (key.includes('supabase') || key.includes('auth')) {
           localStorage.removeItem(key);
-          console.log('✅ Cleared:', key);
+          console.log('✅ Cleared localStorage:', key);
         }
       });
       
@@ -158,29 +158,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       sessionKeys.forEach(key => {
         if (key.includes('supabase') || key.includes('auth')) {
           sessionStorage.removeItem(key);
-          console.log('✅ Cleared session:', key);
+          console.log('✅ Cleared sessionStorage:', key);
         }
       });
       
-      console.log('✅ All auth storage cleared');
+      console.log('🔐 Calling Supabase signOut...');
       
-    } catch (e) {
-      console.warn('⚠️ Could not clear storage:', e);
-    }
-    
-    // Call Supabase signOut (fire and forget)
-    supabase.auth.signOut({ scope: 'local' }).then(() => {
-      console.log('✅ Supabase signOut completed');
-    }).catch((error) => {
-      console.error('⚠️ Supabase signOut error:', error);
-    });
-    
-    // Wait a tiny bit for storage to clear, then redirect
-    console.log('🚀 Redirecting to /login in 100ms');
-    setTimeout(() => {
-      console.log('🚀 Executing hard redirect NOW');
+      // Actually AWAIT the signOut to ensure cookies are cleared
+      await supabase.auth.signOut();
+      
+      console.log('✅ Supabase signOut completed - session cleared');
+      
+      // Wait a bit more to ensure middleware sees the cleared session
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      console.log('🚀 Executing redirect to /login NOW');
       window.location.href = '/login';
-    }, 100);
+      
+    } catch (error) {
+      console.error('⚠️ Error during signOut:', error);
+      // Force redirect anyway
+      console.log('🚀 Forcing redirect despite error');
+      window.location.href = '/login';
+    }
   };
 
   const resetPassword = async (email: string) => {
