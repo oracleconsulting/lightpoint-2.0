@@ -177,47 +177,75 @@ This precedent was manually added because it represents a novel complaint type n
   };
 
   const handleRefineLetter = async (additionalContext: string) => {
-    // First, delete old "Letter Generation" time logs
-    console.log('🗑️ Deleting old Letter Generation time logs');
-    await deleteTimeByType.mutateAsync({
-      complaintId: params.id,
-      activityType: 'Letter Generation',
-    });
-
-    // Log time for letter refinement (12 minutes)
-    await logTime.mutateAsync({
-      complaintId: params.id,
-      activity: 'Letter Refinement',
-      duration: TIME_BENCHMARKS.LETTER_REFINEMENT,
-      rate: practiceSettings?.chargeOutRate || 250,
-    });
-
-    // Re-analyze with the new context
-    if (documents && documents.length > 0) {
-      const firstDocId = (documents as any[])[0].id;
-      console.log(`🔄 Re-analyzing with refinement context`);
+    try {
+      // Delete all old automated time logs for analysis and letter generation
+      console.log('🗑️ Deleting old analysis and letter generation time logs');
       
-      analyzeDocument.mutate({ 
-        documentId: firstDocId,
-        additionalContext 
-      }, {
-        onSuccess: (newAnalysis) => {
-          // Auto-generate letter with new analysis
-          console.log('✨ Auto-generating refined letter');
-          setAnalysisData(newAnalysis);
-          
-          const practiceLetterhead = getPracticeLetterhead();
-          const practiceSettings = typeof window !== 'undefined' ? 
-            JSON.parse(localStorage.getItem('lightpoint_practice_settings') || 'null') : null;
-          
-          generateLetter.mutate({
-            complaintId: params.id,
-            analysis: newAnalysis.analysis,
-            practiceLetterhead,
-            chargeOutRate: practiceSettings?.chargeOutRate,
-          });
-        }
+      // Delete old analysis logs (both "analysis" and "Initial Analysis")
+      await deleteTimeByType.mutateAsync({
+        complaintId: params.id,
+        activityType: 'analysis',
+      }).catch(() => null);
+      
+      await deleteTimeByType.mutateAsync({
+        complaintId: params.id,
+        activityType: 'Initial Analysis',
+      }).catch(() => null);
+      
+      // Delete old letter generation logs (all variations)
+      await deleteTimeByType.mutateAsync({
+        complaintId: params.id,
+        activityType: 'letter_generation',
+      }).catch(() => null);
+      
+      await deleteTimeByType.mutateAsync({
+        complaintId: params.id,
+        activityType: 'Letter Generation',
+      }).catch(() => null);
+
+      // Log time for letter refinement (12 minutes)
+      await logTime.mutateAsync({
+        complaintId: params.id,
+        activity: 'Letter Refinement',
+        duration: TIME_BENCHMARKS.LETTER_REFINEMENT,
+        rate: practiceSettings?.chargeOutRate || 250,
       });
+
+      console.log('✅ Old time logs deleted, refinement time logged');
+
+      // Re-analyze with the new context
+      if (documents && documents.length > 0) {
+        const firstDocId = (documents as any[])[0].id;
+        console.log(`🔄 Re-analyzing with refinement context`);
+        
+        analyzeDocument.mutate({ 
+          documentId: firstDocId,
+          additionalContext 
+        }, {
+          onSuccess: (newAnalysis) => {
+            // Auto-generate letter with new analysis
+            console.log('✨ Auto-generating refined letter');
+            setAnalysisData(newAnalysis);
+            
+            const practiceLetterhead = getPracticeLetterhead();
+            const practiceSettings = typeof window !== 'undefined' ? 
+              JSON.parse(localStorage.getItem('lightpoint_practice_settings') || 'null') : null;
+            
+            generateLetter.mutate({
+              complaintId: params.id,
+              analysis: newAnalysis.analysis,
+              practiceLetterhead,
+              chargeOutRate: practiceSettings?.chargeOutRate,
+            });
+            
+            // Refresh time data after all operations
+            utils.time.getComplaintTime.invalidate(params.id);
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error in refinement:', error);
+      alert('Failed to process refinement. Please try again.');
     }
   };
 
