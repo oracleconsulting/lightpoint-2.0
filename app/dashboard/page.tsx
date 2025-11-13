@@ -18,13 +18,18 @@ export default function DashboardPage() {
   const { signOut } = useAuth();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | 'all'>('all');
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   
   const handleLogout = async () => {
     if (confirm('Are you sure you want to sign out?')) {
+      setIsLoggingOut(true);
       try {
+        console.log('🔓 Dashboard: Starting logout process...');
         await signOut();
+        // signOut will handle the redirect via window.location.href
       } catch (error) {
-        console.error('Logout error:', error);
+        console.error('❌ Dashboard: Logout error:', error);
+        setIsLoggingOut(false);
         alert('Failed to sign out. Please try again.');
       }
     }
@@ -108,6 +113,19 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Logout Overlay */}
+      {isLoggingOut && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-white rounded-lg p-8 shadow-2xl">
+            <div className="flex flex-col items-center gap-4">
+              <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
+              <p className="text-lg font-semibold">Signing out...</p>
+              <p className="text-sm text-muted-foreground">Please wait</p>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Header */}
       <header className="border-b">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
@@ -149,8 +167,17 @@ export default function DashboardPage() {
                 New Complaint
               </Button>
             </Link>
-            <Button variant="ghost" onClick={handleLogout} title="Sign Out">
-              <LogOut className="h-4 w-4" />
+            <Button 
+              variant="ghost" 
+              onClick={handleLogout} 
+              disabled={isLoggingOut}
+              title={isLoggingOut ? "Signing out..." : "Sign Out"}
+            >
+              {isLoggingOut ? (
+                <span className="h-4 w-4 animate-spin">⏳</span>
+              ) : (
+                <LogOut className="h-4 w-4" />
+              )}
             </Button>
           </div>
         </div>
