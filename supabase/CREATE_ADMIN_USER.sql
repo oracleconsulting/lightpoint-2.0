@@ -1,107 +1,43 @@
 -- ============================================================================
 -- CREATE ADMIN USER FOR JAMES HOWARD - LIGHTPOINT
 -- ============================================================================
--- This creates both the Supabase Auth user AND the lightpoint_users profile
--- Run this in Supabase SQL Editor (NOT Dashboard SQL - use the Auth Admin API)
+-- Email: jhoward@rpgcc.co.uk
+-- Role: Admin (Director)
 -- ============================================================================
 
--- IMPORTANT: You need to run this via Supabase Auth Admin API or Dashboard
--- This SQL creates the profile, but you need to create the auth user first
-
 -- ============================================================================
--- OPTION 1: Use Supabase Dashboard (EASIEST)
--- ============================================================================
--- 1. Go to: Authentication → Users
--- 2. Click "Invite User"
--- 3. Email: james.howard@youremail.com  (UPDATE THIS!)
--- 4. Click "Send Invite"
--- 5. Check your email and set password
--- 6. Then run the SQL below to set role to admin
-
--- ============================================================================
--- OPTION 2: Run SQL After Creating Auth User
+-- STEP 1: CREATE AUTH USER IN SUPABASE DASHBOARD (SET PASSWORD HERE)
 -- ============================================================================
 
--- Update existing user to admin (after you've been invited/created)
+/*
+GO TO: Supabase Dashboard → Authentication → Users
+CLICK: "Add User" → "Create new user"
+
+ENTER:
+  Email: jhoward@rpgcc.co.uk
+  Password: [TYPE YOUR SECURE PASSWORD HERE - you choose it!]
+  ✅ CHECK: "Auto Confirm User" (so you don't need email verification)
+
+CLICK: "Create User"
+
+The password is set when you create the user in the dashboard!
+You'll use this email + password to login at /login
+*/
+
+-- ============================================================================
+-- STEP 2: RUN THIS SQL TO MAKE YOU ADMIN
+-- ============================================================================
+
+-- Update your role to admin
 UPDATE lightpoint_users
 SET 
   role = 'admin',
   full_name = 'James Howard',
-  job_title = 'Managing Partner',
-  is_active = true,
-  updated_at = now()
-WHERE email = 'james.howard@youremail.com';  -- UPDATE THIS EMAIL!
-
--- Verify admin user
-SELECT 
-  id,
-  email,
-  full_name,
-  role,
-  job_title,
-  is_active,
-  created_at
-FROM lightpoint_users
-WHERE email = 'james.howard@youremail.com';  -- UPDATE THIS EMAIL!
-
--- ============================================================================
--- OPTION 3: Create via Auth Admin API (if no users exist yet)
--- ============================================================================
-
--- If you haven't created ANY users yet, you can bootstrap using the service key
--- This requires using the Supabase REST API from your terminal:
-
-/*
-curl -X POST 'https://YOUR_PROJECT_REF.supabase.co/auth/v1/admin/users' \
-  -H "apikey: YOUR_SERVICE_ROLE_KEY" \
-  -H "Authorization: Bearer YOUR_SERVICE_ROLE_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "james.howard@youremail.com",
-    "password": "your_secure_password_here",
-    "email_confirm": true,
-    "user_metadata": {
-      "full_name": "James Howard",
-      "role": "admin",
-      "job_title": "Managing Partner"
-    }
-  }'
-*/
-
--- Then the profile will be auto-created by the AuthContext.tsx sync function
--- But you may need to update the role:
-
-UPDATE lightpoint_users
-SET role = 'admin'
-WHERE email = 'james.howard@youremail.com';
-
--- ============================================================================
--- QUICK START INSTRUCTIONS
--- ============================================================================
-
-/*
-FASTEST WAY TO GET STARTED:
-
-1. Go to Supabase Dashboard → Authentication → Users
-2. Click "Add User" → "Create new user"
-3. Enter:
-   - Email: james.howard@youremail.com  (YOUR EMAIL!)
-   - Password: [Create a secure password]
-   - Auto Confirm User: YES (check the box)
-4. Click "Create User"
-
-5. Then run this SQL:
-*/
-
-UPDATE lightpoint_users
-SET 
-  role = 'admin',
-  full_name = 'James Howard',
-  job_title = 'Managing Partner',
+  job_title = 'Director',
   is_active = true
-WHERE email = 'james.howard@youremail.com';
+WHERE email = 'jhoward@rpgcc.co.uk';
 
--- If the profile doesn't exist yet, create it:
+-- If profile doesn't exist yet, create it
 INSERT INTO lightpoint_users (
   id,
   organization_id,
@@ -114,32 +50,21 @@ INSERT INTO lightpoint_users (
 SELECT 
   auth.users.id,
   '00000000-0000-0000-0000-000000000001',
-  'james.howard@youremail.com',
+  'jhoward@rpgcc.co.uk',
   'James Howard',
   'admin',
-  'Managing Partner',
+  'Director',
   true
 FROM auth.users
-WHERE auth.users.email = 'james.howard@youremail.com'
+WHERE auth.users.email = 'jhoward@rpgcc.co.uk'
 ON CONFLICT (id) DO UPDATE SET
   role = 'admin',
   full_name = 'James Howard',
-  job_title = 'Managing Partner',
+  job_title = 'Director',
   is_active = true;
 
-/*
-6. Go to: https://lightpoint-production.up.railway.app/login
-7. Login with your email and password
-8. ✅ You're the admin!
-
-9. Now you can invite others:
-   - Go to /users
-   - Click "Add User"
-   - They receive email invite
-*/
-
 -- ============================================================================
--- VERIFY YOU'RE ADMIN
+-- STEP 3: VERIFY YOU'RE ADMIN
 -- ============================================================================
 
 SELECT 
@@ -151,30 +76,107 @@ SELECT
   u.is_active,
   'Admin powers: ✅' as status
 FROM lightpoint_users u
-WHERE u.email = 'james.howard@youremail.com'
+WHERE u.email = 'jhoward@rpgcc.co.uk'
   AND u.role = 'admin';
+
+-- ============================================================================
+-- STEP 4: LOGIN
+-- ============================================================================
+
+/*
+GO TO: https://lightpoint-production.up.railway.app/login
+
+ENTER:
+  Email: jhoward@rpgcc.co.uk
+  Password: [the password you set in Step 1]
+
+CLICK: "Sign In"
+
+✅ You're now admin!
+*/
+
+-- ============================================================================
+-- PASSWORD RESET (if you forget your password)
+-- ============================================================================
+
+/*
+OPTION 1: Use the "Forgot password?" link on login page
+  - Enter: jhoward@rpgcc.co.uk
+  - Check your email
+  - Click reset link
+  - Set new password
+
+OPTION 2: Reset via Supabase Dashboard
+  - Go to: Authentication → Users
+  - Find: jhoward@rpgcc.co.uk
+  - Click: "..." menu → "Send password recovery email"
+  - Check your email
+  - Click reset link
+  - Set new password
+
+OPTION 3: Manually set new password in dashboard
+  - Go to: Authentication → Users
+  - Find: jhoward@rpgcc.co.uk
+  - Click: "..." menu → "Reset password"
+  - Enter new password
+  - Click "Update user"
+*/
+
+-- ============================================================================
+-- ALTERNATIVE: USE INVITE SYSTEM (if you prefer email invite)
+-- ============================================================================
+
+/*
+If you want to receive an email invite instead:
+
+1. Have someone else create their admin account first
+2. They go to /users
+3. Click "Add User"
+4. Enter:
+   - Email: jhoward@rpgcc.co.uk
+   - Name: James Howard
+   - Role: Admin
+   - Job Title: Director
+5. Click "Send Invite"
+6. Check your email for invite
+7. Click link in email
+8. SET YOUR PASSWORD (this is where you choose it!)
+9. ✅ You're logged in
+*/
 
 -- ============================================================================
 -- TROUBLESHOOTING
 -- ============================================================================
 
--- If you can't login:
--- 1. Check auth.users table has your email:
-SELECT email, confirmed_at, email_confirmed_at 
+-- Check if auth user exists:
+SELECT 
+  email, 
+  confirmed_at, 
+  email_confirmed_at,
+  created_at
 FROM auth.users 
-WHERE email = 'james.howard@youremail.com';
+WHERE email = 'jhoward@rpgcc.co.uk';
 
--- 2. Check profile exists:
-SELECT * FROM lightpoint_users 
-WHERE email = 'james.howard@youremail.com';
+-- Check if profile exists:
+SELECT 
+  id,
+  email,
+  full_name,
+  role,
+  job_title,
+  is_active,
+  created_at
+FROM lightpoint_users 
+WHERE email = 'jhoward@rpgcc.co.uk';
 
--- 3. If profile missing but auth user exists, create profile:
+-- If auth user exists but profile missing, create profile:
 INSERT INTO lightpoint_users (
   id,
   organization_id,
   email,
   full_name,
   role,
+  job_title,
   is_active
 )
 SELECT 
@@ -183,7 +185,39 @@ SELECT
   email,
   'James Howard',
   'admin',
+  'Director',
   true
 FROM auth.users
-WHERE email = 'james.howard@youremail.com'
-ON CONFLICT (id) DO NOTHING;
+WHERE email = 'jhoward@rpgcc.co.uk'
+ON CONFLICT (id) DO UPDATE SET
+  role = 'admin',
+  full_name = 'James Howard',
+  job_title = 'Director',
+  is_active = true;
+
+-- ============================================================================
+-- SUMMARY
+-- ============================================================================
+
+/*
+PASSWORD IS SET IN SUPABASE DASHBOARD WHEN YOU CREATE THE USER!
+
+Steps:
+1. Dashboard → Authentication → Users → "Add User"
+2. Enter email: jhoward@rpgcc.co.uk
+3. Enter password: [YOU CHOOSE IT - make it secure!]
+4. ✅ Auto Confirm User
+5. Click "Create User"
+6. Run the SQL above to set role to admin
+7. Go to /login
+8. Login with jhoward@rpgcc.co.uk + your password
+9. ✅ Done!
+
+PASSWORD TIPS:
+- At least 8 characters
+- Mix of upper/lower case
+- Include numbers
+- Include special characters (!@#$%^&*)
+- Don't use common words
+- Example: "Lightpoint2024!Secure"
+*/
