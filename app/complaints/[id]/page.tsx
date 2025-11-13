@@ -9,6 +9,7 @@ import { TimelineView } from '@/components/complaint/TimelineView';
 import { OCRFailureCard } from '@/components/complaint/OCRFailureCard';
 import { StatusManager } from '@/components/complaint/StatusManager';
 import { TimeTracker } from '@/components/complaint/TimeTracker';
+import { ManualTimeEntry } from '@/components/time/ManualTimeEntry';
 import { ResponseUploader } from '@/components/complaint/ResponseUploader';
 import { FollowUpManager } from '@/components/complaint/FollowUpManager';
 import { ViolationChecker } from '@/components/analysis/ViolationChecker';
@@ -438,6 +439,15 @@ This precedent was manually added because it represents a novel complaint type n
                 date: log.created_at,
               })) || []}
               chargeOutRate={practiceSettings?.chargeOutRate || 250}
+            />
+
+            {/* Manual Time Entry */}
+            <ManualTimeEntry
+              complaintId={params.id}
+              onTimeLogged={() => {
+                utils.time.getComplaintTime.invalidate(params.id);
+                utils.complaints.getById.invalidate(params.id); // Refresh timeline
+              }}
             />
           </div>
 

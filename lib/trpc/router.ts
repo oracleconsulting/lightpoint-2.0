@@ -644,26 +644,66 @@ export const appRouter = router({
         activity: z.string(),
         duration: z.number(), // minutes
         rate: z.number().optional(),
+        notes: z.string().optional(), // For manual entries
+        automated: z.boolean().optional(), // Default true for system, false for manual
       }))
       .mutation(async ({ input }) => {
-        const { data, error } = await (supabaseAdmin as any)
+        console.log('⏱️ Logging activity:', input.activity, input.duration, 'minutes');
+        
+        // Log time entry
+        const { data: timeLog, error: timeError } = await (supabaseAdmin as any)
           .from('time_logs')
           .insert({
             complaint_id: input.complaintId,
             activity_type: input.activity,
             minutes_spent: input.duration,
-            automated: true,
+            automated: input.automated !== false, // Default true
           })
           .select()
           .single();
         
-        if (error) {
-          console.error('Time logging error:', error);
+        if (timeError) {
+          console.error('Time logging error:', timeError);
           // Don't throw - time logging is optional
           return null;
         }
         
-        return data;
+        // If manual entry with notes, also add to timeline
+        if (input.notes && input.automated === false) {
+          console.log('📝 Adding manual activity to timeline');
+          
+          // Get current timeline
+          const { data: complaint } = await (supabaseAdmin as any)
+            .from('complaints')
+            .select('timeline')
+            .eq('id', input.complaintId)
+            .single();
+          
+          if (complaint) {
+            const currentTimeline = complaint.timeline || [];
+            const newTimelineEntry = {
+              date: new Date().toISOString(),
+              type: 'manual_activity',
+              summary: `${input.activity} (${input.duration}m)`,
+              notes: input.notes,
+              duration: input.duration,
+            };
+            
+            // Update timeline
+            await (supabaseAdmin as any)
+              .from('complaints')
+              .update({
+                timeline: [...currentTimeline, newTimelineEntry],
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', input.complaintId);
+            
+            console.log('✅ Added to timeline');
+          }
+        }
+        
+        console.log('✅ Time logged successfully');
+        return timeLog;
       }),
 
     deleteActivityByType: publicProcedure

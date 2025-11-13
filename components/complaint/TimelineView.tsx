@@ -73,6 +73,8 @@ export function TimelineView({ events, documents = [], letters = [] }: TimelineV
         return <FileText className="h-5 w-5 text-purple-500" />;
       case 'letter':
         return <FileText className="h-5 w-5 text-green-600" />;
+      case 'manual_activity':
+        return <Clock className="h-5 w-5 text-blue-600" />;
       default:
         return <AlertCircle className="h-5 w-5 text-yellow-500" />;
     }
@@ -251,6 +253,26 @@ export function TimelineView({ events, documents = [], letters = [] }: TimelineV
                               <Eye className="h-4 w-4 mr-2" />
                               View Full Letter
                             </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Manual Activity details */}
+                    {event.type === 'manual_activity' && (event as any).notes && (
+                      <div className="mt-3 border rounded-lg p-3 bg-blue-50/30">
+                        <div className="flex items-start gap-2">
+                          <Clock className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                            <p className="font-medium text-sm text-blue-900 mb-1">Activity Notes:</p>
+                            <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                              {(event as any).notes}
+                            </p>
+                            {(event as any).duration && (
+                              <p className="text-xs text-muted-foreground mt-2">
+                                Duration: {(event as any).duration} minutes
+                              </p>
+                            )}
                           </div>
                         </div>
                       </div>
