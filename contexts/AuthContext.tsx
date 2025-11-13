@@ -131,20 +131,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Clear user state first
       setUser(null);
       
-      // Sign out from Supabase
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error('Supabase signOut error:', error);
-        throw error;
-      }
+      // Sign out from Supabase (don't wait for it to complete)
+      supabase.auth.signOut().catch((error) => {
+        console.error('⚠️ Supabase signOut error (non-blocking):', error);
+      });
       
-      console.log('✅ Signed out successfully');
+      console.log('✅ Signed out successfully, redirecting...');
       
-      // Force a full page reload to clear all state
-      window.location.href = '/login';
+      // Immediate redirect - don't wait for anything
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 100);
+      
     } catch (error) {
       console.error('❌ Sign out failed:', error);
-      throw error;
+      // Redirect anyway to ensure logout
+      window.location.href = '/login';
     }
   };
 
