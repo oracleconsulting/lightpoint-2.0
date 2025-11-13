@@ -21,12 +21,15 @@ import { StartComplaint } from '@/components/complaint/StartComplaint';
 import { getPracticeLetterhead } from '@/lib/practiceSettings';
 import { calculateLetterTime, calculateAnalysisTime, TIME_BENCHMARKS } from '@/lib/timeCalculations';
 import Link from 'next/link';
-import { ArrowLeft, FileText, Sparkles, Send } from 'lucide-react';
+import { ArrowLeft, FileText, Sparkles, Send, Edit2, Check, X } from 'lucide-react';
 import { useState } from 'react';
+import { Input } from '@/components/ui/input';
 
 export default function ComplaintDetailPage({ params }: { params: { id: string } }) {
   const [analysisData, setAnalysisData] = useState<any>(null);
   const [generatedLetter, setGeneratedLetter] = useState<string | null>(null);
+  const [isEditingReference, setIsEditingReference] = useState(false);
+  const [editedReference, setEditedReference] = useState('');
 
   const utils = trpc.useUtils();
   const { data: complaint, isLoading } = trpc.complaints.getById.useQuery(params.id);
@@ -41,6 +44,15 @@ export default function ComplaintDetailPage({ params }: { params: { id: string }
   // Auto-log time for analysis
   const logTime = trpc.time.logActivity.useMutation();
   const deleteTimeByType = trpc.time.deleteActivityByType.useMutation();
+  const updateReference = trpc.complaints.updateReference.useMutation({
+    onSuccess: () => {
+      setIsEditingReference(false);
+      utils.complaints.getById.invalidate(params.id);
+    },
+    onError: (error) => {
+      alert(`Failed to update reference: ${error.message}`);
+    }
+  });
 
   const retryOCR = trpc.documents.retryOCR.useMutation({
     onSuccess: () => {
@@ -286,9 +298,59 @@ This precedent was manually added because it represents a novel complaint type n
         {/* Complaint Header */}
         <div className="mb-8">
           <div className="flex justify-between items-start">
-            <div>
-              <h1 className="text-3xl font-bold mb-2">{complaintData.complaint_reference}</h1>
-              <p className="text-muted-foreground">
+            <div className="flex-1">
+              {!isEditingReference ? (
+                <div className="flex items-center gap-3">
+                  <h1 className="text-3xl font-bold">{complaintData.complaint_reference}</h1>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setEditedReference(complaintData.complaint_reference);
+                      setIsEditingReference(true);
+                    }}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={editedReference}
+                    onChange={(e) => setEditedReference(e.target.value)}
+                    className="text-3xl font-bold h-12 max-w-md"
+                    placeholder="Client reference..."
+                    autoFocus
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      if (editedReference.trim()) {
+                        updateReference.mutate({
+                          id: params.id,
+                          complaint_reference: editedReference.trim(),
+                        });
+                      }
+                    }}
+                    disabled={!editedReference.trim() || updateReference.isPending}
+                    className="text-green-600 hover:text-green-700"
+                  >
+                    <Check className="h-5 w-5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsEditingReference(false)}
+                    disabled={updateReference.isPending}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
+              )}
+              <p className="text-muted-foreground mt-2">
                 {complaintData.client_name_encrypted || 'Client'} • {complaintData.status}
               </p>
             </div>

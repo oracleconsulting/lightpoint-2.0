@@ -126,6 +126,33 @@ export const appRouter = router({
         return data;
       }),
 
+    updateReference: publicProcedure
+      .input(z.object({
+        id: z.string(),
+        complaint_reference: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        console.log(`📝 Updating complaint reference to: ${input.complaint_reference}`);
+        
+        const { data, error } = await (supabaseAdmin as any)
+          .from('complaints')
+          .update({ 
+            complaint_reference: input.complaint_reference,
+            updated_at: new Date().toISOString() 
+          })
+          .eq('id', input.id)
+          .select()
+          .single();
+        
+        if (error) {
+          console.error('❌ Failed to update reference:', error);
+          throw new Error(error.message);
+        }
+        
+        console.log('✅ Reference updated successfully');
+        return data;
+      }),
+
     delete: publicProcedure
       .input(z.string())
       .mutation(async ({ input }) => {
