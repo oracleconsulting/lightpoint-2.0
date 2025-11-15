@@ -996,7 +996,12 @@ export const appRouter = router({
           
           // 1. Upload to storage (server-side with service key)
           const timestamp = Date.now();
-          const cleanFilename = `${timestamp}-${input.filename}`;
+          // Sanitize filename: remove special characters that Supabase storage doesn't allow
+          const sanitizedFilename = input.filename
+            .replace(/'/g, '') // Remove apostrophes
+            .replace(/[^\w\s.-]/g, '_') // Replace other special chars with underscore
+            .replace(/\s+/g, '_'); // Replace spaces with underscore
+          const cleanFilename = `${timestamp}-${sanitizedFilename}`;
           // Generate storage path (just knowledge-base/filename)
           const storagePath = `knowledge-base/${cleanFilename}`;
           
