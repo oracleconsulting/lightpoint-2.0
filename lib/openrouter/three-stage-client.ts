@@ -167,6 +167,17 @@ export const stage2_structureLetter = async (
 ): Promise<string> => {
   console.log('🏗️ STAGE 2: Structuring letter with Sonnet 4.5 (professional structure)');
   console.log('👤 Using real user:', userName, userTitle);
+  console.log('💰 Charge-out rate:', chargeOutRate ? `£${chargeOutRate}/hour` : 'not provided, using £185 default');
+  
+  // Get today's date in UK format (15 November 2025)
+  const today = new Date();
+  const dateOptions: Intl.DateTimeFormatOptions = { 
+    day: 'numeric', 
+    month: 'long', 
+    year: 'numeric' 
+  };
+  const todayFormatted = today.toLocaleDateString('en-GB', dateOptions);
+  console.log('📅 Using today\'s date:', todayFormatted);
   
       const response = await callOpenRouter({
         model: STRUCTURE_MODEL,
@@ -186,7 +197,7 @@ Use this EXACT GOLD STANDARD structure:
 
 **1. LETTERHEAD**
 ${practiceLetterhead || '[Firm Name]\n[Address]\n[Contact details]'}
-[Date - use today's date or date after all timeline events]
+${todayFormatted}
 
 HMRC Complaints Team
 HM Revenue & Customs
