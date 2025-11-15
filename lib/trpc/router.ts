@@ -1057,7 +1057,6 @@ export const appRouter = router({
               embedding,
               comparison_result: comparisonResult,
               status: 'pending',
-              organization_id: '00000000-0000-0000-0000-000000000001',
             })
             .select()
             .single();
