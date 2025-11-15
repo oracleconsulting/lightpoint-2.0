@@ -5,7 +5,7 @@
  * Searches knowledge base to answer HMRC complaint questions
  */
 
-import { searchKnowledgeBase } from '@/lib/search/hybridSearch';
+import { searchKnowledgeBase } from '@/lib/vectorSearch';
 
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const CHAT_MODEL = 'anthropic/claude-opus-4.1'; // Best conversational AI
