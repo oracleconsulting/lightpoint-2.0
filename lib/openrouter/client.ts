@@ -135,13 +135,45 @@ Return ONLY valid JSON with no markdown:
 
   try {
     let jsonText = response.trim();
+    
+    // Log the raw response for debugging
+    console.log('📝 Raw LLM response (first 200 chars):', jsonText.substring(0, 200));
+    
+    // Try to extract JSON from markdown code blocks (```json ... ``` or ``` ... ```)
     const jsonBlockMatch = jsonText.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
     if (jsonBlockMatch) {
+      console.log('🔧 Detected markdown code fence, extracting JSON');
       jsonText = jsonBlockMatch[1].trim();
     }
-    return JSON.parse(jsonText);
+    
+    // Remove any leading/trailing whitespace or newlines
+    jsonText = jsonText.trim();
+    
+    // Ensure it starts with { or [
+    const jsonStart = jsonText.indexOf('{');
+    const arrayStart = jsonText.indexOf('[');
+    if (jsonStart === -1 && arrayStart === -1) {
+      throw new Error('No JSON object or array found in response');
+    }
+    
+    // Take the first valid JSON start position
+    const startPos = jsonStart !== -1 && arrayStart !== -1 
+      ? Math.min(jsonStart, arrayStart)
+      : (jsonStart !== -1 ? jsonStart : arrayStart);
+    
+    if (startPos > 0) {
+      console.log(`🔧 Trimming ${startPos} characters before JSON start`);
+      jsonText = jsonText.substring(startPos);
+    }
+    
+    console.log('📝 Cleaned JSON (first 200 chars):', jsonText.substring(0, 200));
+    
+    const parsed = JSON.parse(jsonText);
+    console.log('✅ Successfully parsed analysis JSON');
+    return parsed;
   } catch (error: any) {
     console.error('❌ Failed to parse analysis:', error);
+    console.error('❌ Problematic response:', response.substring(0, 500));
     throw new Error(`Invalid analysis response format: ${error.message}`);
   }
 };
