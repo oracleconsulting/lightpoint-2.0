@@ -383,12 +383,8 @@ export const appRouter = router({
           // Don't fail the request if saving fails - we still have the analysis
         }
         
-        // Log time (optional - don't fail if this fails)
-        try {
-          await logTime((document as any).complaint_id, 'analysis', 20);
-        } catch (timeError) {
-          console.warn('⚠️ Failed to log time, but continuing:', timeError);
-        }
+        // NOTE: Time logging is handled by frontend (page.tsx) which calculates
+        // time based on document count. Don't duplicate here!
         
         return {
           analysis,
@@ -451,12 +447,8 @@ export const appRouter = router({
           );
         }
         
-        // Log time (optional - don't fail if this fails)
-        try {
-          await logTime(input.complaintId, 'letter_generation', 45);
-        } catch (timeError) {
-          console.warn('⚠️ Failed to log time, but continuing:', timeError);
-        }
+        // NOTE: Time logging is handled by frontend (page.tsx) which calculates
+        // time based on letter page count. Don't duplicate here!
         
         return { letter };
       }),
