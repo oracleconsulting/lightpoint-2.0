@@ -119,7 +119,7 @@ export default function KnowledgeBasePage() {
 
         comparisons.push({
           filename: doc.filename,
-          stagedId: result.stagedId,
+          stagedId: result.stagingId,
           comparison: result.comparison,
         });
       }
