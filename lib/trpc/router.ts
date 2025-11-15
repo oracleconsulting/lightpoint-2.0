@@ -1047,7 +1047,7 @@ export const appRouter = router({
           const { data, error } = await (supabaseAdmin as any)
             .from('knowledge_base_staging')
             .insert({
-              uploaded_by: '', // TODO: Get from auth context
+              uploaded_by: null, // Set to null instead of empty string for UUID field
               filename: input.filename,
               file_path: storagePath,
               file_type: input.fileType,
@@ -1057,6 +1057,7 @@ export const appRouter = router({
               embedding,
               comparison_result: comparisonResult,
               status: 'pending',
+              organization_id: '00000000-0000-0000-0000-000000000001',
             })
             .select()
             .single();
