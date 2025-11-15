@@ -108,9 +108,12 @@ export default function KnowledgeBasePage() {
       for (const doc of processedDocs) {
         console.log(`🤖 Comparing: ${doc.filename}`);
         
+        // Convert ArrayBuffer to base64 for transmission
+        const base64Buffer = Buffer.from(doc.fileBuffer).toString('base64');
+        
         const result = await uploadForComparison.mutateAsync({
           filename: doc.filename,
-          filePath: doc.storagePath,
+          fileBuffer: base64Buffer, // Send as base64
           fileType: doc.fileType,
           fileSize: doc.fileSize,
           extractedText: doc.extractedText,

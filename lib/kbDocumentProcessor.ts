@@ -1,15 +1,9 @@
 /**
  * Knowledge Base Document Upload Processor
  * 
- * Handles document upload, text extraction, and preparation for AI comparison
+ * Handles document text extraction and preparation for AI comparison
+ * Note: Storage upload is now handled server-side via tRPC
  */
-
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 interface ProcessedDocument {
   filename: string;
@@ -17,7 +11,7 @@ interface ProcessedDocument {
   fileSize: number;
   extractedText: string;
   documentChunks: string[];
-  storagePath: string;
+  fileBuffer: ArrayBuffer; // Send to server for storage upload
 }
 
 /**
@@ -85,39 +79,6 @@ function chunkText(text: string, chunkSize: number = 1000): string[] {
 }
 
 /**
- * Upload file to Supabase storage
- */
-async function uploadToStorage(file: File, orgId: string): Promise<string> {
-  const timestamp = Date.now();
-  const filename = `${timestamp}-${file.name}`;
-  const storagePath = `knowledge-base/${orgId}/${filename}`;
-  
-  console.log(`  📤 Uploading to: complaint-documents/${storagePath}`);
-  
-  // Add timeout to prevent hanging
-  const uploadPromise = supabase.storage
-    .from('complaint-documents')
-    .upload(storagePath, file, {
-      cacheControl: '3600',
-      upsert: false
-    });
-  
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => reject(new Error('Upload timeout after 30 seconds')), 30000);
-  });
-  
-  const { data, error } = await Promise.race([uploadPromise, timeoutPromise]);
-  
-  if (error) {
-    console.error('  ❌ Storage upload failed:', error);
-    throw new Error(`Storage upload failed: ${error.message}`);
-  }
-  
-  console.log(`  ✅ Storage upload successful:`, data);
-  return storagePath;
-}
-
-/**
  * Main function to process a document for KB upload
  */
 export async function processDocumentForKB(
@@ -127,10 +88,10 @@ export async function processDocumentForKB(
   const startTime = Date.now();
   console.log(`📄 Processing ${file.name}...`);
   
-  // 1. Upload to storage
-  console.log(`  ⏳ Step 1/3: Uploading to storage...`);
-  const storagePath = await uploadToStorage(file, orgId);
-  console.log(`  ✅ Step 1/3: Uploaded to storage (${Date.now() - startTime}ms)`);
+  // 1. Read file buffer (will be uploaded server-side)
+  console.log(`  ⏳ Step 1/3: Reading file buffer...`);
+  const fileBuffer = await file.arrayBuffer();
+  console.log(`  ✅ Step 1/3: Read ${fileBuffer.byteLength} bytes (${Date.now() - startTime}ms)`);
   
   // 2. Extract text
   console.log(`  ⏳ Step 2/3: Extracting text from ${file.type || 'PDF'}...`);
@@ -153,7 +114,7 @@ export async function processDocumentForKB(
     fileSize: file.size,
     extractedText,
     documentChunks,
-    storagePath,
+    fileBuffer,
   };
 }
 

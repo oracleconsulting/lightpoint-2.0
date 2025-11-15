@@ -979,14 +979,41 @@ export const appRouter = router({
     uploadForComparison: publicProcedure
       .input(z.object({
         filename: z.string(),
-        filePath: z.string(),
+        fileBuffer: z.string(), // base64 encoded
         fileType: z.string(),
         fileSize: z.number(),
         extractedText: z.string(),
         documentChunks: z.array(z.string()),
       }))
       .mutation(async ({ input }) => {
-        // Generate embedding for the document
+        console.log('📤 Server-side upload for:', input.filename);
+        
+        // 1. Upload to storage (server-side with service key)
+        const timestamp = Date.now();
+        const cleanFilename = `${timestamp}-${input.filename}`;
+        const storagePath = `knowledge-base/00000000-0000-0000-0000-000000000001/${cleanFilename}`;
+        
+        // Decode base64 to buffer
+        const fileBuffer = Buffer.from(input.fileBuffer, 'base64');
+        
+        console.log(`  📤 Uploading ${fileBuffer.length} bytes to: ${storagePath}`);
+        
+        const { error: uploadError } = await supabaseAdmin.storage
+          .from('complaint-documents')
+          .upload(storagePath, fileBuffer, {
+            contentType: input.fileType,
+            cacheControl: '3600',
+            upsert: false,
+          });
+        
+        if (uploadError) {
+          console.error('  ❌ Storage upload failed:', uploadError);
+          throw new Error(`Storage upload failed: ${uploadError.message}`);
+        }
+        
+        console.log(`  ✅ Storage upload successful`);
+        
+        // 2. Generate embedding for the document
         const embedding = await generateEmbedding(input.extractedText);
         
         // Check for duplicates in existing knowledge base
@@ -1010,7 +1037,7 @@ export const appRouter = router({
             .insert({
               uploaded_by: '', // TODO: Get from auth context
               filename: input.filename,
-              file_path: input.filePath,
+              file_path: storagePath,
               file_type: input.fileType,
               file_size: input.fileSize,
               extracted_text: input.extractedText,
