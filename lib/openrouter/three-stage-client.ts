@@ -111,6 +111,9 @@ DO NOT add tone, style, or persuasive language. Just extract:
 
 1. Timeline facts (exact dates, durations, gaps)
 2. Financial facts (amounts, hours, rates, calculations)
+   - **DT-Individual forms**: Client is RECEIVING interest/income, not paying
+   - **Treaty relief**: Prevents UK withholding tax on payments TO non-residents
+   - **Financial harm**: Unable to receive payments WITHOUT tax deduction, not "blocked payments"
 3. Violation facts (specific CRG/Charter breaches with citations)
 4. Communication facts (what was sent, when, by whom, method)
 5. System failure facts (contradictions, lost correspondence, departmental issues)
