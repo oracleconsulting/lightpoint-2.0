@@ -1027,8 +1027,14 @@ export const appRouter = router({
           
           // 2. Generate embedding for the document
           console.log('  🔄 Generating embedding...');
-          const embedding = await generateEmbedding(input.extractedText);
-          console.log('  ✅ Embedding generated');
+          let embedding;
+          try {
+            embedding = await generateEmbedding(input.extractedText);
+            console.log('  ✅ Embedding generated');
+          } catch (embError: any) {
+            console.error('  ❌ Embedding generation failed:', embError);
+            throw new Error(`Failed to generate embedding: ${embError.message || 'Unknown error'}`);
+          }
         
           // 3. Check for duplicates in existing knowledge base
           console.log('  🔍 Checking for duplicates...');

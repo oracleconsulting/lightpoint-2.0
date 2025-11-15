@@ -9,6 +9,17 @@ export const generateEmbedding = async (text: string): Promise<number[]> => {
     throw new Error('OPENROUTER_API_KEY is not configured');
   }
 
+  // Truncate text if too long (embedding models have token limits)
+  // text-embedding-ada-002 has a limit of 8191 tokens (~30,000 chars)
+  const MAX_CHARS = 30000;
+  const truncatedText = text.length > MAX_CHARS 
+    ? text.substring(0, MAX_CHARS) 
+    : text;
+
+  if (text.length > MAX_CHARS) {
+    console.warn(`⚠️ Text truncated from ${text.length} to ${MAX_CHARS} chars for embedding`);
+  }
+
   try {
     const response = await fetch('https://openrouter.ai/api/v1/embeddings', {
       method: 'POST',
@@ -20,12 +31,13 @@ export const generateEmbedding = async (text: string): Promise<number[]> => {
       },
       body: JSON.stringify({
         model: 'openai/text-embedding-ada-002',
-        input: text,
+        input: truncatedText,
       }),
     });
 
     if (!response.ok) {
       const error = await response.text();
+      console.error('OpenRouter embedding API error:', error);
       throw new Error(`OpenRouter API error: ${response.status} - ${error}`);
     }
 
@@ -38,9 +50,9 @@ export const generateEmbedding = async (text: string): Promise<number[]> => {
     }
     
     return data.data[0].embedding;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error generating embedding:', error);
-    throw new Error('Failed to generate embedding');
+    throw new Error(`Failed to generate embedding: ${error.message || 'Unknown error'}`);
   }
 };
 
