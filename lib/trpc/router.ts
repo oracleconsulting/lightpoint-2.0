@@ -997,7 +997,8 @@ export const appRouter = router({
           // 1. Upload to storage (server-side with service key)
           const timestamp = Date.now();
           const cleanFilename = `${timestamp}-${input.filename}`;
-          const storagePath = `knowledge-base/00000000-0000-0000-0000-000000000001/${cleanFilename}`;
+          // Generate storage path (just knowledge-base/filename)
+          const storagePath = `knowledge-base/${cleanFilename}`;
           
           // Decode base64 to buffer
           const fileBuffer = Buffer.from(input.fileBuffer, 'base64');
