@@ -1055,6 +1055,67 @@ export const appRouter = router({
         }
       }),
 
+    // Approve staged document and add to knowledge base
+    approveStaged: publicProcedure
+      .input(z.object({
+        stagedId: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        console.log('✅ Approving staged document:', input.stagedId);
+        
+        // Get staged document
+        const { data: staged, error: stagedError } = await supabaseAdmin
+          .from('knowledge_base_staging')
+          .select('*')
+          .eq('id', input.stagedId)
+          .single();
+        
+        if (stagedError) throw new Error(stagedError.message);
+        
+        const stagedDoc = staged as any;
+        
+        // Add to knowledge base
+        const { data: kbEntry, error: kbError } = await (supabaseAdmin as any)
+          .from('knowledge_base')
+          .insert({
+            title: stagedDoc.title,
+            content: stagedDoc.content,
+            category: stagedDoc.category,
+            source: stagedDoc.source,
+            file_path: stagedDoc.file_path,
+            embedding: stagedDoc.embedding,
+            metadata: stagedDoc.metadata,
+            organization_id: stagedDoc.organization_id,
+          })
+          .select()
+          .single();
+        
+        if (kbError) throw new Error(kbError.message);
+        
+        // Log to updates timeline
+        await (supabaseAdmin as any)
+          .from('knowledge_base_updates')
+          .insert({
+            kb_id: kbEntry.id,
+            action: 'added',
+            title: stagedDoc.title,
+            category: stagedDoc.category,
+            source: stagedDoc.source,
+            user_name: 'Admin', // TODO: Use actual user from context
+            organization_id: stagedDoc.organization_id,
+          });
+        
+        // Delete from staging
+        await supabaseAdmin
+          .from('knowledge_base_staging')
+          .delete()
+          .eq('id', input.stagedId);
+        
+        console.log('✅ Document approved and added to knowledge base');
+        
+        return { success: true, kbId: kbEntry.id };
+      }),
+
     // Get RSS feed statistics
     getRssStats: publicProcedure
       .query(async () => {
