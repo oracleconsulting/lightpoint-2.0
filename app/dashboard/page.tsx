@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { useUser } from '@/contexts/UserContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { Plus, FileText, AlertCircle, CheckCircle, TrendingUp, Clock, Building2, Trash2, Users, Shield, LogOut } from 'lucide-react';
+import { Plus, FileText, AlertCircle, CheckCircle, TrendingUp, Clock, Building2, Trash2, Users, Shield, LogOut, BookOpen, Settings } from 'lucide-react';
 import { useState } from 'react';
 
 // Mock data for demo - replace with actual auth
@@ -156,6 +156,18 @@ export default function DashboardPage() {
                   <Button variant="outline">
                     <Shield className="h-4 w-4 mr-2" />
                     Management
+                  </Button>
+                </Link>
+                <Link href="/knowledge-base">
+                  <Button variant="outline">
+                    <BookOpen className="h-4 w-4 mr-2" />
+                    Knowledge Base
+                  </Button>
+                </Link>
+                <Link href="/settings/ai">
+                  <Button variant="outline">
+                    <Settings className="h-4 w-4 mr-2" />
+                    AI Settings
                   </Button>
                 </Link>
               </>
