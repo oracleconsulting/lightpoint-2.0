@@ -1109,7 +1109,7 @@ export const appRouter = router({
         console.log('✅ Approving staged document:', input.stagedId);
         
         // Get staged document
-        const { data: staged, error: stagedError } = await supabaseAdmin
+        const { data: staged, error: stagedError} = await supabaseAdmin
           .from('knowledge_base_staging')
           .select('*')
           .eq('id', input.stagedId)
@@ -1119,18 +1119,30 @@ export const appRouter = router({
         
         const stagedDoc = staged as any;
         
-        // Add to knowledge base
+        // Extract title from filename (remove .pdf extension and timestamp)
+        const title = stagedDoc.filename
+          ?.replace(/^\d+-/, '') // Remove timestamp prefix
+          ?.replace(/\.pdf$/i, '') // Remove .pdf extension
+          ?.replace(/_/g, ' ') // Replace underscores with spaces
+          || 'Untitled Document';
+        
+        // Add to knowledge base with correct schema
         const { data: kbEntry, error: kbError } = await (supabaseAdmin as any)
           .from('knowledge_base')
           .insert({
-            title: stagedDoc.title,
-            content: stagedDoc.content,
-            category: stagedDoc.category,
-            source: stagedDoc.source,
-            file_path: stagedDoc.file_path,
+            title: title,
+            content: stagedDoc.extracted_text,
+            category: 'CHG', // Default category
+            source: 'Manual Upload',
             embedding: stagedDoc.embedding,
-            metadata: stagedDoc.metadata,
-            organization_id: stagedDoc.organization_id,
+            metadata: {
+              filename: stagedDoc.filename,
+              file_path: stagedDoc.file_path,
+              file_type: stagedDoc.file_type,
+              file_size: stagedDoc.file_size,
+              comparison_result: stagedDoc.comparison_result,
+              uploaded_at: new Date().toISOString(),
+            },
           })
           .select()
           .single();
@@ -1143,11 +1155,10 @@ export const appRouter = router({
           .insert({
             kb_id: kbEntry.id,
             action: 'added',
-            title: stagedDoc.title,
-            category: stagedDoc.category,
-            source: stagedDoc.source,
+            title: title,
+            category: 'CHG',
+            source: 'Manual Upload',
             user_name: 'Admin', // TODO: Use actual user from context
-            organization_id: stagedDoc.organization_id,
           });
         
         // Delete from staging
