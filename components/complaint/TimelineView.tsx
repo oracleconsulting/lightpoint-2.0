@@ -75,6 +75,9 @@ export function TimelineView({ events, documents = [], letters = [] }: TimelineV
         return <FileText className="h-5 w-5 text-green-600" />;
       case 'manual_activity':
         return <Clock className="h-5 w-5 text-blue-600" />;
+      case 'additional_context':
+      case 'context_provided':
+        return <AlertCircle className="h-5 w-5 text-orange-500" />;
       default:
         return <AlertCircle className="h-5 w-5 text-yellow-500" />;
     }
@@ -273,6 +276,26 @@ export function TimelineView({ events, documents = [], letters = [] }: TimelineV
                                 Duration: {(event as any).duration} minutes
                               </p>
                             )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Additional Context details */}
+                    {(event.type === 'additional_context' || event.type === 'context_provided') && event.summary && (
+                      <div className="mt-3 border rounded-lg p-3 bg-orange-50/30 border-orange-200">
+                        <div className="flex items-start gap-2">
+                          <AlertCircle className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                            <p className="font-medium text-sm text-orange-900 mb-2">
+                              {event.type === 'additional_context' ? '📝 Additional Context Added' : '📝 Initial Context'}
+                            </p>
+                            <div className="text-sm text-gray-700 whitespace-pre-wrap bg-white rounded p-2 border border-orange-100">
+                              {event.summary}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-2 italic">
+                              This context was used for {event.type === 'additional_context' ? 're-analysis and letter refinement' : 'initial complaint assessment'}
+                            </p>
                           </div>
                         </div>
                       </div>

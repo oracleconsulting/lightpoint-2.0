@@ -299,6 +299,29 @@ export const appRouter = router({
           ? `${baseContext}\n\nADDITIONAL CONTEXT FOR RE-ANALYSIS:\n${input.additionalContext}`
           : baseContext;
         
+        // SAVE ADDITIONAL CONTEXT TO TIMELINE
+        if (input.additionalContext) {
+          console.log('💾 Saving additional context to timeline');
+          const timeline = (complaint as any)?.timeline || [];
+          const newTimelineEvent = {
+            date: new Date().toISOString(),
+            type: 'additional_context',
+            summary: input.additionalContext,
+          };
+          timeline.push(newTimelineEvent);
+          
+          // Update complaint with new timeline
+          await (supabaseAdmin as any)
+            .from('complaints')
+            .update({ 
+              timeline,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', (document as any).complaint_id);
+          
+          console.log('✅ Additional context saved to timeline');
+        }
+        
         console.log('📋 Starting analysis:', {
           documentCount: (allDocuments as any[])?.length || 0,
           complaintContextLength: complaintContext.length
