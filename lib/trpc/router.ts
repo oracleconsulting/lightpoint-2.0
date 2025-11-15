@@ -846,21 +846,34 @@ export const appRouter = router({
 
     list: publicProcedure
       .input(z.object({
+        searchQuery: z.string().optional(),
         category: z.string().optional(),
+        limit: z.number().optional(),
       }))
       .query(async ({ input }) => {
         let query = supabaseAdmin
           .from('knowledge_base')
-          .select('*');
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (input.searchQuery) {
+          query = query.textSearch('content', input.searchQuery, {
+            type: 'websearch',
+            config: 'english',
+          });
+        }
         
         if (input.category) {
           query = query.eq('category', input.category);
         }
         
-        const { data, error } = await query.order('created_at', { ascending: false });
+        if (input.limit) {
+          query = query.limit(input.limit);
+        }
+        
+        const { data, error } = await query;
         
         if (error) throw new Error(error.message);
-        
         return data;
       }),
 
@@ -932,6 +945,149 @@ export const appRouter = router({
         console.log('✅ Precedent added successfully to precedents table:', data.id);
         
         return data;
+      }),
+
+    // Get knowledge base update timeline
+    getTimeline: publicProcedure
+      .input(z.object({
+        limit: z.number().optional(),
+        category: z.string().optional(),
+        action: z.string().optional(),
+      }))
+      .query(async ({ input }) => {
+        // For now, return empty until SQL function is created
+        // The SQL function will be added when user runs SETUP_KNOWLEDGE_BASE_MANAGEMENT.sql
+        try {
+          const { data, error } = await supabaseAdmin.rpc('get_knowledge_base_timeline', {
+            p_limit: input.limit || 50,
+            p_category: input.category || null,
+            p_action: input.action || null,
+          } as any);
+          
+          if (error) {
+            console.warn('Timeline function not available yet:', error);
+            return [];
+          }
+          return data;
+        } catch (err) {
+          console.warn('Timeline query failed:', err);
+          return [];
+        }
+      }),
+
+    // Upload document for comparison (Stage 1: Upload & analyze)
+    uploadForComparison: publicProcedure
+      .input(z.object({
+        filename: z.string(),
+        filePath: z.string(),
+        fileType: z.string(),
+        fileSize: z.number(),
+        extractedText: z.string(),
+        documentChunks: z.array(z.string()),
+      }))
+      .mutation(async ({ input }) => {
+        // Generate embedding for the document
+        const embedding = await generateEmbedding(input.extractedText);
+        
+        // Check for duplicates in existing knowledge base
+        try {
+          const { data: duplicates } = await supabaseAdmin.rpc('check_knowledge_duplicate', {
+            p_embedding: embedding,
+            p_similarity_threshold: 0.90,
+          } as any);
+          
+          // Perform AI comparison using OpenRouter
+          const { compareDocumentToKnowledgeBase } = await import('@/lib/knowledgeComparison');
+          const comparisonResult = await compareDocumentToKnowledgeBase(
+            input.extractedText,
+            input.documentChunks,
+            duplicates || []
+          );
+          
+          // Save to staging for review
+          const { data, error } = await (supabaseAdmin as any)
+            .from('knowledge_base_staging')
+            .insert({
+              uploaded_by: '', // TODO: Get from auth context
+              filename: input.filename,
+              file_path: input.filePath,
+              file_type: input.fileType,
+              file_size: input.fileSize,
+              extracted_text: input.extractedText,
+              document_chunks: input.documentChunks,
+              embedding,
+              comparison_result: comparisonResult,
+              status: 'pending',
+            })
+            .select()
+            .single();
+          
+          if (error) throw new Error(error.message);
+          
+          return {
+            stagingId: data.id,
+            comparison: comparisonResult,
+            duplicates: duplicates || [],
+          };
+        } catch (err: any) {
+          console.error('Upload for comparison failed:', err);
+          throw new Error(`Upload failed: ${err.message}`);
+        }
+      }),
+
+    // List RSS feeds
+    listRssFeeds: publicProcedure
+      .query(async () => {
+        try {
+          const { data, error } = await (supabaseAdmin as any)
+            .from('rss_feeds')
+            .select('*')
+            .order('created_at', { ascending: false });
+          
+          if (error) {
+            console.warn('RSS feeds table not available yet:', error);
+            return [];
+          }
+          return data;
+        } catch (err) {
+          console.warn('RSS feeds query failed:', err);
+          return [];
+        }
+      }),
+
+    // Get RSS feed statistics
+    getRssStats: publicProcedure
+      .query(async () => {
+        try {
+          const { data, error } = await supabaseAdmin.rpc('get_rss_feed_stats');
+          
+          if (error) {
+            console.warn('RSS stats function not available yet:', error);
+            return {
+              total_feeds: 0,
+              active_feeds: 0,
+              total_items_processed: 0,
+              items_added_today: 0,
+              pending_items: 0,
+            };
+          }
+          return data[0] || {
+            total_feeds: 0,
+            active_feeds: 0,
+            total_items_processed: 0,
+            items_added_today: 0,
+            pending_items: 0,
+          };
+        } catch (err) {
+          console.warn('RSS stats query failed:', err);
+          return {
+            total_feeds: 0,
+            active_feeds: 0,
+            total_items_processed: 0,
+            items_added_today: 0,
+            pending_items: 0,
+          };
+        }
       }),
   }),
 
@@ -1229,6 +1385,7 @@ export const appRouter = router({
         };
       }),
   }),
+
 });
 
 export type AppRouter = typeof appRouter;
