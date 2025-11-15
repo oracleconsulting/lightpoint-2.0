@@ -986,52 +986,64 @@ export const appRouter = router({
         documentChunks: z.array(z.string()),
       }))
       .mutation(async ({ input }) => {
-        console.log('📤 Server-side upload for:', input.filename);
-        
-        // 1. Upload to storage (server-side with service key)
-        const timestamp = Date.now();
-        const cleanFilename = `${timestamp}-${input.filename}`;
-        const storagePath = `knowledge-base/00000000-0000-0000-0000-000000000001/${cleanFilename}`;
-        
-        // Decode base64 to buffer
-        const fileBuffer = Buffer.from(input.fileBuffer, 'base64');
-        
-        console.log(`  📤 Uploading ${fileBuffer.length} bytes to: ${storagePath}`);
-        
-        const { error: uploadError } = await supabaseAdmin.storage
-          .from('complaint-documents')
-          .upload(storagePath, fileBuffer, {
-            contentType: input.fileType,
-            cacheControl: '3600',
-            upsert: false,
-          });
-        
-        if (uploadError) {
-          console.error('  ❌ Storage upload failed:', uploadError);
-          throw new Error(`Storage upload failed: ${uploadError.message}`);
-        }
-        
-        console.log(`  ✅ Storage upload successful`);
-        
-        // 2. Generate embedding for the document
-        const embedding = await generateEmbedding(input.extractedText);
-        
-        // Check for duplicates in existing knowledge base
         try {
+          console.log('📤 Server-side upload for:', input.filename);
+          console.log('   File type:', input.fileType);
+          console.log('   File size:', input.fileSize);
+          console.log('   Buffer length (base64):', input.fileBuffer?.length || 0);
+          console.log('   Extracted text length:', input.extractedText?.length || 0);
+          console.log('   Chunks:', input.documentChunks?.length || 0);
+          
+          // 1. Upload to storage (server-side with service key)
+          const timestamp = Date.now();
+          const cleanFilename = `${timestamp}-${input.filename}`;
+          const storagePath = `knowledge-base/00000000-0000-0000-0000-000000000001/${cleanFilename}`;
+          
+          // Decode base64 to buffer
+          const fileBuffer = Buffer.from(input.fileBuffer, 'base64');
+          
+          console.log(`  📤 Uploading ${fileBuffer.length} bytes to: ${storagePath}`);
+          
+          const { error: uploadError } = await supabaseAdmin.storage
+            .from('complaint-documents')
+            .upload(storagePath, fileBuffer, {
+              contentType: input.fileType,
+              cacheControl: '3600',
+              upsert: false,
+            });
+          
+          if (uploadError) {
+            console.error('  ❌ Storage upload failed:', uploadError);
+            throw new Error(`Storage upload failed: ${uploadError.message}`);
+          }
+          
+          console.log(`  ✅ Storage upload successful`);
+          
+          // 2. Generate embedding for the document
+          console.log('  🔄 Generating embedding...');
+          const embedding = await generateEmbedding(input.extractedText);
+          console.log('  ✅ Embedding generated');
+        
+          // 3. Check for duplicates in existing knowledge base
+          console.log('  🔍 Checking for duplicates...');
           const { data: duplicates } = await supabaseAdmin.rpc('check_knowledge_duplicate', {
             p_embedding: embedding,
             p_similarity_threshold: 0.90,
           } as any);
+          console.log(`  ✅ Found ${duplicates?.length || 0} potential duplicates`);
           
-          // Perform AI comparison using OpenRouter
+          // 4. Perform AI comparison using OpenRouter
+          console.log('  🤖 Performing AI comparison...');
           const { compareDocumentToKnowledgeBase } = await import('@/lib/knowledgeComparison');
           const comparisonResult = await compareDocumentToKnowledgeBase(
             input.extractedText,
             input.documentChunks,
             duplicates || []
           );
+          console.log('  ✅ AI comparison complete');
           
-          // Save to staging for review
+          // 5. Save to staging for review
+          console.log('  💾 Saving to staging...');
           const { data, error } = await (supabaseAdmin as any)
             .from('knowledge_base_staging')
             .insert({
@@ -1049,7 +1061,12 @@ export const appRouter = router({
             .select()
             .single();
           
-          if (error) throw new Error(error.message);
+          if (error) {
+            console.error('  ❌ Failed to save to staging:', error);
+            throw new Error(error.message);
+          }
+          
+          console.log('  ✅ Saved to staging successfully');
           
           return {
             stagingId: data.id,
@@ -1057,7 +1074,8 @@ export const appRouter = router({
             duplicates: duplicates || [],
           };
         } catch (err: any) {
-          console.error('Upload for comparison failed:', err);
+          console.error('❌ Upload for comparison failed:', err);
+          console.error('   Stack:', err.stack);
           throw new Error(`Upload failed: ${err.message}`);
         }
       }),
