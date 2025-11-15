@@ -162,8 +162,8 @@ export const stage2_structureLetter = async (
   chargeOutRate?: number,
   userName?: string,
   userTitle?: string,
-  userEmail?: string,
-  userPhone?: string
+  userEmail?: string | null,
+  userPhone?: string | null
 ): Promise<string> => {
   console.log('🏗️ STAGE 2: Structuring letter with Sonnet 4.5 (professional structure)');
   console.log('👤 Using real user:', userName, userTitle);
@@ -551,8 +551,8 @@ export const generateComplaintLetterThreeStage = async (
   chargeOutRate?: number,
   userName?: string,
   userTitle?: string,
-  userEmail?: string,
-  userPhone?: string
+  userEmail?: string | null,
+  userPhone?: string | null
 ) => {
   console.log('🚀 Starting three-stage letter generation pipeline');
   console.log('👤 User details:', { userName, userTitle, userEmail, userPhone });
