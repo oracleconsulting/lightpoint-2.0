@@ -278,19 +278,31 @@ We require the following specific actions:
 2. [Specific action required]
 3. [Continue numbered list - typically 5-7 items]
 
-**ESCALATION NOTE**: If the fact sheet indicates this is an escalation (Tier 1 inadequate, Tier 2 required):
-- State clearly: "This matter requires immediate escalation to Tier 2"
-- Reference CHG requirements: "Per CHG [reference], Tier 1 response was inadequate"
-- Cite specific CHG timelines: "We require Tier 2 response within 40 working days per CHG standards"
-- State escalation grounds: "Tier 1 failed to provide meaningful remedy/resolution"
-- Reference right to escalate: "Per CHG procedures, we exercise our right to Tier 2 review"
+**CRITICAL - ESCALATION HANDLING:**
+If the fact sheet mentions:
+- "Tier 1 response inadequate/insufficient"
+- "Escalate to Tier 2"
+- "Tier 1 failed to provide remedy"
+- Any recommendation for escalation
+
+Then IMMEDIATELY AFTER the numbered list, add this paragraph:
+
+"This matter requires immediate escalation to Tier 2 per CHG408 complaint handling standards. The Tier 1 response [describe why inadequate: e.g., 'offered only an apology', 'failed to provide compensation', 'did not address systemic failures']. Per CHG requirements, Tier 1 responses must provide meaningful resolution and appropriate redress. We exercise our right to Tier 2 review under CHG procedures given the Tier 1 response fell short of these standards."
+
+**MANDATORY CHG REFERENCES when escalating:**
+- Must cite "CHG408" or "CHG complaint handling standards"
+- Must state "Per CHG requirements" or "Per CHG procedures"
+- Must reference "right to Tier 2 review"
+- Must explain WHY Tier 1 was inadequate
 
 **11. RESPONSE DEADLINE** ← Section heading MUST be bold
 
 We require a substantive response to this complaint within 15 working days of receipt. Failure to provide an adequate response will result in immediate escalation to Tier 2, and subsequently to the Adjudicator's Office if necessary.
 
-**ESCALATION VARIANT**: If this IS a Tier 2 escalation, adjust to:
-"As a Tier 2 escalation, we require a substantive response within 40 working days per CHG guidelines. Failure to provide adequate resolution will result in referral to the Adjudicator's Office."
+**ESCALATION VARIANT - CRITICAL:**
+If this IS a Tier 2 escalation (detected in fact sheet or resolution section above):
+REPLACE the standard deadline with:
+"As a Tier 2 escalation, we require a substantive response within 40 working days per CHG guidelines. Failure to provide adequate resolution will result in referral to the Adjudicator's Office per CHG502."
 
 **12. CLOSING** ← Section heading MUST be bold
 
