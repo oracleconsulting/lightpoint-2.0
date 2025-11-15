@@ -92,12 +92,28 @@ async function uploadToStorage(file: File, orgId: string): Promise<string> {
   const filename = `${timestamp}-${file.name}`;
   const storagePath = `knowledge-base/${orgId}/${filename}`;
   
-  const { error } = await supabase.storage
-    .from('documents')
-    .upload(storagePath, file);
+  console.log(`  📤 Uploading to: complaint-documents/${storagePath}`);
   
-  if (error) throw error;
+  // Add timeout to prevent hanging
+  const uploadPromise = supabase.storage
+    .from('complaint-documents')
+    .upload(storagePath, file, {
+      cacheControl: '3600',
+      upsert: false
+    });
   
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => reject(new Error('Upload timeout after 30 seconds')), 30000);
+  });
+  
+  const { data, error } = await Promise.race([uploadPromise, timeoutPromise]);
+  
+  if (error) {
+    console.error('  ❌ Storage upload failed:', error);
+    throw new Error(`Storage upload failed: ${error.message}`);
+  }
+  
+  console.log(`  ✅ Storage upload successful:`, data);
   return storagePath;
 }
 
