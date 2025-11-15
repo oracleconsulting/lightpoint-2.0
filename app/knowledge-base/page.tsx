@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import KnowledgeBaseChat from '@/components/kb/KnowledgeBaseChat';
+import DocumentComparison from '@/components/kb/DocumentComparison';
+import { processMultipleDocuments } from '@/lib/kbDocumentProcessor';
 import { 
   Upload, 
   FileText, 
@@ -21,7 +23,8 @@ import {
   Eye,
   RefreshCw,
   Plus,
-  MessageCircle
+  MessageCircle,
+  Loader2
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -29,6 +32,14 @@ export default function KnowledgeBasePage() {
   const { currentUser, isAdmin, isManager } = useUser();
   const [searchQuery, setSearchQuery] = useState('');
   const [uploadingFiles, setUploadingFiles] = useState<File[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, filename: '' });
+  const [comparisonResults, setComparisonResults] = useState<any[]>([]);
+  const [processingDoc, setProcessingDoc] = useState<string | null>(null);
+
+  const uploadForComparison = trpc.knowledge.uploadForComparison.useMutation();
+  const approveStaged = trpc.knowledge.approveStaged.useMutation();
+  const utils = trpc.useUtils();
 
   // Check permissions
   if (!isAdmin && !isManager) {
@@ -73,11 +84,92 @@ export default function KnowledgeBasePage() {
   };
 
   const handleUpload = async () => {
-    if (uploadingFiles.length === 0) return;
+    if (uploadingFiles.length === 0 || !currentUser) return;
 
-    // TODO: Implement upload with comparison
-    console.log('Uploading files:', uploadingFiles);
-    alert('Upload functionality coming next!');
+    setIsProcessing(true);
+    setComparisonResults([]);
+
+    try {
+      console.log('📤 Processing', uploadingFiles.length, 'documents...');
+
+      // Process all documents
+      const processedDocs = await processMultipleDocuments(
+        uploadingFiles,
+        currentUser.organization_id,
+        (current, total, filename) => {
+          setUploadProgress({ current, total, filename });
+        }
+      );
+
+      console.log(`✅ Processed ${processedDocs.length} documents`);
+
+      // Upload each for AI comparison
+      const comparisons = [];
+      for (const doc of processedDocs) {
+        console.log(`🤖 Comparing: ${doc.filename}`);
+        
+        const result = await uploadForComparison.mutateAsync({
+          filename: doc.filename,
+          content: doc.extractedText,
+          storagePath: doc.storagePath,
+          fileType: doc.fileType,
+          fileSize: doc.fileSize,
+        });
+
+        comparisons.push({
+          filename: doc.filename,
+          stagedId: result.stagedId,
+          comparison: result.comparison,
+        });
+      }
+
+      setComparisonResults(comparisons);
+      console.log('✅ All documents compared');
+
+    } catch (error: any) {
+      console.error('❌ Upload failed:', error);
+      alert(`Upload failed: ${error.message}`);
+    } finally {
+      setIsProcessing(false);
+      setUploadProgress({ current: 0, total: 0, filename: '' });
+    }
+  };
+
+  const handleApprove = async (stagedId: string, filename: string) => {
+    setProcessingDoc(stagedId);
+    try {
+      await approveStaged.mutateAsync({ stagedId });
+      
+      // Remove from comparison results
+      setComparisonResults(prev => prev.filter(r => r.stagedId !== stagedId));
+      
+      // Refresh knowledge list
+      await utils.knowledge.list.invalidate();
+      await utils.knowledge.getTimeline.invalidate();
+      
+      console.log(`✅ Approved: ${filename}`);
+    } catch (error: any) {
+      console.error('❌ Approval failed:', error);
+      alert(`Failed to approve: ${error.message}`);
+    } finally {
+      setProcessingDoc(null);
+    }
+  };
+
+  const handleReject = async (stagedId: string, filename: string) => {
+    if (!confirm(`Reject "${filename}"? This will delete it from staging.`)) {
+      return;
+    }
+
+    setProcessingDoc(stagedId);
+    try {
+      // Just remove from comparison results (staged entry will remain until admin deletes it)
+      setComparisonResults(prev => prev.filter(r => r.stagedId !== stagedId));
+      
+      console.log(`❌ Rejected: ${filename}`);
+    } finally {
+      setProcessingDoc(null);
+    }
   };
 
   return (
@@ -136,89 +228,153 @@ export default function KnowledgeBasePage() {
 
           {/* UPLOAD & COMPARE TAB */}
           <TabsContent value="upload" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Upload className="h-5 w-5 text-blue-600" />
-                  Upload Documents for Analysis
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Upload Zone */}
-                <div className="border-2 border-dashed border-blue-200 rounded-lg p-8 text-center bg-blue-50/30 hover:bg-blue-50/50 transition-colors">
-                  <input
-                    type="file"
-                    id="kb-file-upload"
-                    multiple
-                    accept=".pdf,.doc,.docx,.txt,.csv,.xls,.xlsx"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                  />
-                  <label htmlFor="kb-file-upload" className="cursor-pointer">
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="p-4 bg-blue-100 rounded-full">
-                        <Upload className="h-8 w-8 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-lg">Drop files here or click to browse</p>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Supported: PDF, Word, Excel, CSV, TXT
+            {/* Processing Progress */}
+            {isProcessing && (
+              <Card className="bg-blue-50 border-blue-200">
+                <CardContent className="py-6">
+                  <div className="flex items-center gap-4">
+                    <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
+                    <div className="flex-1">
+                      <p className="font-medium text-blue-900">
+                        Processing Documents...
+                      </p>
+                      {uploadProgress.total > 0 && (
+                        <p className="text-sm text-blue-700 mt-1">
+                          {uploadProgress.current} of {uploadProgress.total}: {uploadProgress.filename}
                         </p>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Comparison Results */}
+            {comparisonResults.length > 0 && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-semibold">AI Comparison Results</h2>
+                  <Badge variant="outline">
+                    {comparisonResults.length} document{comparisonResults.length !== 1 ? 's' : ''} analyzed
+                  </Badge>
+                </div>
+                {comparisonResults.map((result, index) => (
+                  <DocumentComparison
+                    key={result.stagedId}
+                    filename={result.filename}
+                    comparison={result.comparison}
+                    onApprove={() => handleApprove(result.stagedId, result.filename)}
+                    onReject={() => handleReject(result.stagedId, result.filename)}
+                    isProcessing={processingDoc === result.stagedId}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Upload Form (shown when not processing and no results) */}
+            {!isProcessing && comparisonResults.length === 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Upload className="h-5 w-5 text-blue-600" />
+                    Upload Documents for Analysis
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Upload Zone */}
+                  <div className="border-2 border-dashed border-blue-200 rounded-lg p-8 text-center bg-blue-50/30 hover:bg-blue-50/50 transition-colors">
+                    <input
+                      type="file"
+                      id="kb-file-upload"
+                      multiple
+                      accept=".pdf,.doc,.docx,.txt,.csv,.xls,.xlsx"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                      disabled={isProcessing}
+                    />
+                    <label htmlFor="kb-file-upload" className="cursor-pointer">
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="p-4 bg-blue-100 rounded-full">
+                          <Upload className="h-8 w-8 text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-lg">Drop files here or click to browse</p>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Supported: PDF, Word, Excel, CSV, TXT
+                          </p>
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+
+                  {/* Selected Files */}
+                  {uploadingFiles.length > 0 && (
+                    <div className="space-y-3">
+                      <p className="font-medium">Selected Files ({uploadingFiles.length}):</p>
+                      <div className="space-y-2 max-h-96 overflow-y-auto">
+                        {uploadingFiles.map((file, index) => (
+                          <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                            <div className="flex items-center gap-3">
+                              <FileText className="h-5 w-5 text-blue-600" />
+                              <div>
+                                <p className="font-medium text-sm">{file.name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {(file.size / 1024).toFixed(1)} KB
+                                </p>
+                              </div>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setUploadingFiles(files => files.filter((_, i) => i !== index))}
+                              disabled={isProcessing}
+                            >
+                              <Trash2 className="h-4 w-4 text-red-600" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                      <Button 
+                        onClick={handleUpload} 
+                        className="w-full" 
+                        size="lg"
+                        disabled={isProcessing}
+                      >
+                        {isProcessing ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="h-4 w-4 mr-2" />
+                            Upload & Compare Against Existing Knowledge
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Info Card */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex gap-3">
+                      <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                      <div className="text-sm space-y-2">
+                        <p className="font-medium text-blue-900">What happens when you upload?</p>
+                        <ul className="list-disc list-inside space-y-1 text-blue-800">
+                          <li>Documents are extracted and analyzed with AI</li>
+                          <li>Content is compared against existing knowledge base</li>
+                          <li>AI detects: duplicates, overlaps, new information, and gaps</li>
+                          <li>You'll see a detailed comparison report for each document</li>
+                          <li>Approve documents individually to add them to the knowledge base</li>
+                          <li>Each approval is versioned and tracked in the timeline</li>
+                        </ul>
                       </div>
                     </div>
-                  </label>
-                </div>
-
-                {/* Selected Files */}
-                {uploadingFiles.length > 0 && (
-                  <div className="space-y-3">
-                    <p className="font-medium">Selected Files ({uploadingFiles.length}):</p>
-                    <div className="space-y-2">
-                      {uploadingFiles.map((file, index) => (
-                        <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <FileText className="h-5 w-5 text-blue-600" />
-                            <div>
-                              <p className="font-medium text-sm">{file.name}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {(file.size / 1024).toFixed(1)} KB
-                              </p>
-                            </div>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setUploadingFiles(files => files.filter((_, i) => i !== index))}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-600" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                    <Button onClick={handleUpload} className="w-full" size="lg">
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Upload & Compare Against Existing Knowledge
-                    </Button>
                   </div>
-                )}
-
-                {/* Info Card */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex gap-3">
-                    <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                    <div className="text-sm space-y-2">
-                      <p className="font-medium text-blue-900">What happens when you upload?</p>
-                      <ul className="list-disc list-inside space-y-1 text-blue-800">
-                        <li>Documents are analyzed and compared against existing knowledge base</li>
-                        <li>AI detects: duplicates, overlaps, new information, and gaps</li>
-                        <li>You'll see a detailed comparison report before confirming upload</li>
-                        <li>Each upload is versioned and tracked in the timeline</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           {/* BROWSE KNOWLEDGE TAB */}
