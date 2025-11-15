@@ -135,11 +135,20 @@ CRITICAL: If the analysis includes precedents or similar cases, extract:
 - Timeline for escalation (15 working days, 40 working days)
 - Grounds for escalation (incomplete response, no remedy offered)
 
+**TIER 1 RESPONSE DETAILS** - Extract if a previous complaint was made:
+- Date of Tier 1 response
+- Reference number of Tier 1 response
+- What Tier 1 offered (apology only? acknowledgment? no action?)
+- What Tier 1 FAILED to offer (compensation? professional costs? remedy?)
+- Whether HMRC acknowledged error but provided no redress
+- Specific CHG violations in how the complaint was handled
+
 When escalation is recommended, note:
 - Why Tier 1 failed (no remedy, acknowledgment only, inadequate resolution)
 - What Tier 2 should address
 - CHG procedural requirements for escalation
 - Rights to escalate and timelines
+- **SPECIFIC CHG BREACHES in how Tier 1 handled the complaint**
 
 Format as a structured fact sheet with clear sections.
 Use bullet points for clarity.
@@ -256,6 +265,24 @@ This handling represents a breach of multiple HMRC Charter commitments and Compl
 **2. [CRG Reference] - [Violation Name]** ← MUST be bold
 
 [Factual explanation with 2-3 sentences...]
+
+**CRITICAL - CHG COMPLAINT HANDLING VIOLATIONS:**
+If the fact sheet mentions a Tier 1 response that:
+- Offered only an apology (no remedy/compensation)
+- Failed to offer redress for acknowledged errors
+- Did not address professional costs (CRG5225)
+- Failed to provide meaningful resolution
+
+YOU MUST ADD A DEDICATED VIOLATION citing CHG complaint handling standards:
+
+**[N]. CHG Complaint Handling Standards - Inadequate Tier 1 Response**
+
+The Tier 1 response to our initial complaint (reference: [REF], dated [DATE]) demonstrably breached CHG complaint handling standards. Per CHG guidance, Tier 1 responses must provide meaningful resolution and appropriate redress when HMRC errors are acknowledged. The response offered [only an apology/acknowledgment only/no remedy] without addressing:
+- Professional cost reimbursement under CRG5225
+- Appropriate compensation for [delays/distress/financial harm]
+- Any tangible remedy for the acknowledged failures
+
+This failure to provide adequate redress at Tier 1 represents a procedural breach of CHG requirements and necessitates immediate Tier 2 escalation.
 
 [Continue numbering for all violations - typically 3-7. CRG reference FIRST, then violation name. Each violation header MUST be bold.]
 
