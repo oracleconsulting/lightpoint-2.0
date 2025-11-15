@@ -3,6 +3,9 @@
 -- Store, version, and manage all AI prompts used throughout Lightpoint
 -- ============================================================================
 
+-- Ensure clean setup
+BEGIN;
+
 -- ============================================================================
 -- 1. AI PROMPTS TABLE (Store all system prompts)
 -- ============================================================================
@@ -437,4 +440,7 @@ BEGIN
   RAISE NOTICE '';
   RAISE NOTICE 'Ready for: /settings/ai';
 END $$;
+
+-- Commit the transaction
+COMMIT;
 
