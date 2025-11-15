@@ -79,23 +79,48 @@ export async function compareDocumentToKnowledgeBase(
   console.log(`📄 Document length: ${documentText.length} chars`);
   console.log(`🔢 Found ${potentialDuplicates.length} potential duplicates`);
 
+  // If no text or it's too short, return early with safe defaults
+  if (!documentText || documentText.length < 50) {
+    console.log('⚠️ Document too short, skipping AI comparison');
+    return {
+      duplicates: [],
+      overlaps: [],
+      new_information: [{
+        category: 'CHG',
+        topic: 'Uploaded document',
+        content: documentText || '[Empty document]',
+        confidence: 0.5,
+        importance: 'medium',
+      }],
+      gaps_filled: [],
+      conflicts: [],
+      recommendations: {
+        action: 'add',
+        confidence: 0.8,
+        reason: 'First document in knowledge base - adding for review',
+      },
+    };
+  }
+
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
     throw new Error('OPENROUTER_API_KEY not configured');
   }
 
-  // Prepare context for AI comparison
-  const duplicatesContext = potentialDuplicates.map(dup => {
-    const content = dup.content || '';
-    const contentPreview = content.length > 0 ? content.substring(0, 500) : '[No content available]';
-    
-    return `
+  // Prepare context for AI comparison - with defensive checks
+  const duplicatesContext = potentialDuplicates
+    .filter(dup => dup && (dup.content || dup.title)) // Filter out invalid entries
+    .map(dup => {
+      const content = dup.content || '';
+      const contentPreview = content.length > 0 ? content.substring(0, 500) : '[No content available]';
+      
+      return `
 [Existing Entry: ${dup.title || 'Untitled'}]
 Category: ${dup.category || 'Uncategorized'}
 Similarity: ${((dup.similarity || 0) * 100).toFixed(1)}%
 Content Preview: ${contentPreview}...
 `;
-  }).join('\n\n');
+    }).join('\n\n');
 
   const prompt = `You are an expert knowledge base curator analyzing whether a new document should be added to an HMRC complaints guidance knowledge base.
 
