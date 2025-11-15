@@ -116,6 +116,7 @@ DO NOT add tone, style, or persuasive language. Just extract:
 5. System failure facts (contradictions, lost correspondence, departmental issues)
 6. Impact facts (client distress, wasted time, mounting costs)
 7. **PRECEDENT EXAMPLES** (successful complaint letters showing structure and tone)
+8. **ESCALATION FACTS** (if Tier 1 response inadequate, need for Tier 2, adjudicator referral)
 
 CRITICAL: If the analysis includes precedents or similar cases, extract:
 - Key phrases used in successful complaints
@@ -123,9 +124,25 @@ CRITICAL: If the analysis includes precedents or similar cases, extract:
 - Tone examples (level of firmness, memorable phrases)
 - Compensation amounts awarded in similar cases
 
+**ESCALATION INDICATORS** - Extract if present:
+- "Tier 1 response inadequate" or similar assessments
+- "Escalate to Tier 2 immediately" recommendations
+- "Adjudicator" or "escalation rights" mentions
+- CHG procedure references (CHG408, CHG502, etc.)
+- Timeline for escalation (15 working days, 40 working days)
+- Grounds for escalation (incomplete response, no remedy offered)
+
+When escalation is recommended, note:
+- Why Tier 1 failed (no remedy, acknowledgment only, inadequate resolution)
+- What Tier 2 should address
+- CHG procedural requirements for escalation
+- Rights to escalate and timelines
+
 Format as a structured fact sheet with clear sections.
 Use bullet points for clarity.
-Include ALL specific details - dates, amounts, counts, percentages.`
+Include ALL specific details - dates, amounts, counts, percentages.
+
+**If escalation mentioned**: Create separate "ESCALATION" section with all procedural facts.`
       },
       {
         role: 'user',
@@ -261,9 +278,19 @@ We require the following specific actions:
 2. [Specific action required]
 3. [Continue numbered list - typically 5-7 items]
 
+**ESCALATION NOTE**: If the fact sheet indicates this is an escalation (Tier 1 inadequate, Tier 2 required):
+- State clearly: "This matter requires immediate escalation to Tier 2"
+- Reference CHG requirements: "Per CHG [reference], Tier 1 response was inadequate"
+- Cite specific CHG timelines: "We require Tier 2 response within 40 working days per CHG standards"
+- State escalation grounds: "Tier 1 failed to provide meaningful remedy/resolution"
+- Reference right to escalate: "Per CHG procedures, we exercise our right to Tier 2 review"
+
 **11. RESPONSE DEADLINE** ← Section heading MUST be bold
 
 We require a substantive response to this complaint within 15 working days of receipt. Failure to provide an adequate response will result in immediate escalation to Tier 2, and subsequently to the Adjudicator's Office if necessary.
+
+**ESCALATION VARIANT**: If this IS a Tier 2 escalation, adjust to:
+"As a Tier 2 escalation, we require a substantive response within 40 working days per CHG guidelines. Failure to provide adequate resolution will result in referral to the Adjudicator's Office."
 
 **12. CLOSING** ← Section heading MUST be bold
 

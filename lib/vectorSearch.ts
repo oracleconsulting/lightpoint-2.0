@@ -93,24 +93,34 @@ function generateSearchQueries(originalQuery: string): string[] {
     queries.push('SEIS claim errors and appeals');
   }
   
-  // Search 2: Process/procedure search
+  // Search 2: Escalation/CHG search (enhanced for procedural issues)
+  if (lowerQuery.includes('tier 1') || lowerQuery.includes('tier 2') || 
+      lowerQuery.includes('escalat') || lowerQuery.includes('inadequate response') ||
+      lowerQuery.includes('adjudicator')) {
+    queries.push('CHG complaint handling guidance escalation procedures');
+    queries.push('CHG tier 1 tier 2 response standards timeframes');
+    queries.push('CHG408 CHG502 escalation adjudicator referral');
+    queries.push('complaint response inadequate escalation rights');
+  }
+  
+  // Search 3: General process/procedure search
   queries.push('complaint escalation tier 1 tier 2 adjudicator');
   queries.push('HMRC complaints procedure timeline');
   
-  // Search 3: CRG reference search
+  // Search 4: CRG reference search
   queries.push('CRG professional fees reimbursement CRG5225');
   queries.push('CRG compensation distress inconvenience CRG6050');
   queries.push('CRG financial redress remedy');
   
-  // Search 4: Charter commitments search
+  // Search 5: Charter commitments search
   queries.push('Charter commitments being responsive getting things right');
   queries.push('Charter violations complaint grounds');
   
-  // Search 5: Template and effective language
+  // Search 6: Template and effective language
   queries.push('effective complaint letter phrases breakthrough language');
   queries.push('successful complaint examples letter templates');
   
-  // Search 6: Timeline and documentation
+  // Search 7: Timeline and documentation
   queries.push('complaint response timeframes 15 working days');
   queries.push('evidence documentation requirements complaints');
   
