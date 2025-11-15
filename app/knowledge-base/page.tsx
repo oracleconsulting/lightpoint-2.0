@@ -110,10 +110,11 @@ export default function KnowledgeBasePage() {
         
         const result = await uploadForComparison.mutateAsync({
           filename: doc.filename,
-          content: doc.extractedText,
-          storagePath: doc.storagePath,
+          filePath: doc.storagePath,
           fileType: doc.fileType,
           fileSize: doc.fileSize,
+          extractedText: doc.extractedText,
+          documentChunks: doc.documentChunks,
         });
 
         comparisons.push({
