@@ -1214,6 +1214,181 @@ export const appRouter = router({
       }),
   }),
 
+  // Knowledge Base Chat
+  kbChat: router({
+    // Start new conversation
+    startConversation: publicProcedure
+      .mutation(async () => {
+        // TODO: Get user_id from auth context
+        const userId = '00000000-0000-0000-0000-000000000001'; // Placeholder
+        
+        const { data, error } = await (supabaseAdmin as any)
+          .from('kb_chat_conversations')
+          .insert({
+            user_id: userId,
+            title: 'New conversation',
+          })
+          .select()
+          .single();
+        
+        if (error) throw new Error(error.message);
+        return data;
+      }),
+
+    // Send message and get response
+    sendMessage: publicProcedure
+      .input(z.object({
+        conversationId: z.string(),
+        message: z.string(),
+        conversationHistory: z.array(z.object({
+          role: z.enum(['user', 'assistant', 'system']),
+          content: z.string(),
+        })).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const startTime = Date.now();
+        
+        // Save user message
+        const { data: userMessage, error: userError } = await (supabaseAdmin as any)
+          .from('kb_chat_messages')
+          .insert({
+            conversation_id: input.conversationId,
+            role: 'user',
+            content: input.message,
+          })
+          .select()
+          .single();
+        
+        if (userError) throw new Error(userError.message);
+        
+        // Get AI response
+        const { chatWithKnowledgeBase, generateConversationTitle } = await import('@/lib/knowledgeBaseChat');
+        const response = await chatWithKnowledgeBase(
+          input.message,
+          input.conversationHistory || []
+        );
+        
+        const processingTime = Date.now() - startTime;
+        
+        // Save assistant message
+        const { data: assistantMessage, error: assistantError } = await (supabaseAdmin as any)
+          .from('kb_chat_messages')
+          .insert({
+            conversation_id: input.conversationId,
+            role: 'assistant',
+            content: response.answer,
+            knowledge_base_chunks: response.knowledgeChunks,
+            sources: response.sources,
+            processing_time_ms: processingTime,
+          })
+          .select()
+          .single();
+        
+        if (assistantError) throw new Error(assistantError.message);
+        
+        // Update conversation title if this is the first message
+        const { data: conversation } = await (supabaseAdmin as any)
+          .from('kb_chat_conversations')
+          .select('message_count, title')
+          .eq('id', input.conversationId)
+          .single();
+        
+        if (conversation && conversation.message_count === 2 && conversation.title === 'New conversation') {
+          const title = await generateConversationTitle(input.message);
+          await (supabaseAdmin as any)
+            .from('kb_chat_conversations')
+            .update({ title })
+            .eq('id', input.conversationId);
+        }
+        
+        return {
+          userMessage,
+          assistantMessage,
+          sources: response.sources,
+        };
+      }),
+
+    // Get conversation history
+    getConversation: publicProcedure
+      .input(z.object({
+        conversationId: z.string(),
+      }))
+      .query(async ({ input }) => {
+        const { data: messages, error } = await (supabaseAdmin as any)
+          .from('kb_chat_messages')
+          .select('*')
+          .eq('conversation_id', input.conversationId)
+          .order('created_at', { ascending: true });
+        
+        if (error) throw new Error(error.message);
+        return messages;
+      }),
+
+    // List user's conversations
+    listConversations: publicProcedure
+      .query(async () => {
+        // TODO: Get user_id from auth context
+        const userId = '00000000-0000-0000-0000-000000000001'; // Placeholder
+        
+        try {
+          const { data, error } = await supabaseAdmin.rpc('get_user_kb_conversations', {
+            p_user_id: userId,
+            p_limit: 50,
+          } as any);
+          
+          if (error) {
+            console.warn('Chat conversations not available yet:', error);
+            return [];
+          }
+          return data;
+        } catch (err) {
+          console.warn('Chat query failed:', err);
+          return [];
+        }
+      }),
+
+    // Delete conversation
+    deleteConversation: publicProcedure
+      .input(z.object({
+        conversationId: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        const { error } = await (supabaseAdmin as any)
+          .from('kb_chat_conversations')
+          .delete()
+          .eq('id', input.conversationId);
+        
+        if (error) throw new Error(error.message);
+        return { success: true };
+      }),
+
+    // Submit feedback on message
+    submitFeedback: publicProcedure
+      .input(z.object({
+        messageId: z.string(),
+        isHelpful: z.boolean(),
+        feedbackText: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        // TODO: Get user_id from auth context
+        const userId = '00000000-0000-0000-0000-000000000001'; // Placeholder
+        
+        const { data, error } = await (supabaseAdmin as any)
+          .from('kb_chat_feedback')
+          .upsert({
+            message_id: input.messageId,
+            user_id: userId,
+            is_helpful: input.isHelpful,
+            feedback_text: input.feedbackText,
+          })
+          .select()
+          .single();
+        
+        if (error) throw new Error(error.message);
+        return data;
+      }),
+  }),
+
   // Users
   users: router({
     list: publicProcedure

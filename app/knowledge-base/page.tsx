@@ -8,6 +8,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import KnowledgeBaseChat from '@/components/kb/KnowledgeBaseChat';
 import { 
   Upload, 
   FileText, 
@@ -19,7 +20,8 @@ import {
   Trash2,
   Eye,
   RefreshCw,
-  Plus
+  Plus,
+  MessageCircle
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -103,8 +105,12 @@ export default function KnowledgeBasePage() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        <Tabs defaultValue="upload" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+        <Tabs defaultValue="chat" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="chat">
+              <MessageCircle className="h-4 w-4 mr-2" />
+              Ask Questions
+            </TabsTrigger>
             <TabsTrigger value="upload">
               <Upload className="h-4 w-4 mr-2" />
               Upload & Compare
@@ -122,6 +128,11 @@ export default function KnowledgeBasePage() {
               RSS Feeds
             </TabsTrigger>
           </TabsList>
+
+          {/* CHAT TAB */}
+          <TabsContent value="chat" className="space-y-6">
+            <KnowledgeBaseChat />
+          </TabsContent>
 
           {/* UPLOAD & COMPARE TAB */}
           <TabsContent value="upload" className="space-y-6">
