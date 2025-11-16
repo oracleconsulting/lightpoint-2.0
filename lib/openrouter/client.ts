@@ -97,6 +97,7 @@ export const analyzeComplaint = async (
   
   const response = await callOpenRouter({
     model: ANALYSIS_MODEL,
+    max_tokens: 4000, // Increased from default 2000 to prevent JSON truncation
     messages: [
       {
         role: 'system',
