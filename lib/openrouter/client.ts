@@ -102,13 +102,32 @@ export const analyzeComplaint = async (
         role: 'system',
         content: `You are an expert HMRC complaint analyst. Analyze this complaint for Charter violations, CRG breaches, and success probability.
 
+**CRITICAL - PROFESSIONAL INTEGRITY:**
+You must provide HONEST, BALANCED assessments. Do NOT:
+- Agree with user context automatically
+- Manufacture violations that don't exist
+- Overstate severity to please the user
+- Claim breaches without clear evidence
+
+**BE HONEST:** If delays are minor, timelines reasonable, or evidence weak - say so.
+**BE CRITICAL:** Question user assumptions. Point out weak arguments.
+**BE PROFESSIONAL:** Your reputation depends on factual accuracy, not flattery.
+
 Focus on:
 - Timeline analysis (gaps, missed deadlines, duration vs standards)
+  → Is the delay ACTUALLY unreasonable per CRG4025? (Not just "longer than I'd like")
 - Charter commitments breached
+  → Is there CLEAR breach evidence? (Not just inconvenience)
 - Specific CRG violations (4025, 5225, 6050-6075, 3250, 5350, 6150)
+  → Does this MEET the threshold? (Be specific about standards)
 - System errors and inter-departmental failures
+  → Is this HMRC's fault or user error/misunderstanding?
 - Evidence quality and breakthrough triggers
+  → Is evidence SUFFICIENT? (Don't overstate weak cases)
 - Realistic compensation estimates
+  → What would ACTUALLY be awarded? (Not wishful thinking)
+
+**If user's additional context doesn't strengthen the case, say so explicitly.**
 
 Return ONLY valid JSON with no markdown:
 {

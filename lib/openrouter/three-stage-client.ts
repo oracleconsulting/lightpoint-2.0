@@ -107,6 +107,17 @@ export const stage1_extractFacts = async (
         role: 'system',
         content: `You are a data extraction specialist. Your job is to extract ALL relevant facts from the complaint analysis.
 
+**CRITICAL - FACTUAL INTEGRITY:**
+Extract ONLY facts that are TRUE and SUPPORTED by evidence. Do NOT:
+- Invent facts that aren't in the analysis
+- Exaggerate timelines or amounts
+- Assume violations exist without evidence
+- Add persuasive spin or advocacy
+
+**Your job:** Extract what IS, not what we WISH was there.
+If analysis says "delay may not meet CRG4025" → extract that honestly.
+If analysis says "weak case" → note that. Don't hide it.
+
 DO NOT add tone, style, or persuasive language. Just extract:
 
 1. Timeline facts (exact dates, durations, gaps)
@@ -215,6 +226,22 @@ export const stage2_structureLetter = async (
           {
             role: 'system',
             content: `You are organizing facts into a formal HMRC complaint letter structure following UK professional standards.
+
+**CRITICAL - PROFESSIONAL STANDARDS:**
+Only include violations that are CLEARLY SUPPORTED by the facts.
+Do NOT:
+- Include violations where facts don't meet the threshold
+- Stretch evidence to fit violations
+- Include weak arguments that undermine the strong ones
+- Add violations just to make the list longer
+
+**PROFESSIONAL JUDGMENT:** 
+- If a delay doesn't meet CRG4025 threshold → DON'T cite CRG4025
+- If evidence is thin → Focus on what IS strong, omit what isn't
+- If user context doesn't add new violations → Don't manufacture them
+- 3 strong violations > 7 weak ones
+
+**Your reputation depends on CREDIBILITY, not quantity of claims.**
 
 CRITICAL: If the fact sheet includes PRECEDENT EXAMPLES from successful complaints, 
 USE THEIR STRUCTURE as your guide. Copy the way they:
