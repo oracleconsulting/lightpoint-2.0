@@ -27,15 +27,27 @@ export async function middleware(req: NextRequest) {
     data: { session },
   } = await supabase.auth.getSession();
 
+  // Debug logging
+  console.log('🔐 Middleware check:', {
+    path: req.nextUrl.pathname,
+    hasSession: !!session,
+    userId: session?.user?.id,
+  });
+
   // Public routes that don't require authentication
   const publicRoutes = ['/login', '/logout', '/auth/callback', '/auth/reset-password'];
   const isPublicRoute = publicRoutes.some(route => req.nextUrl.pathname.startsWith(route));
 
   // Protect all routes except public ones
   if (!session && !isPublicRoute) {
+    console.log('❌ No session, redirecting to login from:', req.nextUrl.pathname);
     const redirectUrl = new URL('/login', req.url);
     redirectUrl.searchParams.set('redirectedFrom', req.nextUrl.pathname);
     return NextResponse.redirect(redirectUrl);
+  }
+
+  if (session) {
+    console.log('✅ Session valid, allowing access to:', req.nextUrl.pathname);
   }
 
   return res;
