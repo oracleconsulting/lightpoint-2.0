@@ -5,6 +5,10 @@ import type { NextRequest } from 'next/server';
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
   
+  // Debug: Log available cookies
+  const allCookies = req.cookies.getAll();
+  console.log('🍪 Available cookies:', allCookies.map(c => c.name));
+  
   // Create Supabase client with proper cookie handling for middleware
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
