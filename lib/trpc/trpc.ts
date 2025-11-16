@@ -87,24 +87,38 @@ export async function createContext(
       
       const { data: userData, error: orgError } = await adminSupabase
         .from('lightpoint_users')
-        .select('organization_id, email, role')
+        .select('organization_id, email, role, id, updated_at')
         .eq('id', userId)
         .single();
       
+      console.log('📊 Raw Supabase response:', { 
+        data: userData, 
+        error: orgError?.message,
+        hasData: !!userData,
+        orgId: userData?.organization_id 
+      });
+      
       if (orgError) {
         console.error('❌ Error fetching user org:', orgError.message);
+        console.error('Full error:', JSON.stringify(orgError, null, 2));
       } else {
         console.log('✅ User data:', { 
+          id: userData?.id,
           email: userData?.email, 
           role: userData?.role,
-          organization_id: userData?.organization_id 
+          organization_id: userData?.organization_id,
+          updated_at: userData?.updated_at
         });
       }
       
       organizationId = userData?.organization_id ?? null;
       
       if (!organizationId) {
-        console.warn('⚠️ User has no organization_id! User:', userId);
+        console.warn('⚠️ User has no organization_id!');
+        console.warn('User ID:', userId);
+        console.warn('User data:', JSON.stringify(userData, null, 2));
+      } else {
+        console.log('🎉 Organization ID found:', organizationId);
       }
     } catch (error) {
       console.error('❌ Failed to fetch user organization:', error);
