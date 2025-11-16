@@ -118,7 +118,7 @@ export default function ComplaintDetailPage({ params }: { params: { id: string }
   const saveLetter = trpc.letters.save.useMutation({
     onSuccess: () => {
       console.log('💾 Letter saved to database');
-      utils.letters.list.invalidate(params.id);
+      utils.letters.list.invalidate({ complaintId: params.id });
     },
   });
 
