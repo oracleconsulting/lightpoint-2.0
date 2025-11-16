@@ -60,17 +60,34 @@ export async function createContext(
   let organizationId: string | null = null;
   if (userId) {
     try {
-      const { data: userData } = await supabase
+      console.log('🔍 Fetching organization for user:', userId);
+      const { data: userData, error: orgError } = await supabase
         .from('lightpoint_users')
-        .select('organization_id')
+        .select('organization_id, email, role')
         .eq('id', userId)
         .single();
       
+      if (orgError) {
+        console.error('❌ Error fetching user org:', orgError.message);
+      } else {
+        console.log('✅ User data:', { 
+          email: userData?.email, 
+          role: userData?.role,
+          organization_id: userData?.organization_id 
+        });
+      }
+      
       organizationId = userData?.organization_id ?? null;
+      
+      if (!organizationId) {
+        console.warn('⚠️ User has no organization_id! User:', userId);
+      }
     } catch (error) {
-      console.warn('Failed to fetch user organization:', error);
+      console.error('❌ Failed to fetch user organization:', error);
     }
   }
+
+  console.log('📋 tRPC Context:', { userId, organizationId });
 
   return {
     user,
