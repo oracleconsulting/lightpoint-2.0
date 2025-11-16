@@ -1,5 +1,6 @@
 import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
 import { appRouter } from '@/lib/trpc/router';
+import { createContext } from '@/lib/trpc/trpc';
 
 // Increase timeout for letter generation (three-stage pipeline can take 60-120s)
 export const maxDuration = 300; // 5 minutes (Railway/Vercel allow up to 300s)
@@ -12,7 +13,7 @@ const handler = (req: Request) => {
     endpoint: '/api/trpc',
     req,
     router: appRouter,
-    createContext: () => ({}),
+    createContext, // Now includes authenticated user context
     onError: ({ error, path }) => {
       console.error('❌ tRPC Error on path:', path);
       console.error('Error details:', error);

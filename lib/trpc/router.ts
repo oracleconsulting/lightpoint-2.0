@@ -1,4 +1,4 @@
-import { router, publicProcedure } from './trpc';
+import { router, publicProcedure, protectedProcedure } from './trpc';
 import { z } from 'zod';
 import { supabaseAdmin } from '@/lib/supabase/client';
 import { processDocument } from '@/lib/documentProcessor';
@@ -13,7 +13,7 @@ import { generateEmbedding } from '@/lib/embeddings';
 export const appRouter = router({
   // Complaints
   complaints: router({
-    create: publicProcedure
+    create: protectedProcedure
       .input(z.object({
         organizationId: z.string(),
         createdBy: z.string(),
@@ -22,7 +22,12 @@ export const appRouter = router({
         hmrcDepartment: z.string().optional(),
         context: z.string().optional(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        // Verify user belongs to the organization they're creating in
+        if (input.organizationId !== ctx.organizationId) {
+          throw new Error('Unauthorized: Cannot create complaint for different organization');
+        }
+        
         const { data, error } = await (supabaseAdmin as any)
           .from('complaints')
           .insert({
@@ -46,20 +51,23 @@ export const appRouter = router({
         return data;
       }),
 
-    list: publicProcedure
+    list: protectedProcedure
       .input(z.object({
         organizationId: z.string(),
         status: z.enum(['assessment', 'draft', 'active', 'escalated', 'resolved', 'closed']).optional(),
       }))
-      .query(async ({ input }) => {
+      .query(async ({ input, ctx }) => {
+        // Force user's organization - prevent accessing other orgs
+        const organizationId = ctx.organizationId;
+        
         try {
-          console.log('📋 Fetching complaints for org:', input.organizationId);
+          console.log('📋 Fetching complaints for org:', organizationId);
           console.log('📋 Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 30));
           
           let query = supabaseAdmin
             .from('complaints')
             .select('*')
-            .eq('organization_id', input.organizationId);
+            .eq('organization_id', organizationId);
           
           if (input.status) {
             query = query.eq('status', input.status);
@@ -94,7 +102,7 @@ export const appRouter = router({
         }
       }),
 
-    getById: publicProcedure
+    getById: protectedProcedure
       .input(z.string())
       .query(async ({ input }) => {
         const { data, error } = await supabaseAdmin
