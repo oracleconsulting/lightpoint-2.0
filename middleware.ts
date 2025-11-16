@@ -7,7 +7,7 @@ export async function middleware(req: NextRequest) {
   
   // Debug: Log available cookies
   const allCookies = req.cookies.getAll();
-  console.log('🍪 Available cookies:', allCookies.map(c => c.name));
+  console.log('🍪 Available cookies:', allCookies.map(c => ({ name: c.name, valueLength: c.value.length })));
   
   // Create Supabase client with proper cookie handling for middleware
   const supabase = createServerClient(
@@ -16,9 +16,12 @@ export async function middleware(req: NextRequest) {
     {
       cookies: {
         getAll() {
-          return req.cookies.getAll();
+          const cookies = req.cookies.getAll();
+          console.log('📖 Supabase requesting cookies, found:', cookies.length);
+          return cookies;
         },
         setAll(cookiesToSet) {
+          console.log('📝 Supabase setting cookies:', cookiesToSet.map(c => c.name));
           cookiesToSet.forEach(({ name, value, options }) => {
             res.cookies.set(name, value, options);
           });
@@ -29,7 +32,12 @@ export async function middleware(req: NextRequest) {
 
   const {
     data: { session },
+    error: sessionError,
   } = await supabase.auth.getSession();
+  
+  if (sessionError) {
+    console.error('❌ Session error:', sessionError.message);
+  }
 
   // Debug logging
   console.log('🔐 Middleware check:', {
