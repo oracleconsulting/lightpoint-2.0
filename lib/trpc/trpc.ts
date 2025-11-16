@@ -57,11 +57,35 @@ export async function createContext(
   const userId = user?.id ?? null;
 
   // Get user's organization ID if authenticated
+  // Use service role to bypass RLS issues
   let organizationId: string | null = null;
   if (userId) {
     try {
       console.log('🔍 Fetching organization for user:', userId);
-      const { data: userData, error: orgError } = await supabase
+      
+      // Create admin client with service key to bypass RLS
+      const adminSupabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_KEY!, // Service key bypasses RLS
+        {
+          cookies: {
+            getAll() {
+              return cookieStore.getAll();
+            },
+            setAll(cookiesToSet) {
+              try {
+                cookiesToSet.forEach(({ name, value, options }) => {
+                  cookieStore.set(name, value, options);
+                });
+              } catch {
+                // Ignore
+              }
+            },
+          },
+        }
+      );
+      
+      const { data: userData, error: orgError } = await adminSupabase
         .from('lightpoint_users')
         .select('organization_id, email, role')
         .eq('id', userId)
