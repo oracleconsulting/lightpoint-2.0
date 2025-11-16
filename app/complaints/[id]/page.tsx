@@ -115,10 +115,25 @@ export default function ComplaintDetailPage({ params }: { params: { id: string }
     },
   });
 
+  const saveLetter = trpc.letters.save.useMutation({
+    onSuccess: () => {
+      console.log('💾 Letter saved to database');
+      utils.letters.list.invalidate(params.id);
+    },
+  });
+
   const generateLetter = trpc.letters.generateComplaint.useMutation({
     onSuccess: (data) => {
       console.log('✅ Letter generation succeeded!');
       setGeneratedLetter(data.letter);
+      
+      // Auto-save letter to database
+      saveLetter.mutate({
+        complaintId: params.id,
+        letterType: 'initial_complaint',
+        letterContent: data.letter,
+        notes: 'Auto-generated complaint letter',
+      });
       
       // Auto-log time for letter generation (based on page count)
       const { minutes, description, pages } = calculateLetterTime(data.letter);
