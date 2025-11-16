@@ -455,6 +455,24 @@ export const appRouter = router({
           );
         }
         
+        // Auto-save letter to database (don't rely on client callback due to timeout)
+        console.log('💾 Auto-saving letter to database...');
+        const { error: saveError } = await (supabaseAdmin as any)
+          .from('generated_letters')
+          .insert({
+            complaint_id: input.complaintId,
+            letter_type: 'initial_complaint',
+            letter_content: letter,
+            notes: 'Auto-generated via three-stage pipeline',
+          });
+        
+        if (saveError) {
+          console.error('❌ Failed to auto-save letter:', saveError);
+          // Don't throw - still return the letter to client
+        } else {
+          console.log('✅ Letter auto-saved to database');
+        }
+        
         // NOTE: Time logging is handled by frontend (page.tsx) which calculates
         // time based on letter page count. Don't duplicate here!
         
