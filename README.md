@@ -1,355 +1,314 @@
-# Lightpoint - HMRC Complaint Management System
+# Lightpoint HMRC Complaints Management System
 
-A privacy-first, AI-powered HMRC complaint management system designed for accounting firms.
+## Current Version: 1.0 (Production)
 
-## 🚀 Features
-
-- **Privacy-First Architecture**: All PII is automatically stripped before AI processing
-- **Intelligent Document Analysis**: Automatically identifies Charter violations and CRG breaches
-- **AI-Powered Letter Generation**: Creates professional, evidence-based complaint letters
-- **Vector Search**: Finds relevant HMRC guidance and precedent cases
-- **Time Tracking**: Automatic billing-ready time logs
-- **Correspondence Management**: Track timelines and escalation triggers
-
-## 🛠️ Tech Stack
-
-- **Frontend**: Next.js 14 with App Router, TypeScript, Tailwind CSS, shadcn/ui
-- **Backend**: Next.js API routes with tRPC
-- **Database**: Supabase (PostgreSQL with pgvector extension)
-- **LLM**: OpenRouter API (Claude-3 Opus)
-- **Embeddings**: OpenAI text-embedding-ada-002
-- **File Storage**: Supabase Storage
-- **Deployment**: Railway
-
-## 📋 Prerequisites
-
-- Node.js 18+ and npm
-- Supabase account
-- OpenRouter API key
-- OpenAI API key
-
-## 🏗️ Setup Instructions
-
-### 1. Clone and Install
-
-```bash
-cd lightpoint-complaint-system
-npm install
-```
-
-### 2. Environment Variables
-
-Create a `.env.local` file:
-
-```env
-# Supabase Configuration
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_KEY=your_supabase_service_key
-
-# OpenRouter API (for Claude-3 Opus)
-OPENROUTER_API_KEY=your_openrouter_api_key
-
-# OpenAI API (for embeddings)
-OPENAI_API_KEY=your_openai_api_key
-
-# Encryption
-ENCRYPTION_KEY=your_encryption_key_min_32_chars
-
-# Application
-NEXT_PUBLIC_APP_URL=http://localhost:3004
-```
-
-### 3. Database Setup
-
-Run the migration script in Supabase SQL Editor:
-
-```bash
-# Copy the migration file
-cat supabase/migrations/001_initial_schema.sql
-```
-
-Execute the SQL in your Supabase project dashboard.
-
-### 4. Create Storage Bucket
-
-In Supabase Dashboard:
-1. Go to Storage
-2. Create a new bucket named `complaint-documents`
-3. Set bucket to private
-4. Add RLS policies as needed
-
-### 5. Run Development Server
-
-```bash
-npm run dev
-```
-
-Visit http://localhost:3004
-
-## 📁 Project Structure
-
-```
-lightpoint-complaint-system/
-├── app/
-│   ├── api/
-│   │   ├── documents/upload/     # Document upload endpoint
-│   │   └── trpc/[trpc]/          # tRPC API routes
-│   ├── dashboard/                # Main dashboard
-│   ├── complaints/
-│   │   ├── new/                  # Create complaint
-│   │   └── [id]/                 # Complaint detail
-│   ├── knowledge/                # Knowledge base
-│   ├── layout.tsx
-│   ├── page.tsx
-│   └── globals.css
-├── components/
-│   ├── complaint/
-│   │   ├── ComplaintWizard.tsx
-│   │   ├── DocumentUploader.tsx
-│   │   ├── TimelineView.tsx
-│   │   └── LetterPreview.tsx
-│   ├── analysis/
-│   │   ├── ViolationChecker.tsx
-│   │   └── PrecedentMatcher.tsx
-│   └── ui/                       # shadcn/ui components
-├── lib/
-│   ├── supabase/
-│   │   └── client.ts             # Supabase clients
-│   ├── trpc/
-│   │   ├── trpc.ts
-│   │   ├── router.ts
-│   │   └── Provider.tsx
-│   ├── openrouter/
-│   │   └── client.ts             # Claude integration
-│   ├── privacy.ts                # PII anonymization
-│   ├── embeddings.ts             # OpenAI embeddings
-│   ├── vectorSearch.ts           # Vector similarity search
-│   ├── documentProcessor.ts      # PDF processing
-│   ├── timeTracking.ts           # Time logging
-│   ├── correspondenceTracking.ts # Timeline management
-│   └── utils.ts
-├── types/
-│   └── database.ts               # TypeScript types
-├── supabase/
-│   └── migrations/
-│       └── 001_initial_schema.sql
-├── package.json
-├── tsconfig.json
-├── tailwind.config.ts
-├── next.config.js
-└── README.md
-```
-
-## 🔐 Privacy & GDPR Compliance
-
-### PII Protection
-
-All personal data is automatically anonymized before AI processing:
-- UK Unique Taxpayer Reference (UTR)
-- National Insurance Numbers (NINO)
-- Bank account numbers and sort codes
-- Email addresses and phone numbers
-- Names and addresses
-- UK postcodes
-
-### Data Flow
-
-1. **Document Upload** → Stored in Supabase Storage (encrypted)
-2. **Text Extraction** → PDF parsed to text
-3. **Anonymization** → PII removed using regex patterns
-4. **AI Analysis** → Only anonymized data sent to OpenRouter
-5. **Storage** → Only non-PII data stored in database
-
-### Audit Trail
-
-All data access is logged in `audit_logs` table for GDPR compliance.
-
-## 🤖 AI Features
-
-### Document Analysis
-
-Uses Claude-3 Opus to:
-- Identify HMRC Charter violations
-- Find CRG guidance breaches
-- Assess complaint validity
-- Estimate success rates
-- Recommend actions
-
-### Letter Generation
-
-Generates professional complaint letters with:
-- Formal structure and tone
-- Specific Charter citations
-- Chronological timeline
-- Required remedies
-- Fee recovery statements
-
-### Vector Search
-
-Finds relevant information using semantic similarity:
-- HMRC Charter commitments
-- CRG guidance sections
-- Historical precedent cases
-- Similar complaint patterns
-
-## 📊 Database Schema
-
-### Core Tables
-
-- `organizations` - Accounting firms
-- `users` - Accountants
-- `complaints` - Complaint cases
-- `documents` - Uploaded files
-- `knowledge_base` - HMRC guidance
-- `precedents` - Past cases
-- `time_logs` - Billing data
-- `audit_logs` - GDPR compliance
-
-### Vector Extensions
-
-Uses pgvector with OpenAI embeddings (1536 dimensions) for semantic search.
-
-## 🚢 Deployment to Railway
-
-### 1. Install Railway CLI
-
-```bash
-npm install -g @railway/cli
-```
-
-### 2. Login and Initialize
-
-```bash
-railway login
-railway init
-```
-
-### 3. Set Environment Variables
-
-```bash
-railway variables set NEXT_PUBLIC_SUPABASE_URL=xxx
-railway variables set NEXT_PUBLIC_SUPABASE_ANON_KEY=xxx
-railway variables set SUPABASE_SERVICE_KEY=xxx
-railway variables set OPENROUTER_API_KEY=xxx
-railway variables set OPENAI_API_KEY=xxx
-railway variables set ENCRYPTION_KEY=xxx
-railway variables set NEXT_PUBLIC_APP_URL=https://your-app.railway.app
-```
-
-### 4. Deploy
-
-```bash
-railway up
-```
-
-## 🧪 Testing
-
-To test the system:
-
-1. Create a test complaint with anonymized client reference
-2. Upload a sample HMRC letter (PDF)
-3. Run analysis to identify violations
-4. Generate a complaint letter
-5. Review precedent matches
-
-## 📖 Initial Data Seeding
-
-To populate the knowledge base:
-
-1. Import HMRC Charter commitments
-2. Import CRG guidance sections
-3. Import sanitized precedent cases
-4. Generate embeddings for all entries
-
-Example script (create `scripts/seed-knowledge.ts`):
-
-```typescript
-import { addToKnowledgeBase } from '@/lib/vectorSearch';
-
-const charterCommitments = [
-  {
-    category: 'HMRC Charter',
-    title: 'Respect You',
-    content: 'We will treat you with courtesy and respect at all times...',
-    source: 'HMRC Charter 2020'
-  },
-  // Add more...
-];
-
-async function seed() {
-  for (const item of charterCommitments) {
-    await addToKnowledgeBase(
-      item.category,
-      item.title,
-      item.content,
-      item.source
-    );
-  }
-}
-```
-
-## 🔧 Configuration
-
-### Time Estimates
-
-Adjust time tracking estimates in `lib/timeTracking.ts`:
-
-```typescript
-export const TIME_ESTIMATES = {
-  document_upload: 5,
-  document_review: 15,
-  analysis: 20,
-  letter_generation: 45,
-  letter_review: 30,
-  response_drafting: 40,
-  escalation_preparation: 60,
-  research: 30,
-  precedent_review: 20,
-};
-```
-
-### Escalation Rules
-
-Customize escalation triggers in `lib/correspondenceTracking.ts`.
-
-## 📝 API Routes
-
-### tRPC Procedures
-
-- `complaints.create` - Create new complaint
-- `complaints.list` - List complaints
-- `complaints.getById` - Get complaint details
-- `complaints.updateStatus` - Update status
-- `analysis.analyzeDocument` - Run AI analysis
-- `letters.generateComplaint` - Generate letter
-- `letters.generateResponse` - Generate response
-- `documents.list` - List documents
-- `time.getComplaintTime` - Get time logs
-- `knowledge.search` - Vector search
-
-## 🛡️ Security Features
-
-- Row Level Security (RLS) in Supabase
-- Encrypted file storage
-- API key protection
-- GDPR-compliant audit logs
-- No PII in AI processing
-- Signed URLs for file access
-
-## 📞 Support
-
-For issues or questions, refer to:
-- HMRC Charter documentation
-- Complaint Resolution Guidance (CRG)
-- Supabase documentation
-- OpenRouter API docs
-
-## 📄 License
-
-Private - for internal use only
+**Status:** ✅ Active Production System  
+**Deployment:** Railway (auto-deploy from `main` branch)  
+**Database:** Supabase PostgreSQL + Vector Search  
+**AI Provider:** OpenRouter (Claude Opus 4.1, Sonnet 4.5, Haiku 4.5)
 
 ---
 
-**Built with privacy and professionalism in mind** 🔐⚖️
+## Quick Start
 
+```bash
+# Install dependencies
+npm install
+
+# Create .env.local with required variables (see below)
+cp .env.example .env.local
+
+# Run development server
+npm run dev
+
+# Access at http://localhost:3004
+```
+
+---
+
+## Key Features
+
+### ✅ Currently Working
+- **Complaint Letter Generation**: 3-stage AI pipeline (Fact Extraction → Structure → Tone)
+- **Document Processing**: PDF, DOCX, Excel, images (with OCR)
+- **PII Sanitization**: Automatic redaction of NINO, UTR, emails, phone numbers
+- **Knowledge Base**: HMRC guidance (CHG, CRG, Charter) with vector search + reranking
+- **Precedent Library**: Historical complaint templates for tone/structure matching
+- **Time Tracking**: Automated billable time calculation in 12-minute segments
+- **User Management**: Role-based access (Admin, Manager, Staff)
+- **Practice Settings**: Firm details, charge-out rates, letterhead
+- **Status Management**: Assessment → Active → Escalated → Resolved → Closed
+
+### 🚧 In Development
+- Enhanced CHG violation detection for complaint handling failures
+- Professional integrity checks (honest assessment, no confirmation bias)
+- Reranking integration for improved search precision
+
+---
+
+## Environment Variables Required
+
+Create `.env.local` in the project root:
+
+```bash
+# Supabase (Database + Auth + Storage)
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_KEY=your-service-role-key
+
+# OpenRouter (AI Provider)
+OPENROUTER_API_KEY=sk-or-v1-your-key
+
+# OpenAI (for embeddings)
+OPENAI_API_KEY=sk-your-openai-key
+
+# App Configuration
+NEXT_PUBLIC_APP_URL=https://your-app.railway.app
+NODE_ENV=production
+```
+
+---
+
+## Technology Stack
+
+| Layer | Technology | Purpose |
+|-------|------------|---------|
+| **Frontend** | Next.js 14, React, TypeScript | UI framework |
+| **API** | tRPC | Type-safe client-server communication |
+| **Database** | Supabase (PostgreSQL + pgvector) | Data storage + vector search |
+| **Auth** | Supabase Auth | User authentication |
+| **Storage** | Supabase Storage | Document storage |
+| **AI** | OpenRouter | LLM access (Claude, GPT-4o) |
+| **Embeddings** | OpenAI `text-embedding-ada-002` | Vector search |
+| **Reranking** | Cohere Rerank 3.5, Voyage Rerank 2.5 | Search precision |
+| **UI** | shadcn/ui, Tailwind CSS | Component library |
+| **Deployment** | Railway | Cloud platform |
+
+---
+
+## Project Structure
+
+```
+lightpoint-complaint-system/
+├── app/                          # Next.js 14 app directory
+│   ├── complaints/[id]/         # Complaint detail pages
+│   ├── knowledge-base/          # KB management (admin)
+│   ├── settings/                # Practice settings
+│   └── api/trpc/[trpc]/         # tRPC API routes
+├── components/                   # React components
+│   ├── complaints/              # Complaint UI components
+│   ├── documents/               # Document viewer/upload
+│   ├── kb/                      # Knowledge base components
+│   └── ui/                      # shadcn/ui base components
+├── lib/                         # Core libraries
+│   ├── openrouter/              # AI clients (3-stage pipeline)
+│   ├── search/                  # Vector + hybrid search
+│   ├── trpc/                    # tRPC router (1,830 lines)
+│   ├── embeddings.ts            # Embedding generation
+│   ├── privacy.ts               # PII sanitization
+│   ├── modelConfig.ts           # AI model configuration
+│   └── supabase.ts              # Supabase client
+├── supabase/                    # Database migrations + SQL
+│   ├── migrations/              # Schema migrations
+│   └── *.sql                    # Setup/utility scripts
+└── public/                      # Static assets
+```
+
+---
+
+## Database Schema (Key Tables)
+
+| Table | Purpose |
+|-------|---------|
+| `complaints` | Main complaint records |
+| `complaint_documents` | Uploaded documents |
+| `complaint_timeline` | Activity log |
+| `time_log` | Billable time tracking |
+| `knowledge_base` | HMRC guidance documents |
+| `precedents` | Historical complaint templates |
+| `lightpoint_users` | User profiles |
+| `complaint_assignments` | User-complaint assignments |
+| `management_tickets` | Internal flags/issues |
+| `kb_chat_conversations` | Knowledge base chat sessions |
+| `ai_prompts` | Versioned system prompts |
+
+---
+
+## AI Pipeline Architecture
+
+### Stage 0: Initial Analysis
+**Model:** Claude Sonnet 4.5 (1M context)  
+**Purpose:** Assess complaint viability, identify violations  
+**Output:** JSON with violations, timeline, success rate, compensation estimates
+
+### Stage 1: Fact Extraction
+**Model:** Claude Haiku 4.5 (200K context, fast)  
+**Purpose:** Extract timeline, violations, financial facts from analysis  
+**Output:** Structured fact sheet
+
+### Stage 2: Letter Structuring  
+**Model:** Claude Sonnet 4.5 (1M context)  
+**Purpose:** Organize facts into professional UK complaint letter  
+**Output:** Structured letter with proper sections
+
+### Stage 3: Professional Tone
+**Model:** Claude Opus 4.1 (200K context, superior language)  
+**Purpose:** Enhance tone, ensure professional firmness  
+**Output:** Final complaint letter
+
+### Supporting Systems
+- **Knowledge Base Search**: Multi-angle vector search + BM25 hybrid search + reranking
+- **Precedent Matching**: Find similar historical complaints for tone/structure
+- **PII Sanitization**: Redact sensitive data before AI processing
+
+---
+
+## Known Issues & Limitations
+
+### Security
+- ❌ No authentication on tRPC endpoints (relies solely on Supabase RLS)
+- ❌ No rate limiting on AI endpoints (cost risk)
+- ⚠️ Practice settings stored in localStorage (not database)
+
+### Code Quality
+- ❌ Monolithic tRPC router (1,830 lines in single file)
+- ❌ No test coverage
+- ❌ Console.log statements throughout (should use structured logging)
+- ❌ Inconsistent error handling
+
+### Performance
+- ⚠️ No caching layer for vector search results
+- ⚠️ Large bundle size (no code splitting on heavy components)
+- ⚠️ Three-stage letter generation can timeout (5-minute limit set)
+
+### Features
+- ⚠️ Document viewer issues with some file types (scanned PDFs, large DOCx)
+- ⚠️ OCR failures not surfaced to user
+- ⚠️ No bulk document assessment yet
+- ⚠️ RSS feed for knowledge base not implemented
+
+---
+
+## Deployment
+
+### Automatic Deployment (Railway)
+```bash
+# Any push to main branch auto-deploys
+git push origin main
+
+# Monitor deployment at:
+# https://railway.app/project/your-project-id
+```
+
+### Manual Deployment
+```bash
+# Build locally
+npm run build
+
+# Railway CLI
+railway up
+```
+
+### Supabase Migrations
+```bash
+# Run migrations manually via Supabase SQL Editor
+# Files in: supabase/migrations/*.sql
+```
+
+---
+
+## Common Tasks
+
+### Adding a New AI Prompt
+1. Update `lib/openrouter/three-stage-client.ts` or `lib/openrouter/client.ts`
+2. Test locally with `npm run dev`
+3. Commit and push to deploy
+
+### Adding New Knowledge Base Documents
+1. Navigate to `/knowledge-base` (admin only)
+2. Click "Upload Document"
+3. System will extract text, generate embeddings, compare against existing
+4. Approve or reject staged document
+
+### Updating Practice Settings
+1. Navigate to `/settings`
+2. Update firm name, address, contact, charge-out rate
+3. Click "Save Settings"
+4. **Note:** Stored in localStorage, not database
+
+### Viewing System Logs
+```bash
+# Railway deployment logs
+railway logs
+
+# Or via Railway dashboard
+```
+
+---
+
+## Testing Checklist (After Changes)
+
+- [ ] Create new complaint
+- [ ] Upload documents (PDF, DOCX, image)
+- [ ] Run analysis (check console for errors)
+- [ ] Generate letter (3-stage pipeline)
+- [ ] Verify letter quality (CHG citations, dates, firm details)
+- [ ] Check time log entries (12-minute segments)
+- [ ] Test knowledge base search
+- [ ] Test document viewer
+- [ ] Check for console errors in browser
+
+---
+
+## Migration to v2.0
+
+**Status:** Planned  
+**Timeline:** 3-4 weeks  
+**Strategy:** Parallel development environment
+
+### Planned v2.0 Improvements
+- ✅ Proper tRPC authentication
+- ✅ Split monolithic router into modules
+- ✅ Comprehensive error handling
+- ✅ Structured logging (Winston)
+- ✅ Testing infrastructure (Vitest)
+- ✅ Rate limiting
+- ✅ CI/CD pipeline (GitHub Actions)
+- ✅ Error monitoring (Sentry)
+- ✅ Performance optimizations (caching, code splitting)
+
+See `DUAL_ENVIRONMENT_STRATEGY.md` for migration plan.
+
+---
+
+## Support & Maintenance
+
+**Primary Developer:** AI Assistant  
+**Client Contact:** jhoward@rpgcc.co.uk  
+**Repository:** https://github.com/oracleconsulting/lightpoint  
+
+---
+
+## License
+
+Proprietary - RPGCC LLP
+
+---
+
+## Recent Updates
+
+### November 16, 2025
+- ✅ Added professional integrity checks (honest assessment)
+- ✅ Enhanced CHG violation detection for complaint handling
+- ✅ Fixed DT-Individual financial context understanding
+- ✅ Added security headers
+- ✅ Updated Next.js to 14.2.33 (security patches)
+- ✅ Removed unused code files
+
+### November 9-15, 2025
+- Added three-stage letter generation pipeline
+- Implemented reranking for search precision
+- Added user management and role-based access
+- Implemented time tracking and billing
+- Added practice settings
+- Enhanced knowledge base with CHG documents
