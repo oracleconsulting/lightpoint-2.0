@@ -23,7 +23,7 @@ export interface Context {
 export async function createContext(
   opts?: FetchCreateContextFnOptions
 ): Promise<Context> {
-  // Create Supabase server client
+  // Create Supabase server client with proper cookie handling
   const cookieStore = cookies();
   
   const supabase = createServerClient(
@@ -31,8 +31,18 @@ export async function createContext(
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options);
+            });
+          } catch (error) {
+            // Cookie setting might fail in read-only contexts (like tRPC queries)
+            // This is expected and safe to ignore
+          }
         },
       },
     }
@@ -135,14 +145,25 @@ export const protectedProcedure = t.procedure.use(async (opts) => {
 export const adminProcedure = protectedProcedure.use(async (opts) => {
   const { ctx } = opts;
 
-  // Get user role from database
+  // Get user role from database using service key (bypasses RLS)
+  const cookieStore = cookies();
+  
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_KEY!, // Use service key for admin checks
     {
       cookies: {
-        get() {
-          return undefined;
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options);
+            });
+          } catch {
+            // Ignore cookie setting errors in read-only contexts
+          }
         },
       },
     }
