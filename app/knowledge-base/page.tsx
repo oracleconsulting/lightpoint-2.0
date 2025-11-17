@@ -33,7 +33,7 @@ export default function KnowledgeBasePage() {
   const { currentUser, isAdmin, isManager } = useUser();
   const [searchQuery, setSearchQuery] = useState('');
   const [uploadingFiles, setUploadingFiles] = useState<File[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>('CRG');
+  const [selectedCategory, setSelectedCategory] = useState<'CRG' | 'Charter' | 'Precedents' | 'Forms' | 'Legislation' | 'Other'>('CRG');
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, filename: '' });
   const [comparisonResults, setComparisonResults] = useState<any[]>([]);
