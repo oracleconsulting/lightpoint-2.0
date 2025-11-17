@@ -293,7 +293,7 @@ export default function KnowledgeBasePage() {
                     <label className="text-sm font-medium">
                       Document Category <span className="text-red-500">*</span>
                     </label>
-                    <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                    <Select value={selectedCategory} onValueChange={(value) => setSelectedCategory(value as typeof selectedCategory)}>
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>
