@@ -4,6 +4,8 @@ import { trpc } from '@/lib/trpc/Provider';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { DocumentUploader } from '@/components/complaint/DocumentUploader';
 import { TimelineView } from '@/components/complaint/TimelineView';
 import { OCRFailureCard } from '@/components/complaint/OCRFailureCard';
@@ -34,6 +36,8 @@ export default function ComplaintDetailPage({ params }: { params: { id: string }
   const [generatedLetter, setGeneratedLetter] = useState<string | null>(null);
   const [isEditingReference, setIsEditingReference] = useState(false);
   const [editedReference, setEditedReference] = useState('');
+  const [showLetterDialog, setShowLetterDialog] = useState(false);
+  const [additionalContext, setAdditionalContext] = useState('');
 
   const { currentUser } = useUser();
   const utils = trpc.useUtils();
@@ -241,6 +245,7 @@ This precedent was manually added because it represents a novel complaint type n
     console.log('🔄 Generate Letter button clicked');
     console.log('Analysis data:', analysisData ? 'Available' : 'Missing');
     console.log('Current user:', currentUser);
+    console.log('Additional context:', additionalContext || 'None provided');
     
     if (!analysisData) {
       console.error('❌ Cannot generate letter: No analysis data');
@@ -265,10 +270,15 @@ This precedent was manually added because it represents a novel complaint type n
       userTitle: currentUser?.job_title || 'Chartered Accountant',
       userEmail: currentUser?.email,
       userPhone: currentUser?.phone,
+      additionalContext: additionalContext || undefined, // Include additional context if provided
     };
     console.log('📤 Calling generateLetter with params:', letterParams);
     
     generateLetter.mutate(letterParams);
+    
+    // Close dialog and reset context
+    setShowLetterDialog(false);
+    setAdditionalContext('');
   };
 
   const handleRefineLetter = async (additionalContext: string) => {
@@ -482,15 +492,71 @@ This precedent was manually added because it represents a novel complaint type n
                       : 'Analyze Complaint'}
                   </Button>
 
-                  <Button 
-                    onClick={handleGenerateLetter}
-                    disabled={!analysisData || generateLetter.isPending}
-                    className="w-full"
-                    variant="outline"
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    {generateLetter.isPending ? 'Generating...' : 'Generate Letter'}
-                  </Button>
+                  <Dialog open={showLetterDialog} onOpenChange={setShowLetterDialog}>
+                    <DialogTrigger asChild>
+                      <Button 
+                        disabled={!analysisData || generateLetter.isPending}
+                        className="w-full"
+                        variant="outline"
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        {generateLetter.isPending ? 'Generating...' : 'Generate Letter'}
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl">
+                      <DialogHeader>
+                        <DialogTitle>Generate Complaint Letter</DialogTitle>
+                        <DialogDescription>
+                          Optionally add specific instructions or context to customize the letter generation.
+                        </DialogDescription>
+                      </DialogHeader>
+                      
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <label htmlFor="additional-context" className="text-sm font-medium">
+                            Additional Context (Optional)
+                          </label>
+                          <Textarea
+                            id="additional-context"
+                            placeholder="Examples:
+• Emphasize the £1.5M financial impact
+• Focus on the system failure aspects
+• Include specific compensation amounts (£1,500 for distress + £1,000 for fees)
+• Mention any upcoming deadlines or urgency
+• Reference specific CRG sections to highlight
+• Add client-specific details or circumstances"
+                            value={additionalContext}
+                            onChange={(e) => setAdditionalContext(e.target.value)}
+                            rows={10}
+                            className="resize-none"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            This context will be incorporated into the letter alongside the AI analysis.
+                            Leave blank to generate with analysis only.
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <DialogFooter>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setShowLetterDialog(false);
+                            setAdditionalContext('');
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          onClick={handleGenerateLetter}
+                          disabled={generateLetter.isPending}
+                        >
+                          <FileText className="h-4 w-4 mr-2" />
+                          {generateLetter.isPending ? 'Generating...' : 'Generate Letter'}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
                 </CardContent>
               </Card>
             )}

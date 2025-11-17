@@ -415,6 +415,7 @@ export const appRouter = router({
         userEmail: z.string().optional().nullable(), // User's email (can be null)
         userPhone: z.string().optional().nullable(), // User's phone (can be null)
         useThreeStage: z.boolean().optional(), // Optional: use three-stage pipeline (default: true)
+        additionalContext: z.string().optional(), // Optional: additional instructions/context for letter generation
       }))
       .mutation(async ({ input }) => {
         // Get complaint details
@@ -433,6 +434,9 @@ export const appRouter = router({
         
         if (useThreeStage) {
           console.log('🚀 Using THREE-STAGE pipeline for letter generation');
+          if (input.additionalContext) {
+            console.log('📝 Additional context provided:', input.additionalContext.substring(0, 100) + '...');
+          }
           letter = await generateComplaintLetterThreeStage(
             input.analysis,
             (complaint as any).complaint_reference,
@@ -442,16 +446,21 @@ export const appRouter = router({
             input.userName,
             input.userTitle,
             input.userEmail,
-            input.userPhone
+            input.userPhone,
+            input.additionalContext // Pass additional context
           );
         } else {
           console.log('📝 Using SINGLE-STAGE letter generation (legacy)');
+          if (input.additionalContext) {
+            console.log('📝 Additional context provided:', input.additionalContext.substring(0, 100) + '...');
+          }
           letter = await generateComplaintLetter(
             input.analysis,
             (complaint as any).complaint_reference,
             (complaint as any).hmrc_department || 'HMRC',
             input.practiceLetterhead,
-            input.chargeOutRate
+            input.chargeOutRate,
+            input.additionalContext // Pass additional context
           );
         }
         

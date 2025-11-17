@@ -203,12 +203,16 @@ export const stage2_structureLetter = async (
   userName?: string,
   userTitle?: string,
   userEmail?: string | null,
-  userPhone?: string | null
+  userPhone?: string | null,
+  additionalContext?: string
 ): Promise<string> => {
   console.log('🏗️ STAGE 2: Structuring letter with Sonnet 4.5 (professional structure)');
   console.log('👤 Using real user:', userName, userTitle);
   console.log('💰 Charge-out rate:', chargeOutRate || 'NOT PROVIDED');
   console.log('📋 Practice letterhead length:', practiceLetterhead?.length || 0);
+  if (additionalContext) {
+    console.log('📝 Additional context included:', additionalContext.substring(0, 100) + '...');
+  }
   
   // Get today's date for the letter
   const today = new Date();
@@ -428,6 +432,8 @@ Do NOT add tone or emotion - just organize facts professionally with ALL proper 
 ${factSheet}
 
 ${chargeOutRate ? `\nCharge-out rate: £${chargeOutRate}/hour\n` : ''}
+
+${additionalContext ? `\n**ADDITIONAL INSTRUCTIONS FROM USER:**\n${additionalContext}\n\nIncorporate these specific instructions/emphases into the letter where appropriate.\n` : ''}
 
 REAL USER DETAILS TO USE IN CLOSING:
 - Name: ${userName || 'NOT PROVIDED - use placeholder'}
@@ -660,12 +666,16 @@ export const generateComplaintLetterThreeStage = async (
   userName?: string,
   userTitle?: string,
   userEmail?: string | null,
-  userPhone?: string | null
+  userPhone?: string | null,
+  additionalContext?: string
 ) => {
   console.log('🚀 Starting three-stage letter generation pipeline');
   console.log('👤 User details:', { userName, userTitle, userEmail, userPhone });
   console.log('📋 Client Reference:', clientReference);
   console.log('🏢 HMRC Department:', hmrcDepartment);
+  if (additionalContext) {
+    console.log('📝 Additional context provided:', additionalContext.substring(0, 150) + '...');
+  }
   
   try {
     // STAGE 1: Extract facts (Sonnet 4.5 - 1M context)
@@ -690,7 +700,8 @@ export const generateComplaintLetterThreeStage = async (
       userName,
       userTitle,
       userEmail,
-      userPhone
+      userPhone,
+      additionalContext // Pass additional context to stage 2
     );
     const stage2Duration = ((Date.now() - startStage2) / 1000).toFixed(2);
     console.log(`✅ Stage 2 complete: Letter structured (${stage2Duration}s)`);
