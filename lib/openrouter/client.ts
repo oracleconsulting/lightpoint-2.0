@@ -226,9 +226,13 @@ export const generateComplaintLetter = async (
   clientReference: string,
   hmrcDepartment: string,
   practiceLetterhead?: string,
-  chargeOutRate?: number
+  chargeOutRate?: number,
+  additionalContext?: string
 ) => {
   console.log('✍️ Letter Generation: Using Claude Opus 4.1 (superior writing quality)');
+  if (additionalContext) {
+    console.log('📝 Additional context provided for single-stage generation');
+  }
   
   const response = await callOpenRouter({
     model: LETTER_MODEL,
@@ -418,6 +422,7 @@ CLIENT REFERENCE: ${clientReference}
 HMRC DEPARTMENT: ${hmrcDepartment}
 ${practiceLetterhead ? `\nPRACTICE LETTERHEAD (use exactly as provided):\n${practiceLetterhead}\n` : ''}
 ${chargeOutRate ? `\nCHARGE-OUT RATE: £${chargeOutRate}/hour (use this exact rate)\n` : ''}
+${additionalContext ? `\n**ADDITIONAL INSTRUCTIONS FROM USER:**\n${additionalContext}\n\nIncorporate these specific instructions/emphases into the letter where appropriate.\n` : ''}
 
 Generate the complete formal complaint letter now:`
       }
