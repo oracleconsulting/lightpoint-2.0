@@ -1021,10 +1021,12 @@ export const appRouter = router({
         fileSize: z.number(),
         extractedText: z.string(),
         documentChunks: z.array(z.string()),
+        category: z.enum(['CRG', 'Charter', 'Precedents', 'Forms', 'Legislation', 'Other']).optional().default('CRG'),
       }))
       .mutation(async ({ input }) => {
         try {
           console.log('📤 Server-side upload for:', input.filename);
+          console.log('   Category:', input.category);
           console.log('   File type:', input.fileType);
           console.log('   File size:', input.fileSize);
           console.log('   Buffer length (base64):', input.fileBuffer?.length || 0);
@@ -1106,6 +1108,7 @@ export const appRouter = router({
               embedding,
               comparison_result: comparisonResult,
               status: 'pending',
+              category: input.category, // Store selected category
             })
             .select()
             .single();
@@ -1181,7 +1184,7 @@ export const appRouter = router({
           .insert({
             title: title,
             content: stagedDoc.extracted_text,
-            category: 'CHG', // Default category
+            category: stagedDoc.category || 'CRG', // Use category from staging
             source: 'Manual Upload',
             embedding: stagedDoc.embedding,
             metadata: {

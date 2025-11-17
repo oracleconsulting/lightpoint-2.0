@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import KnowledgeBaseChat from '@/components/kb/KnowledgeBaseChat';
 import DocumentComparison from '@/components/kb/DocumentComparison';
@@ -32,6 +33,7 @@ export default function KnowledgeBasePage() {
   const { currentUser, isAdmin, isManager } = useUser();
   const [searchQuery, setSearchQuery] = useState('');
   const [uploadingFiles, setUploadingFiles] = useState<File[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>('CRG');
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, filename: '' });
   const [comparisonResults, setComparisonResults] = useState<any[]>([]);
@@ -118,6 +120,7 @@ export default function KnowledgeBasePage() {
           fileSize: doc.fileSize,
           extractedText: doc.extractedText,
           documentChunks: doc.documentChunks,
+          category: selectedCategory, // Include selected category
         });
 
         comparisons.push({
@@ -285,6 +288,29 @@ export default function KnowledgeBasePage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Category Selector */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      Document Category <span className="text-red-500">*</span>
+                    </label>
+                    <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="CRG">CRG - Complaints Resolution Guidance</SelectItem>
+                        <SelectItem value="Charter">Charter - HMRC Charter Documents</SelectItem>
+                        <SelectItem value="Precedents">Precedents - Historical Complaint Cases</SelectItem>
+                        <SelectItem value="Forms">Forms - HMRC Forms & Templates</SelectItem>
+                        <SelectItem value="Legislation">Legislation - Tax Law & Statutory References</SelectItem>
+                        <SelectItem value="Other">Other - General Tax Guidance</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Select where these documents should be stored in the knowledge base
+                    </p>
+                  </div>
+
                   {/* Upload Zone */}
                   <div className="border-2 border-dashed border-blue-200 rounded-lg p-8 text-center bg-blue-50/30 hover:bg-blue-50/50 transition-colors">
                     <input
