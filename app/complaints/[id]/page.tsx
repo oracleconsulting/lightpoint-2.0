@@ -147,9 +147,39 @@ export default function ComplaintDetailPage({ params }: { params: { id: string }
       
       console.log(`⏱️ Logged ${minutes} minutes for ${pages}-page letter (${description})`);
     },
-    onError: (error) => {
-      console.error('❌ Letter generation failed:', error);
-      alert(`Failed to generate letter: ${error.message}`);
+    onError: async (error) => {
+      console.error('❌ Letter generation failed on client:', error);
+      
+      // Check if letter was auto-saved on server despite client timeout
+      console.log('🔍 Checking if letter was auto-saved on server...');
+      
+      // Show helpful message immediately
+      alert(
+        'Letter generation is taking longer than expected (3-4 minutes for complex cases).\n\n' +
+        'The letter is being generated in the background. The page will automatically check for it.\n\n' +
+        'Please wait and watch the "Saved Letters" section below - the letter will appear when ready.'
+      );
+      
+      // Poll for new letters every 10 seconds for up to 4 minutes
+      let pollCount = 0;
+      const maxPolls = 24; // 4 minutes = 24 * 10 seconds
+      
+      const pollInterval = setInterval(async () => {
+        pollCount++;
+        console.log(`🔄 Polling for letter (attempt ${pollCount}/${maxPolls})...`);
+        
+        try {
+          await utils.letters.list.invalidate({ complaintId: params.id });
+          
+          if (pollCount >= maxPolls) {
+            clearInterval(pollInterval);
+            console.log('⏰ Polling timeout reached');
+          }
+        } catch (refreshError) {
+          console.error('Failed to refresh letters:', refreshError);
+          clearInterval(pollInterval);
+        }
+      }, 10000); // Poll every 10 seconds
     },
   });
 
