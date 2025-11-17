@@ -4,8 +4,8 @@ import { trpc } from '@/lib/trpc/Provider';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { DocumentUploader } from '@/components/complaint/DocumentUploader';
 import { TimelineView } from '@/components/complaint/TimelineView';
 import { OCRFailureCard } from '@/components/complaint/OCRFailureCard';
@@ -492,42 +492,35 @@ This precedent was manually added because it represents a novel complaint type n
                       : 'Analyze Complaint'}
                   </Button>
 
-                  <Dialog open={showLetterDialog} onOpenChange={setShowLetterDialog}>
-                    <DialogTrigger asChild>
-                      <Button 
-                        disabled={!analysisData || generateLetter.isPending}
-                        className="w-full"
-                        variant="outline"
-                      >
-                        <FileText className="h-4 w-4 mr-2" />
-                        {generateLetter.isPending ? 'Generating...' : 'Generate Letter'}
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-2xl">
-                      <DialogHeader>
-                        <DialogTitle>Generate Complaint Letter</DialogTitle>
-                        <DialogDescription>
+                  {!showLetterDialog ? (
+                    <Button 
+                      onClick={() => setShowLetterDialog(true)}
+                      disabled={!analysisData || generateLetter.isPending}
+                      className="w-full"
+                      variant="outline"
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      {generateLetter.isPending ? 'Generating...' : 'Generate Letter'}
+                    </Button>
+                  ) : (
+                    <Card className="border-2 border-primary">
+                      <CardHeader>
+                        <CardTitle className="text-lg">Generate Complaint Letter</CardTitle>
+                        <p className="text-sm text-muted-foreground">
                           Optionally add specific instructions or context to customize the letter generation.
-                        </DialogDescription>
-                      </DialogHeader>
-                      
-                      <div className="space-y-4 py-4">
+                        </p>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
                         <div className="space-y-2">
-                          <label htmlFor="additional-context" className="text-sm font-medium">
+                          <Label htmlFor="additional-context">
                             Additional Context (Optional)
-                          </label>
+                          </Label>
                           <Textarea
                             id="additional-context"
-                            placeholder="Examples:
-• Emphasize the £1.5M financial impact
-• Focus on the system failure aspects
-• Include specific compensation amounts (£1,500 for distress + £1,000 for fees)
-• Mention any upcoming deadlines or urgency
-• Reference specific CRG sections to highlight
-• Add client-specific details or circumstances"
+                            placeholder="Examples:&#10;• Emphasize specific amounts or impacts&#10;• Focus on particular violations&#10;• Include compensation amounts&#10;• Mention deadlines or urgency&#10;• Reference specific CRG sections&#10;• Add client-specific details"
                             value={additionalContext}
                             onChange={(e) => setAdditionalContext(e.target.value)}
-                            rows={10}
+                            rows={8}
                             className="resize-none"
                           />
                           <p className="text-xs text-muted-foreground">
@@ -535,28 +528,30 @@ This precedent was manually added because it represents a novel complaint type n
                             Leave blank to generate with analysis only.
                           </p>
                         </div>
-                      </div>
-                      
-                      <DialogFooter>
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            setShowLetterDialog(false);
-                            setAdditionalContext('');
-                          }}
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          onClick={handleGenerateLetter}
-                          disabled={generateLetter.isPending}
-                        >
-                          <FileText className="h-4 w-4 mr-2" />
-                          {generateLetter.isPending ? 'Generating...' : 'Generate Letter'}
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
+                        
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setShowLetterDialog(false);
+                              setAdditionalContext('');
+                            }}
+                            className="flex-1"
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            onClick={handleGenerateLetter}
+                            disabled={generateLetter.isPending}
+                            className="flex-1"
+                          >
+                            <FileText className="h-4 w-4 mr-2" />
+                            {generateLetter.isPending ? 'Generating...' : 'Generate Letter'}
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
                 </CardContent>
               </Card>
             )}
