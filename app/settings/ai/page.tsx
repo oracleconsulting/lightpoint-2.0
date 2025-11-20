@@ -283,7 +283,7 @@ export default function AISettingsPage() {
                           <Button
                             size="sm"
                             onClick={handleSave}
-                            disabled={updatePrompt.isLoading}
+                            disabled={updatePrompt.isPending}
                           >
                             <Save className="h-4 w-4 mr-2" />
                             Save Changes
