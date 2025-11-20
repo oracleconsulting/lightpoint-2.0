@@ -113,7 +113,7 @@ export function LetterManager({ complaintId, generatedLetter, clientReference, o
               clientReference={clientReference || complaintId}
             />
 
-            <Button onClick={handleSaveLetter} disabled={saveLetter.isLoading} className="gap-2 w-full">
+            <Button onClick={handleSaveLetter} disabled={saveLetter.isPending} className="gap-2 w-full">
               <Save className="h-4 w-4" />
               Save Letter to Database
             </Button>
@@ -291,7 +291,7 @@ export function LetterManager({ complaintId, generatedLetter, clientReference, o
                 </Button>
                 <Button
                   onClick={handleConfirmSent}
-                  disabled={markAsSent.isLoading}
+                  disabled={markAsSent.isPending}
                   className="gap-2"
                 >
                   <CheckCircle2 className="h-4 w-4" />
