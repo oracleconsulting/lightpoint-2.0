@@ -135,3 +135,4 @@ onError: async (error) => {
 **Risk:** Low - Fallback behavior unchanged if polling fails  
 **User Benefit:** No more confusing errors or manual page refreshes
 
+

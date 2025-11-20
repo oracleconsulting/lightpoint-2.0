@@ -26,3 +26,4 @@ FROM generated_letters
 ORDER BY created_at DESC
 LIMIT 10;
 
+
