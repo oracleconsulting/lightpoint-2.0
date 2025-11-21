@@ -341,7 +341,7 @@ export async function abTestFineTuned(
 }
 
 // Helper functions (placeholders - implement based on your actual OpenRouter client)
-async function generateWithOpus(analysis: any, reference: string): Promise<string> {
+async function generateWithOpus(_analysis: unknown, _reference: string): Promise<string> {
   // Use your existing Opus 4.1 generation
   // Import from three-stage-client.ts
   return "Opus letter placeholder";

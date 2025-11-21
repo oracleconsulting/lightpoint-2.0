@@ -83,7 +83,7 @@ function chunkText(text: string, chunkSize: number = 1000): string[] {
  */
 export async function processDocumentForKB(
   file: File,
-  orgId: string
+  _orgId: string
 ): Promise<ProcessedDocument> {
   const startTime = Date.now();
   console.log(`📄 Processing ${file.name}...`);
