@@ -33,3 +33,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# IDE and Editor configs (may contain secrets)
+.vscode/
+.cursor/
+.idea/
+
+# SonarLint
+.sonarlint/
