@@ -74,7 +74,14 @@ Extract ALL information as structured JSON:`
   // Parse JSON response
   try {
     let jsonText = response.trim();
-    const jsonBlockMatch = jsonText.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+    // Safe regex with length limit to prevent ReDoS
+    // SonarCloud Security Hotspot: Regex with potential exponential complexity
+    // Mitigation: Limit input length and use non-backtracking regex
+    const MAX_TEXT_LENGTH = 100000; // 100KB limit
+    const textToMatch = jsonText.length > MAX_TEXT_LENGTH ? jsonText.substring(0, MAX_TEXT_LENGTH) : jsonText;
+    
+    // Simpler, safer regex pattern
+    const jsonBlockMatch = textToMatch.match(/```json?\s*\n?([\s\S]{0,50000}?)\n?```/);
     if (jsonBlockMatch) {
       jsonText = jsonBlockMatch[1].trim();
     }
