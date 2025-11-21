@@ -563,7 +563,8 @@ export const appRouter = router({
           .single();
         
         if (complaint) {
-          const timeline = (complaint as any).timeline || [];
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+          const timeline = complaint.timeline || [];
           timeline.push({
             date: new Date().toISOString(),
             type: 'letter_sent',
