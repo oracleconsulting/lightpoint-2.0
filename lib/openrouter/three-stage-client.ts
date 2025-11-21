@@ -743,7 +743,7 @@ export const generateComplaintLetterThreeStage = async (
       additionalContext,
       onProgress
     );
-    const stage2Duration = ((Date.now() - startTime - parseFloat(stage1Duration) * 1000) / 1000).toFixed(2);
+    const stage2Duration = ((Date.now() - startTime - Number.parseFloat(stage1Duration) * 1000) / 1000).toFixed(2);
     console.log(`✅ Stage 2 complete: ${stage2Duration}s (optimized -8s)`);
     console.log(`📄 Structured letter length: ${structuredLetter.length} chars`);
     
@@ -756,7 +756,7 @@ export const generateComplaintLetterThreeStage = async (
       userTitle,
       onProgress
     );
-    const stage3Duration = ((Date.now() - startTime - parseFloat(stage1Duration) * 1000 - parseFloat(stage2Duration) * 1000) / 1000).toFixed(2);
+    const stage3Duration = ((Date.now() - startTime - Number.parseFloat(stage1Duration) * 1000 - Number.parseFloat(stage2Duration) * 1000) / 1000).toFixed(2);
     console.log(`✅ Stage 3 complete: ${stage3Duration}s (optimized -12s)`);
     console.log(`📄 Final letter length: ${finalLetter.length} chars`);
     

@@ -145,9 +145,9 @@ export default function KnowledgeBaseChat() {
               </p>
               <div className="grid grid-cols-1 gap-2 max-w-2xl">
                 <p className="text-xs font-medium text-muted-foreground mb-2">Suggested questions:</p>
-                {suggestedQuestions.map((question, index) => (
+                {suggestedQuestions.map((question) => (
                   <button
-                    key={index}
+                    key={question}
                     onClick={() => setInput(question)}
                     className="text-left p-3 rounded-lg border border-blue-200 bg-blue-50/30 hover:bg-blue-50 transition-colors text-sm"
                   >
@@ -184,8 +184,8 @@ export default function KnowledgeBaseChat() {
                     {message.role === 'assistant' && message.sources && message.sources.length > 0 && (
                       <div className="mt-2 space-y-2 w-full">
                         <p className="text-xs font-medium text-muted-foreground">Sources:</p>
-                        {message.sources.slice(0, 3).map((source, index) => (
-                          <div key={index} className="text-xs p-2 bg-blue-50 rounded border border-blue-200">
+                        {message.sources.slice(0, 3).map((source) => (
+                          <div key={`${source.title}-${source.relevance}`} className="text-xs p-2 bg-blue-50 rounded border border-blue-200">
                             <div className="flex items-center justify-between mb-1">
                               <span className="font-medium text-blue-900">{source.title}</span>
                               <Badge variant="outline" className="text-xs">{source.relevance}% relevant</Badge>

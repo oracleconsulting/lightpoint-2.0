@@ -343,7 +343,7 @@ export default function KnowledgeBasePage() {
                       <p className="font-medium">Selected Files ({uploadingFiles.length}):</p>
                       <div className="space-y-2 max-h-96 overflow-y-auto">
                         {uploadingFiles.map((file, index) => (
-                          <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                          <div key={`${file.name}-${file.size}-${index}`} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                             <div className="flex items-center gap-3">
                               <FileText className="h-5 w-5 text-blue-600" />
                               <div>

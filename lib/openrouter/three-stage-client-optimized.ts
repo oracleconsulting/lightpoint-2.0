@@ -568,7 +568,7 @@ export const generateComplaintLetterThreeStage = async (
       additionalContext,
       onProgress
     );
-    const stage2Duration = ((Date.now() - (startTime + parseFloat(stage1Duration) * 1000)) / 1000).toFixed(2);
+    const stage2Duration = ((Date.now() - (startTime + Number.parseFloat(stage1Duration) * 1000)) / 1000).toFixed(2);
     console.log(`✅ Stage 2 complete: ${stage2Duration}s (optimized -8s)`);
     
     // STAGE 3: Add tone

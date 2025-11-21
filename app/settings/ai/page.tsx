@@ -382,7 +382,7 @@ export default function AISettingsPage() {
                               min="0"
                               max="1"
                               value={editedTemperature}
-                              onChange={(e) => setEditedTemperature(parseFloat(e.target.value))}
+                              onChange={(e) => setEditedTemperature(Number.parseFloat(e.target.value))}
                             />
                           ) : (
                             <Input
@@ -401,7 +401,7 @@ export default function AISettingsPage() {
                               min="100"
                               max="10000"
                               value={editedMaxTokens}
-                              onChange={(e) => setEditedMaxTokens(parseInt(e.target.value))}
+                              onChange={(e) => setEditedMaxTokens(Number.parseInt(e.target.value, 10))}
                             />
                           ) : (
                             <Input

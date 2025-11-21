@@ -155,8 +155,8 @@ export default function DocumentComparison({
               Duplicates Found ({comparison.duplicates.length})
             </h3>
             <div className="space-y-2">
-              {comparison.duplicates.map((dup, index) => (
-                <div key={index} className="bg-white rounded p-3 border border-red-200">
+              {comparison.duplicates.map((dup) => (
+                <div key={`${dup.title}-${dup.similarity}`} className="bg-white rounded p-3 border border-red-200">
                   <div className="flex items-center justify-between mb-1">
                     <span className="font-medium text-sm">{dup.title}</span>
                     <Badge variant="outline">{(dup.similarity * 100).toFixed(0)}% similar</Badge>
@@ -176,8 +176,8 @@ export default function DocumentComparison({
               Overlaps Detected ({comparison.overlaps.length})
             </h3>
             <div className="space-y-2">
-              {comparison.overlaps.map((overlap, index) => (
-                <div key={index} className="bg-white rounded p-3 border border-blue-200">
+              {comparison.overlaps.map((overlap) => (
+                <div key={`${overlap.title}-${overlap.overlap_percentage}`} className="bg-white rounded p-3 border border-blue-200">
                   <div className="flex items-center justify-between mb-1">
                     <span className="font-medium text-sm">{overlap.title}</span>
                     <Badge variant="outline">{overlap.overlap_percentage}% overlap</Badge>
