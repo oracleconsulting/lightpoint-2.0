@@ -11,6 +11,10 @@ const securityHeaders = [
 
 const nextConfig = {
   reactStrictMode: true,
+  // Allow warnings but fail on errors
+  eslint: {
+    ignoreDuringBuilds: false, // Run ESLint during build
+  },
   webpack: (config) => {
     config.resolve.fallback = {
       ...config.resolve.fallback,
