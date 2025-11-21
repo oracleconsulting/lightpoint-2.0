@@ -85,158 +85,113 @@ export const generateCacheKey = (
 };
 
 /**
- * Cache knowledge base search results
+ * Generic cache setter (DRY helper)
  */
-export const cacheKnowledgeSearch = async (
+const cacheSearchResults = async (
+  prefix: string,
   queryText: string,
   threshold: number,
   matchCount: number,
-  results: any[]
+  results: any[],
+  label: string
 ): Promise<void> => {
   const redis = await getRedisClient();
   if (!redis) return;
 
   try {
-    const cacheKey = generateCacheKey('kb_search', {
+    const cacheKey = generateCacheKey(prefix, {
       query: queryText.toLowerCase().trim(),
       threshold,
       matchCount,
     });
-
-    // Cache for 24 hours
     await redis.setEx(cacheKey, 86400, JSON.stringify(results));
-    console.log(`✅ Cached knowledge search: ${cacheKey}`);
+    console.log(`✅ Cached ${label}: ${cacheKey}`);
   } catch (error) {
-    console.error('❌ Failed to cache knowledge search:', error);
+    console.error(`❌ Failed to cache ${label}:`, error);
   }
 };
 
 /**
- * Get cached knowledge base search results
+ * Generic cache getter (DRY helper)
  */
-export const getCachedKnowledgeSearch = async (
+const getCachedSearchResults = async (
+  prefix: string,
   queryText: string,
   threshold: number,
-  matchCount: number
+  matchCount: number,
+  label: string
 ): Promise<any[] | null> => {
   const redis = await getRedisClient();
   if (!redis) return null;
 
   try {
-    const cacheKey = generateCacheKey('kb_search', {
+    const cacheKey = generateCacheKey(prefix, {
       query: queryText.toLowerCase().trim(),
       threshold,
       matchCount,
     });
-
     const cached = await redis.get(cacheKey);
     if (cached) {
-      console.log(`✅ Cache HIT for knowledge search: ${cacheKey}`);
+      console.log(`✅ Cache HIT for ${label}: ${cacheKey}`);
       return JSON.parse(cached);
     }
-
-    console.log(`❌ Cache MISS for knowledge search: ${cacheKey}`);
+    console.log(`❌ Cache MISS for ${label}: ${cacheKey}`);
     return null;
   } catch (error) {
-    console.error('❌ Failed to get cached knowledge search:', error);
+    console.error(`❌ Failed to get cached ${label}:`, error);
     return null;
   }
 };
 
 /**
- * Cache precedent search results
+ * Generic cache invalidator (DRY helper)
  */
-export const cachePrecedentSearch = async (
+const invalidateCache = async (pattern: string, label: string): Promise<void> => {
+  const redis = await getRedisClient();
+  if (!redis) return;
+
+  try {
+    const keys = await redis.keys(pattern);
+    if (keys.length > 0) {
+      await redis.del(keys);
+      console.log(`✅ Invalidated ${keys.length} ${label} caches`);
+    }
+  } catch (error) {
+    console.error(`❌ Failed to invalidate ${label} cache:`, error);
+  }
+};
+
+// Public API - Knowledge Base
+export const cacheKnowledgeSearch = (
   queryText: string,
   threshold: number,
   matchCount: number,
   results: any[]
-): Promise<void> => {
-  const redis = await getRedisClient();
-  if (!redis) return;
+) => cacheSearchResults('kb_search', queryText, threshold, matchCount, results, 'knowledge search');
 
-  try {
-    const cacheKey = generateCacheKey('precedent_search', {
-      query: queryText.toLowerCase().trim(),
-      threshold,
-      matchCount,
-    });
-
-    // Cache for 24 hours
-    await redis.setEx(cacheKey, 86400, JSON.stringify(results));
-    console.log(`✅ Cached precedent search: ${cacheKey}`);
-  } catch (error) {
-    console.error('❌ Failed to cache precedent search:', error);
-  }
-};
-
-/**
- * Get cached precedent search results
- */
-export const getCachedPrecedentSearch = async (
+export const getCachedKnowledgeSearch = (
   queryText: string,
   threshold: number,
   matchCount: number
-): Promise<any[] | null> => {
-  const redis = await getRedisClient();
-  if (!redis) return null;
+) => getCachedSearchResults('kb_search', queryText, threshold, matchCount, 'knowledge search');
 
-  try {
-    const cacheKey = generateCacheKey('precedent_search', {
-      query: queryText.toLowerCase().trim(),
-      threshold,
-      matchCount,
-    });
+export const invalidateKnowledgeCache = () => invalidateCache('kb_search:*', 'knowledge search');
 
-    const cached = await redis.get(cacheKey);
-    if (cached) {
-      console.log(`✅ Cache HIT for precedent search: ${cacheKey}`);
-      return JSON.parse(cached);
-    }
+// Public API - Precedents
+export const cachePrecedentSearch = (
+  queryText: string,
+  threshold: number,
+  matchCount: number,
+  results: any[]
+) => cacheSearchResults('precedent_search', queryText, threshold, matchCount, results, 'precedent search');
 
-    console.log(`❌ Cache MISS for precedent search: ${cacheKey}`);
-    return null;
-  } catch (error) {
-    console.error('❌ Failed to get cached precedent search:', error);
-    return null;
-  }
-};
+export const getCachedPrecedentSearch = (
+  queryText: string,
+  threshold: number,
+  matchCount: number
+) => getCachedSearchResults('precedent_search', queryText, threshold, matchCount, 'precedent search');
 
-/**
- * Invalidate all knowledge base caches (call when KB is updated)
- */
-export const invalidateKnowledgeCache = async (): Promise<void> => {
-  const redis = await getRedisClient();
-  if (!redis) return;
-
-  try {
-    const keys = await redis.keys('kb_search:*');
-    if (keys.length > 0) {
-      await redis.del(keys);
-      console.log(`✅ Invalidated ${keys.length} knowledge search caches`);
-    }
-  } catch (error) {
-    console.error('❌ Failed to invalidate knowledge cache:', error);
-  }
-};
-
-/**
- * Invalidate all precedent caches (call when precedents are updated)
- */
-export const invalidatePrecedentCache = async (): Promise<void> => {
-  const redis = await getRedisClient();
-  if (!redis) return;
-
-  try {
-    const keys = await redis.keys('precedent_search:*');
-    if (keys.length > 0) {
-      await redis.del(keys);
-      console.log(`✅ Invalidated ${keys.length} precedent search caches`);
-    }
-  } catch (error) {
-    console.error('❌ Failed to invalidate precedent cache:', error);
-  }
-};
+export const invalidatePrecedentCache = () => invalidateCache('precedent_search:*', 'precedent search');
 
 /**
  * Get cache statistics
