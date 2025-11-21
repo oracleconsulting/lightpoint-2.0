@@ -1,5 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabase/client';
 import { addDays } from 'date-fns';
+import { logger } from './/logger';
+
 
 /**
  * Track correspondence and update complaint timeline
@@ -53,7 +55,7 @@ export const trackCorrespondence = async (
     
     return data;
   } catch (error) {
-    console.error('Track correspondence error:', error);
+    logger.error('Track correspondence error:', error);
     throw new Error('Failed to track correspondence');
   }
 };
@@ -108,7 +110,7 @@ export const checkEscalationTriggers = async (complaintId: string) => {
         .eq('id', complaintId);
     }
   } catch (error) {
-    console.error('Check escalation triggers error:', error);
+    logger.error('Check escalation triggers error:', error);
   }
 };
 
@@ -141,7 +143,7 @@ export const getComplaintsNeedingAttention = async (organizationId: string) => {
     
     return needingAttention;
   } catch (error) {
-    console.error('Get complaints needing attention error:', error);
+    logger.error('Get complaints needing attention error:', error);
     throw new Error('Failed to retrieve complaints needing attention');
   }
 };

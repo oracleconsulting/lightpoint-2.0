@@ -30,6 +30,8 @@ import { ArrowLeft, FileText, Sparkles, Send, Edit2, Check, X } from 'lucide-rea
 import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { useUser } from '@/contexts/UserContext';
+import { logger } from '../../../lib/logger';
+
 
 export default function ComplaintDetailPage({ params }: { params: { id: string } }) {
   const [analysisData, setAnalysisData] = useState<any>(null);
@@ -49,7 +51,7 @@ export default function ComplaintDetailPage({ params }: { params: { id: string }
   // Load existing analysis from complaint data (if it exists)
   useEffect(() => {
     if (complaint && (complaint as any).analysis) {
-      console.log('📦 Loading existing analysis from database (prevents re-running LLM)');
+      logger.info('📦 Loading existing analysis from database (prevents re-running LLM)');
       setAnalysisData({
         analysis: (complaint as any).analysis,
         guidance: [], // Will be empty on reload, but analysis is the important part
@@ -88,7 +90,7 @@ export default function ComplaintDetailPage({ params }: { params: { id: string }
 
   const analyzeDocument = trpc.analysis.analyzeDocument.useMutation({
     onSuccess: (data) => {
-      console.log('✅ Analysis complete:', data);
+      logger.info('✅ Analysis complete:', data);
       setAnalysisData(data);
       
       // Auto-log time for analysis (based on document count)
@@ -102,10 +104,10 @@ export default function ComplaintDetailPage({ params }: { params: { id: string }
         rate: practiceSettings?.chargeOutRate || 250,
       });
       
-      console.log(`⏱️ Logged ${minutes} minutes for ${description}`);
+      logger.info(`⏱️ Logged ${minutes} minutes for ${description}`);
     },
     onError: (error) => {
-      console.error('❌ Analysis failed:', error);
+      logger.error('❌ Analysis failed:', error);
       alert(`Analysis failed: ${error.message}`);
     },
   });
@@ -121,14 +123,14 @@ export default function ComplaintDetailPage({ params }: { params: { id: string }
 
   const saveLetter = trpc.letters.save.useMutation({
     onSuccess: () => {
-      console.log('💾 Letter saved to database');
+      logger.info('💾 Letter saved to database');
       utils.letters.list.invalidate({ complaintId: params.id });
     },
   });
 
   const generateLetter = trpc.letters.generateComplaint.useMutation({
     onSuccess: (data) => {
-      console.log('✅ Letter generation succeeded!');
+      logger.info('✅ Letter generation succeeded!');
       setGeneratedLetter(data.letter);
       
       // Auto-save letter to database
@@ -149,13 +151,13 @@ export default function ComplaintDetailPage({ params }: { params: { id: string }
         rate: practiceSettings?.chargeOutRate || 250,
       });
       
-      console.log(`⏱️ Logged ${minutes} minutes for ${pages}-page letter (${description})`);
+      logger.info(`⏱️ Logged ${minutes} minutes for ${pages}-page letter (${description})`);
     },
     onError: async (error) => {
-      console.error('❌ Letter generation failed on client:', error);
+      logger.error('❌ Letter generation failed on client:', error);
       
       // Check if letter was auto-saved on server despite client timeout
-      console.log('🔍 Checking if letter was auto-saved on server...');
+      logger.info('🔍 Checking if letter was auto-saved on server...');
       
       // Show helpful message immediately
       alert(
@@ -170,17 +172,17 @@ export default function ComplaintDetailPage({ params }: { params: { id: string }
       
       const pollInterval = setInterval(async () => {
         pollCount++;
-        console.log(`🔄 Polling for letter (attempt ${pollCount}/${maxPolls})...`);
+        logger.info(`🔄 Polling for letter (attempt ${pollCount}/${maxPolls})...`);
         
         try {
           await utils.letters.list.invalidate({ complaintId: params.id });
           
           if (pollCount >= maxPolls) {
             clearInterval(pollInterval);
-            console.log('⏰ Polling timeout reached');
+            logger.info('⏰ Polling timeout reached');
           }
         } catch (refreshError) {
-          console.error('Failed to refresh letters:', refreshError);
+          logger.error('Failed to refresh letters:', refreshError);
           clearInterval(pollInterval);
         }
       }, 10000); // Poll every 10 seconds
@@ -188,15 +190,15 @@ export default function ComplaintDetailPage({ params }: { params: { id: string }
   });
 
   const handleAnalyze = () => {
-    console.log('🔍 Analyze button clicked');
-    console.log('Documents:', documents);
+    logger.info('🔍 Analyze button clicked');
+    logger.info('Documents:', documents);
     
     if (documents && documents.length > 0) {
       const firstDocId = (documents as any[])[0].id;
-      console.log(`📄 Analyzing document: ${firstDocId}`);
+      logger.info(`📄 Analyzing document: ${firstDocId}`);
       analyzeDocument.mutate({ documentId: firstDocId });
     } else {
-      console.error('❌ No documents available to analyze');
+      logger.error('❌ No documents available to analyze');
       alert('No documents available. Please upload documents first.');
     }
   };
@@ -204,7 +206,7 @@ export default function ComplaintDetailPage({ params }: { params: { id: string }
   const handleReAnalyze = (additionalContext: string) => {
     if (documents && documents.length > 0) {
       const firstDocId = (documents as any[])[0].id;
-      console.log(`🔄 Re-analyzing with additional context`);
+      logger.info(`🔄 Re-analyzing with additional context`);
       analyzeDocument.mutate({ 
         documentId: firstDocId,
         additionalContext 
@@ -242,24 +244,24 @@ This precedent was manually added because it represents a novel complaint type n
   };
 
   const handleGenerateLetter = () => {
-    console.log('🔄 Generate Letter button clicked');
-    console.log('Analysis data:', analysisData ? 'Available' : 'Missing');
-    console.log('Current user:', currentUser);
-    console.log('Additional context:', additionalContext || 'None provided');
+    logger.info('🔄 Generate Letter button clicked');
+    logger.info('Analysis data:', analysisData ? 'Available' : 'Missing');
+    logger.info('Current user:', currentUser);
+    logger.info('Additional context:', additionalContext || 'None provided');
     
     if (!analysisData) {
-      console.error('❌ Cannot generate letter: No analysis data');
+      logger.error('❌ Cannot generate letter: No analysis data');
       return;
     }
     
     // Get practice letterhead if configured
     const practiceLetterhead = getPracticeLetterhead();
-    console.log('Practice letterhead:', practiceLetterhead);
+    logger.info('Practice letterhead:', practiceLetterhead);
     
     // Get practice settings for charge-out rate
     const practiceSettings = typeof window !== 'undefined' ? 
       JSON.parse(localStorage.getItem('lightpoint_practice_settings') || 'null') : null;
-    console.log('Practice settings:', practiceSettings);
+    logger.info('Practice settings:', practiceSettings);
     
     const letterParams = {
       complaintId: params.id,
@@ -272,7 +274,7 @@ This precedent was manually added because it represents a novel complaint type n
       userPhone: currentUser?.phone,
       additionalContext: additionalContext || undefined, // Include additional context if provided
     };
-    console.log('📤 Calling generateLetter with params:', letterParams);
+    logger.info('📤 Calling generateLetter with params:', letterParams);
     
     generateLetter.mutate(letterParams);
     
@@ -284,7 +286,7 @@ This precedent was manually added because it represents a novel complaint type n
   const handleRefineLetter = async (additionalContext: string) => {
     try {
       // Delete all old automated time logs for analysis and letter generation
-      console.log('🗑️ Deleting old analysis and letter generation time logs');
+      logger.info('🗑️ Deleting old analysis and letter generation time logs');
       
       // Delete old analysis logs (both "analysis" and "Initial Analysis")
       await deleteTimeByType.mutateAsync({
@@ -316,12 +318,12 @@ This precedent was manually added because it represents a novel complaint type n
         rate: practiceSettings?.chargeOutRate || 250,
       });
 
-      console.log('✅ Old time logs deleted, refinement time logged');
+      logger.info('✅ Old time logs deleted, refinement time logged');
 
       // Re-analyze with the new context
       if (documents && documents.length > 0) {
         const firstDocId = (documents as any[])[0].id;
-        console.log(`🔄 Re-analyzing with refinement context`);
+        logger.info(`🔄 Re-analyzing with refinement context`);
         
         analyzeDocument.mutate({ 
           documentId: firstDocId,
@@ -329,7 +331,7 @@ This precedent was manually added because it represents a novel complaint type n
         }, {
           onSuccess: (newAnalysis) => {
             // Auto-generate letter with new analysis
-            console.log('✨ Auto-generating refined letter');
+            logger.info('✨ Auto-generating refined letter');
             setAnalysisData(newAnalysis);
             
             const practiceLetterhead = getPracticeLetterhead();
@@ -353,7 +355,7 @@ This precedent was manually added because it represents a novel complaint type n
         });
       }
     } catch (error) {
-      console.error('Error in refinement:', error);
+      logger.error('Error in refinement:', error);
       alert('Failed to process refinement. Please try again.');
     }
   };

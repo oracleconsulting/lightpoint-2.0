@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Upload, X, FileText, AlertCircle, CheckCircle2, Clock, Sparkles, FolderOpen } from 'lucide-react';
 import Image from 'next/image';
+import { logger } from '../../lib/logger';
+
 
 interface BatchAssessmentProps {
   organizationId: string;
@@ -102,7 +104,7 @@ export function BatchAssessment({ organizationId, userId }: BatchAssessmentProps
 
   const createComplaintFromDocument = (doc: UploadedDocument) => {
     // TODO: Navigate to complaint creation with pre-filled data
-    console.log('Creating complaint from document:', doc);
+    logger.info('Creating complaint from document:', doc);
   };
 
   const getStatusIcon = (status: UploadedDocument['status']) => {

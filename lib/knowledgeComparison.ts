@@ -9,6 +9,8 @@
  * - Recommendations (add, merge, skip, update)
  */
 
+import { logger } from './/logger';
+
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const COMPARISON_MODEL = 'anthropic/claude-sonnet-4.5'; // 1M context for comprehensive comparison
 
@@ -75,13 +77,13 @@ export async function compareDocumentToKnowledgeBase(
   documentChunks: string[],
   potentialDuplicates: KnowledgeEntry[]
 ): Promise<ComparisonResult> {
-  console.log('🔍 Starting AI-powered knowledge base comparison');
-  console.log(`📄 Document length: ${documentText.length} chars`);
-  console.log(`🔢 Found ${potentialDuplicates.length} potential duplicates`);
+  logger.info('🔍 Starting AI-powered knowledge base comparison');
+  logger.info(`📄 Document length: ${documentText.length} chars`);
+  logger.info(`🔢 Found ${potentialDuplicates.length} potential duplicates`);
 
   // If no text or it's too short, return early with safe defaults
   if (!documentText || documentText.length < 50) {
-    console.log('⚠️ Document too short, skipping AI comparison');
+    logger.info('⚠️ Document too short, skipping AI comparison');
     return {
       duplicates: [],
       overlaps: [],
@@ -270,17 +272,17 @@ Be thorough, accurate, and conservative. When in doubt, recommend "review_requir
 
     const comparisonResult: ComparisonResult = JSON.parse(jsonContent);
 
-    console.log('✅ Comparison complete:');
-    console.log(`   - ${comparisonResult.duplicates.length} duplicates found`);
-    console.log(`   - ${comparisonResult.overlaps.length} overlaps detected`);
-    console.log(`   - ${comparisonResult.new_information.length} new information items`);
-    console.log(`   - ${comparisonResult.gaps_filled.length} gaps filled`);
-    console.log(`   - ${comparisonResult.conflicts.length} conflicts detected`);
-    console.log(`   - Recommendation: ${comparisonResult.recommendations.action} (${(comparisonResult.recommendations.confidence * 100).toFixed(0)}% confidence)`);
+    logger.info('✅ Comparison complete:');
+    logger.info(`   - ${comparisonResult.duplicates.length} duplicates found`);
+    logger.info(`   - ${comparisonResult.overlaps.length} overlaps detected`);
+    logger.info(`   - ${comparisonResult.new_information.length} new information items`);
+    logger.info(`   - ${comparisonResult.gaps_filled.length} gaps filled`);
+    logger.info(`   - ${comparisonResult.conflicts.length} conflicts detected`);
+    logger.info(`   - Recommendation: ${comparisonResult.recommendations.action} (${(comparisonResult.recommendations.confidence * 100).toFixed(0)}% confidence)`);
 
     return comparisonResult;
   } catch (error: any) {
-    console.error('❌ Knowledge comparison failed:', error);
+    logger.error('❌ Knowledge comparison failed:', error);
     
     // Return a safe default if AI comparison fails
     return {

@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Upload, FileText, AlertCircle } from 'lucide-react';
+import { logger } from '../../lib/logger';
+
 
 interface DocumentUploaderProps {
   complaintId: string;
@@ -83,7 +85,7 @@ export function DocumentUploader({ complaintId, onUploadComplete }: DocumentUplo
       onUploadComplete?.();
     } catch (err) {
       setError('Failed to upload document. Please try again.');
-      console.error('Upload error:', err);
+      logger.error('Upload error:', err);
     } finally {
       setUploading(false);
     }

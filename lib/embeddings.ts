@@ -2,6 +2,8 @@
  * Generate embedding for text using OpenRouter
  * Using text-embedding-ada-002 via OpenRouter API (1536 dimensions)
  */
+import { logger } from './/logger';
+
 export const generateEmbedding = async (text: string): Promise<number[]> => {
   const apiKey = process.env.OPENROUTER_API_KEY;
   
@@ -17,7 +19,7 @@ export const generateEmbedding = async (text: string): Promise<number[]> => {
     : text;
 
   if (text.length > MAX_CHARS) {
-    console.warn(`⚠️ Text truncated from ${text.length} to ${MAX_CHARS} chars for embedding`);
+    logger.warn(`⚠️ Text truncated from ${text.length} to ${MAX_CHARS} chars for embedding`);
   }
 
   try {
@@ -37,7 +39,7 @@ export const generateEmbedding = async (text: string): Promise<number[]> => {
 
     if (!response.ok) {
       const error = await response.text();
-      console.error('OpenRouter embedding API error:', error);
+      logger.error('OpenRouter embedding API error:', error);
       throw new Error(`OpenRouter API error: ${response.status} - ${error}`);
     }
 
@@ -45,13 +47,13 @@ export const generateEmbedding = async (text: string): Promise<number[]> => {
     
     // OpenRouter returns the same format as OpenAI
     if (!data.data || !data.data[0] || !data.data[0].embedding) {
-      console.error('Unexpected OpenRouter response:', JSON.stringify(data).substring(0, 200));
+      logger.error('Unexpected OpenRouter response:', JSON.stringify(data).substring(0, 200));
       throw new Error('Invalid embedding response from OpenRouter');
     }
     
     return data.data[0].embedding;
   } catch (error: any) {
-    console.error('Error generating embedding:', error);
+    logger.error('Error generating embedding:', error);
     throw new Error(`Failed to generate embedding: ${error.message || 'Unknown error'}`);
   }
 };
@@ -89,13 +91,13 @@ export const generateEmbeddingsBatch = async (texts: string[]): Promise<number[]
     const data = await response.json();
     
     if (!data.data || !Array.isArray(data.data)) {
-      console.error('Unexpected OpenRouter response:', JSON.stringify(data).substring(0, 200));
+      logger.error('Unexpected OpenRouter response:', JSON.stringify(data).substring(0, 200));
       throw new Error('Invalid embeddings response from OpenRouter');
     }
     
     return data.data.map((item: any) => item.embedding);
   } catch (error) {
-    console.error('Error generating embeddings:', error);
+    logger.error('Error generating embeddings:', error);
     throw new Error('Failed to generate embeddings');
   }
 };

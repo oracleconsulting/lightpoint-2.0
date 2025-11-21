@@ -6,6 +6,8 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Upload, Mail, AlertCircle } from 'lucide-react';
 import { trpc } from '@/lib/trpc/Provider';
+import { logger } from '../../lib/logger';
+
 
 interface ResponseUploaderProps {
   complaintId: string;
@@ -51,7 +53,7 @@ export function ResponseUploader({ complaintId, onResponseUploaded }: ResponseUp
 
       alert('HMRC response uploaded successfully!');
     } catch (error) {
-      console.error('Upload error:', error);
+      logger.error('Upload error:', error);
       alert('Failed to upload response');
     } finally {
       setUploading(false);

@@ -18,6 +18,8 @@
 import { supabaseAdmin } from '../supabase/client';
 import * as fs from 'fs';
 import * as path from 'path';
+import { logger } from '../logger';
+
 
 // ============================================================================
 // DATA COLLECTION
@@ -44,7 +46,7 @@ export async function collectFineTuningData(
   minRating: number = 8,
   minCount: number = 100
 ): Promise<FineTuneExample[]> {
-  console.log(`📚 Collecting fine-tuning data (min rating: ${minRating}/10, target: ${minCount} examples)...`);
+  logger.info(`📚 Collecting fine-tuning data (min rating: ${minRating}/10, target: ${minCount} examples)...`);
   
   // Query successful letters from database
   const { data: letters, error } = await (supabaseAdmin as any)
@@ -67,7 +69,7 @@ export async function collectFineTuningData(
     .limit(minCount * 2);  // Get more than needed for filtering
   
   if (error) {
-    console.error('❌ Failed to collect data:', error);
+    logger.error('❌ Failed to collect data:', error);
     return [];
   }
   
@@ -121,7 +123,7 @@ Generate the complete formal complaint letter now:`
     });
   }
   
-  console.log(`✅ Collected ${examples.length} training examples`);
+  logger.info(`✅ Collected ${examples.length} training examples`);
   return examples;
 }
 
@@ -135,7 +137,7 @@ export async function exportFineTuningData(
   const examples = await collectFineTuningData(minRating, 200);
   
   if (examples.length < 10) {
-    console.error('❌ Not enough training data. Need at least 10 examples (recommended: 100+)');
+    logger.error('❌ Not enough training data. Need at least 10 examples (recommended: 100+)');
     return;
   }
   
@@ -184,16 +186,16 @@ export async function exportFineTuningData(
     }
   }, null, 2));
   
-  console.log(`\n✅ Fine-tuning data exported:`);
-  console.log(`   Training:   ${trainPath} (${trainExamples.length} examples)`);
-  console.log(`   Validation: ${valPath} (${valExamples.length} examples)`);
-  console.log(`   Metadata:   ${metaPath}`);
-  console.log(`\n📋 Next steps:`);
-  console.log(`   1. Review data quality`);
-  console.log(`   2. Upload to OpenAI: openai api fine_tunes.create -t ${trainPath} -v ${valPath} -m gpt-4o-2024-08-06`);
-  console.log(`   3. Wait for training (~1-2 hours)`);
-  console.log(`   4. Test fine-tuned model vs Opus 4.1`);
-  console.log(`   5. Compare cost: GPT-4o fine-tuned ($2.50/M) vs Opus 4.1 ($15/M)`);
+  logger.info(`\n✅ Fine-tuning data exported:`);
+  logger.info(`   Training:   ${trainPath} (${trainExamples.length} examples)`);
+  logger.info(`   Validation: ${valPath} (${valExamples.length} examples)`);
+  logger.info(`   Metadata:   ${metaPath}`);
+  logger.info(`\n📋 Next steps:`);
+  logger.info(`   1. Review data quality`);
+  logger.info(`   2. Upload to OpenAI: openai api fine_tunes.create -t ${trainPath} -v ${valPath} -m gpt-4o-2024-08-06`);
+  logger.info(`   3. Wait for training (~1-2 hours)`);
+  logger.info(`   4. Test fine-tuned model vs Opus 4.1`);
+  logger.info(`   5. Compare cost: GPT-4o fine-tuned ($2.50/M) vs Opus 4.1 ($15/M)`);
 }
 
 // ============================================================================
@@ -226,7 +228,7 @@ export async function rateLetter(
     .eq('id', letterId);
   
   if (letterError) {
-    console.error('❌ Failed to rate letter:', letterError);
+    logger.error('❌ Failed to rate letter:', letterError);
     throw letterError;
   }
   
@@ -244,7 +246,7 @@ export async function rateLetter(
       .eq('id', letter.complaint_id);
   }
   
-  console.log(`✅ Rated letter ${letterId}: ${rating}/10`);
+  logger.info(`✅ Rated letter ${letterId}: ${rating}/10`);
 }
 
 /**
@@ -265,11 +267,11 @@ export async function recordResolution(
     .eq('id', complaintId);
   
   if (error) {
-    console.error('❌ Failed to record resolution:', error);
+    logger.error('❌ Failed to record resolution:', error);
     throw error;
   }
   
-  console.log(`✅ Recorded resolution for ${complaintId}: ${outcome}`);
+  logger.info(`✅ Recorded resolution for ${complaintId}: ${outcome}`);
 }
 
 // ============================================================================
@@ -294,8 +296,8 @@ export async function abTestFineTuned(
   complaintId: string,
   fineTunedModelId: string  // e.g., "ft:gpt-4o-2024-08-06:lightpoint:complaint-letters:abc123"
 ): Promise<FineTuneTestResult> {
-  console.log(`\n🧪 A/B Testing: Opus 4.1 vs Fine-tuned GPT-4o`);
-  console.log(`   Complaint: ${complaintId}`);
+  logger.info(`\n🧪 A/B Testing: Opus 4.1 vs Fine-tuned GPT-4o`);
+  logger.info(`   Complaint: ${complaintId}`);
   
   // Get complaint data
   const { data: complaint } = await (supabaseAdmin as any)
@@ -311,22 +313,22 @@ export async function abTestFineTuned(
   const analysis = complaint.processed_data?.analysis || {};
   
   // Generate with Opus 4.1 (current production)
-  console.log('   🤖 Generating with Opus 4.1...');
+  logger.info('   🤖 Generating with Opus 4.1...');
   const opusStart = Date.now();
   const opusLetter = await generateWithOpus(analysis, complaint.complaint_reference);
   const opusTime = (Date.now() - opusStart) / 1000;
   const opusCost = estimateCost(opusLetter.length, 15.0);  // $15/M output
   
   // Generate with fine-tuned model
-  console.log('   🎯 Generating with fine-tuned GPT-4o...');
+  logger.info('   🎯 Generating with fine-tuned GPT-4o...');
   const ftStart = Date.now();
   const ftLetter = await generateWithFineTuned(analysis, complaint.complaint_reference, fineTunedModelId);
   const ftTime = (Date.now() - ftStart) / 1000;
   const ftCost = estimateCost(ftLetter.length, 2.5);  // $2.50/M output (fine-tuned)
   
-  console.log(`\n   ⏱️  Time: Opus ${opusTime.toFixed(1)}s | Fine-tuned ${ftTime.toFixed(1)}s`);
-  console.log(`   💰 Cost: Opus $${opusCost.toFixed(4)} | Fine-tuned $${ftCost.toFixed(4)} (${((1 - ftCost/opusCost) * 100).toFixed(0)}% cheaper)`);
-  console.log(`\n   📝 Letters ready for blind review`);
+  logger.info(`\n   ⏱️  Time: Opus ${opusTime.toFixed(1)}s | Fine-tuned ${ftTime.toFixed(1)}s`);
+  logger.info(`   💰 Cost: Opus $${opusCost.toFixed(4)} | Fine-tuned $${ftCost.toFixed(4)} (${((1 - ftCost/opusCost) * 100).toFixed(0)}% cheaper)`);
+  logger.info(`\n   📝 Letters ready for blind review`);
   
   return {
     complaintId,

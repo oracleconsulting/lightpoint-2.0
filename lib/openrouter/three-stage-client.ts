@@ -19,6 +19,8 @@
  * TOTAL OPTIMIZATION: ~28-35s faster per letter
  */
 
+import { logger } from '../logger';
+
 const ANALYSIS_MODEL = 'anthropic/claude-sonnet-4.5';
 const STRUCTURE_MODEL = 'anthropic/claude-opus-4.1';
 const TONE_MODEL = 'anthropic/claude-opus-4.1';
@@ -52,13 +54,13 @@ const callOpenRouter = async (request: OpenRouterRequest): Promise<string> => {
     throw new Error('OPENROUTER_API_KEY is not configured');
   }
   
-  console.log(`🤖 Calling OpenRouter with model: ${request.model}`);
-  console.log(`📊 Request size: ${JSON.stringify(request.messages).length} chars`);
-  console.log(`🎯 Max tokens: ${request.max_tokens} (optimized)`);
+  logger.info(`🤖 Calling OpenRouter with model: ${request.model}`);
+  logger.info(`📊 Request size: ${JSON.stringify(request.messages).length} chars`);
+  logger.info(`🎯 Max tokens: ${request.max_tokens} (optimized)`);
 
   try {
     const startTime = Date.now();
-    console.log('⏳ Sending request to OpenRouter...');
+    logger.info('⏳ Sending request to OpenRouter...');
     
     const response = await fetch(OPENROUTER_API_URL, {
       method: 'POST',
@@ -77,22 +79,22 @@ const callOpenRouter = async (request: OpenRouterRequest): Promise<string> => {
     });
 
     const fetchDuration = ((Date.now() - startTime) / 1000).toFixed(2);
-    console.log(`✅ OpenRouter responded (${fetchDuration}s)`);
+    logger.info(`✅ OpenRouter responded (${fetchDuration}s)`);
 
     if (!response.ok) {
       const error = await response.text();
-      console.error('❌ OpenRouter API error:', response.status, error);
+      logger.error('❌ OpenRouter API error:', response.status, error);
       throw new Error(`OpenRouter API error: ${response.status} - ${error}`);
     }
 
     const data = await response.json();
     const totalDuration = ((Date.now() - startTime) / 1000).toFixed(2);
-    console.log(`✅ OpenRouter call complete (${totalDuration}s total)`);
-    console.log(`📄 Response length: ${data.choices[0].message.content.length} chars`);
+    logger.info(`✅ OpenRouter call complete (${totalDuration}s total)`);
+    logger.info(`📄 Response length: ${data.choices[0].message.content.length} chars`);
     
     return data.choices[0].message.content;
   } catch (error) {
-    console.error('❌ OpenRouter API call failed:', error);
+    logger.error('❌ OpenRouter API call failed:', error);
     throw error;
   }
 };
@@ -111,7 +113,7 @@ export const stage1_extractFacts = async (
   hmrcDepartment: string,
   onProgress?: ProgressCallback
 ): Promise<string> => {
-  console.log('📊 STAGE 1: Extracting facts with Sonnet 4.5 (OPTIMIZED)');
+  logger.info('📊 STAGE 1: Extracting facts with Sonnet 4.5 (OPTIMIZED)');
   onProgress?.('stage1', 0, 'Extracting key facts from analysis...');
   
   const response = await callOpenRouter({
@@ -225,13 +227,13 @@ export const stage2_structureLetter = async (
   additionalContext?: string,
   onProgress?: ProgressCallback
 ): Promise<string> => {
-  console.log('🏗️ STAGE 2: Structuring letter with Opus 4.1 (OPTIMIZED)');
+  logger.info('🏗️ STAGE 2: Structuring letter with Opus 4.1 (OPTIMIZED)');
   onProgress?.('stage2', 0, 'Organizing facts into professional letter structure...');
-  console.log('👤 Using real user:', userName, userTitle);
-  console.log('💰 Charge-out rate:', chargeOutRate || 'NOT PROVIDED');
-  console.log('📋 Practice letterhead length:', practiceLetterhead?.length || 0);
+  logger.info('👤 Using real user:', userName, userTitle);
+  logger.info('💰 Charge-out rate:', chargeOutRate || 'NOT PROVIDED');
+  logger.info('📋 Practice letterhead length:', practiceLetterhead?.length || 0);
   if (additionalContext) {
-    console.log('📝 Additional context included:', additionalContext.substring(0, 100) + '...');
+    logger.info('📝 Additional context included:', additionalContext.substring(0, 100) + '...');
   }
   
   // Get today's date for the letter
@@ -242,7 +244,7 @@ export const stage2_structureLetter = async (
     year: 'numeric' 
   }); // e.g., "15 November 2025"
   
-  console.log('📅 Using today\'s date:', formattedDate);
+  logger.info('📅 Using today\'s date:', formattedDate);
   
       const response = await callOpenRouter({
         model: STRUCTURE_MODEL,
@@ -493,9 +495,9 @@ export const stage3_addTone = async (
   userTitle?: string,
   onProgress?: ProgressCallback
 ): Promise<string> => {
-  console.log('✍️ STAGE 3: Adding professional tone with Opus 4.1 (OPTIMIZED)');
+  logger.info('✍️ STAGE 3: Adding professional tone with Opus 4.1 (OPTIMIZED)');
   onProgress?.('stage3', 0, 'Adding measured professional tone...');
-  console.log('👤 Preserving real user:', userName, userTitle);
+  logger.info('👤 Preserving real user:', userName, userTitle);
   
       const response = await callOpenRouter({
         model: TONE_MODEL,
@@ -704,20 +706,20 @@ export const generateComplaintLetterThreeStage = async (
   additionalContext?: string,
   onProgress?: ProgressCallback
 ) => {
-  console.log('🚀 Starting OPTIMIZED three-stage letter generation pipeline');
-  console.log('🎯 Token optimization: -28s average improvement');
-  console.log('👤 User details:', { userName, userTitle, userEmail, userPhone });
-  console.log('📋 Client Reference:', clientReference);
-  console.log('🏢 HMRC Department:', hmrcDepartment);
+  logger.info('🚀 Starting OPTIMIZED three-stage letter generation pipeline');
+  logger.info('🎯 Token optimization: -28s average improvement');
+  logger.info('👤 User details:', { userName, userTitle, userEmail, userPhone });
+  logger.info('📋 Client Reference:', clientReference);
+  logger.info('🏢 HMRC Department:', hmrcDepartment);
   if (additionalContext) {
-    console.log('📝 Additional context provided:', additionalContext.substring(0, 150) + '...');
+    logger.info('📝 Additional context provided:', additionalContext.substring(0, 150) + '...');
   }
   
   const startTime = Date.now();
   
   try {
     // STAGE 1: Extract facts (OPTIMIZED: 2500 tokens)
-    console.log('⏳ STAGE 1 STARTING: Extracting facts (OPTIMIZED)...');
+    logger.info('⏳ STAGE 1 STARTING: Extracting facts (OPTIMIZED)...');
     onProgress?.('overall', 20, 'Extracting facts from analysis...');
     const factSheet = await stage1_extractFacts(
       complaintAnalysis,
@@ -726,11 +728,11 @@ export const generateComplaintLetterThreeStage = async (
       onProgress
     );
     const stage1Duration = ((Date.now() - startTime) / 1000).toFixed(2);
-    console.log(`✅ Stage 1 complete: ${stage1Duration}s (optimized -8s)`);
-    console.log(`📄 Fact sheet length: ${factSheet.length} chars`);
+    logger.info(`✅ Stage 1 complete: ${stage1Duration}s (optimized -8s)`);
+    logger.info(`📄 Fact sheet length: ${factSheet.length} chars`);
     
     // STAGE 2: Structure letter (OPTIMIZED: 2500 tokens)
-    console.log('⏳ STAGE 2 STARTING: Structuring letter (OPTIMIZED)...');
+    logger.info('⏳ STAGE 2 STARTING: Structuring letter (OPTIMIZED)...');
     onProgress?.('overall', 50, 'Structuring letter...');
     const structuredLetter = await stage2_structureLetter(
       factSheet,
@@ -744,11 +746,11 @@ export const generateComplaintLetterThreeStage = async (
       onProgress
     );
     const stage2Duration = ((Date.now() - startTime - Number.parseFloat(stage1Duration) * 1000) / 1000).toFixed(2);
-    console.log(`✅ Stage 2 complete: ${stage2Duration}s (optimized -8s)`);
-    console.log(`📄 Structured letter length: ${structuredLetter.length} chars`);
+    logger.info(`✅ Stage 2 complete: ${stage2Duration}s (optimized -8s)`);
+    logger.info(`📄 Structured letter length: ${structuredLetter.length} chars`);
     
     // STAGE 3: Add tone (OPTIMIZED: 3500 tokens)
-    console.log('⏳ STAGE 3 STARTING: Adding professional tone (OPTIMIZED)...');
+    logger.info('⏳ STAGE 3 STARTING: Adding professional tone (OPTIMIZED)...');
     onProgress?.('overall', 80, 'Adding professional tone...');
     const finalLetter = await stage3_addTone(
       structuredLetter,
@@ -757,19 +759,19 @@ export const generateComplaintLetterThreeStage = async (
       onProgress
     );
     const stage3Duration = ((Date.now() - startTime - Number.parseFloat(stage1Duration) * 1000 - Number.parseFloat(stage2Duration) * 1000) / 1000).toFixed(2);
-    console.log(`✅ Stage 3 complete: ${stage3Duration}s (optimized -12s)`);
-    console.log(`📄 Final letter length: ${finalLetter.length} chars`);
+    logger.info(`✅ Stage 3 complete: ${stage3Duration}s (optimized -12s)`);
+    logger.info(`📄 Final letter length: ${finalLetter.length} chars`);
     
     const totalDuration = ((Date.now() - startTime) / 1000).toFixed(2);
     const saved = 28; // Conservative estimate
-    console.log(`🎉 Pipeline complete! ${totalDuration}s (saved ~${saved}s)`);
+    logger.info(`🎉 Pipeline complete! ${totalDuration}s (saved ~${saved}s)`);
     
     onProgress?.('overall', 100, 'Letter generation complete!');
     
     return finalLetter;
   } catch (error: any) {
-    console.error('❌ Three-stage pipeline failed:', error);
-    console.error('❌ Error details:', {
+    logger.error('❌ Three-stage pipeline failed:', error);
+    logger.error('❌ Error details:', {
       message: error.message,
       stack: error.stack?.substring(0, 500),
     });

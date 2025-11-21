@@ -5,6 +5,8 @@ import { FetchCreateContextFnOptions } from '@trpc/server/adapters/fetch';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import type { User } from '@supabase/supabase-js';
+import { logger } from '../logger';
+
 
 // ============================================================================
 // Context Definition
@@ -61,7 +63,7 @@ export async function createContext(
   let organizationId: string | null = null;
   if (userId) {
     try {
-      console.log('🔍 Fetching organization for user:', userId);
+      logger.info('🔍 Fetching organization for user:', userId);
       
       // Create admin client with service key to bypass RLS
       const adminSupabase = createServerClient(
@@ -91,7 +93,7 @@ export async function createContext(
         .eq('id', userId)
         .single();
       
-      console.log('📊 Raw Supabase response:', { 
+      logger.info('📊 Raw Supabase response:', { 
         data: userData, 
         error: orgError?.message,
         hasData: !!userData,
@@ -99,10 +101,10 @@ export async function createContext(
       });
       
       if (orgError) {
-        console.error('❌ Error fetching user org:', orgError.message);
-        console.error('Full error:', JSON.stringify(orgError, null, 2));
+        logger.error('❌ Error fetching user org:', orgError.message);
+        logger.error('Full error:', JSON.stringify(orgError, null, 2));
       } else {
-        console.log('✅ User data:', { 
+        logger.info('✅ User data:', { 
           id: userData?.id,
           email: userData?.email, 
           role: userData?.role,
@@ -114,18 +116,18 @@ export async function createContext(
       organizationId = userData?.organization_id ?? null;
       
       if (!organizationId) {
-        console.warn('⚠️ User has no organization_id!');
-        console.warn('User ID:', userId);
-        console.warn('User data:', JSON.stringify(userData, null, 2));
+        logger.warn('⚠️ User has no organization_id!');
+        logger.warn('User ID:', userId);
+        logger.warn('User data:', JSON.stringify(userData, null, 2));
       } else {
-        console.log('🎉 Organization ID found:', organizationId);
+        logger.info('🎉 Organization ID found:', organizationId);
       }
     } catch (error) {
-      console.error('❌ Failed to fetch user organization:', error);
+      logger.error('❌ Failed to fetch user organization:', error);
     }
   }
 
-  console.log('📋 tRPC Context:', { userId, organizationId });
+  logger.info('📋 tRPC Context:', { userId, organizationId });
 
   return {
     user,

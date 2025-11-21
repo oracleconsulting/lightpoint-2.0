@@ -13,6 +13,8 @@
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 import type { NextRequest } from 'next/server';
+import { logger } from '../logger';
+
 
 // Initialize Redis client for rate limiting
 const redis = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
@@ -133,7 +135,7 @@ export const checkRateLimit = async (
     const result = await limiter.limit(identifier);
     
     if (!result.success) {
-      console.warn(`⚠️  Rate limit exceeded for ${identifier}`);
+      logger.warn(`⚠️  Rate limit exceeded for ${identifier}`);
     }
 
     return {
@@ -143,7 +145,7 @@ export const checkRateLimit = async (
       reset: result.reset,
     };
   } catch (error) {
-    console.error('❌ Rate limit check failed:', error);
+    logger.error('❌ Rate limit check failed:', error);
     // Fail open (allow request) if rate limiting fails
     return {
       success: true,
@@ -233,7 +235,7 @@ export const getRateLimitAnalytics = async (): Promise<{
       uploads: 0,
     };
   } catch (error) {
-    console.error('❌ Failed to get rate limit analytics:', error);
+    logger.error('❌ Failed to get rate limit analytics:', error);
     return null;
   }
 };
@@ -248,10 +250,10 @@ export const resetUserRateLimits = async (userId: string): Promise<void> => {
     const keys = await redis.keys(`ratelimit:*:user:${userId}`);
     if (keys.length > 0) {
       await Promise.all(keys.map((key) => redis.del(key)));
-      console.log(`✅ Reset rate limits for user: ${userId}`);
+      logger.info(`✅ Reset rate limits for user: ${userId}`);
     }
   } catch (error) {
-    console.error('❌ Failed to reset user rate limits:', error);
+    logger.error('❌ Failed to reset user rate limits:', error);
   }
 };
 

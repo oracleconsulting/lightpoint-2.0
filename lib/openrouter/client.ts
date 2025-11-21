@@ -7,6 +7,8 @@
  */
 
 // Model selection based on task
+import { logger } from '../logger';
+
 const ANALYSIS_MODEL = 'anthropic/claude-sonnet-4.5'; // 1M tokens, cheaper, for analysis
 const LETTER_MODEL = 'anthropic/claude-opus-4.1';     // 200K tokens, better writing
 
@@ -52,7 +54,7 @@ export const callOpenRouter = async (
     throw new Error('OPENROUTER_API_KEY is not configured');
   }
   
-  console.log(`🤖 Calling OpenRouter with model: ${request.model}`);
+  logger.info(`🤖 Calling OpenRouter with model: ${request.model}`);
 
   try {
     const response = await fetch(OPENROUTER_API_URL, {
@@ -79,7 +81,7 @@ export const callOpenRouter = async (
     const data: OpenRouterResponse = await response.json();
     return data.choices[0].message.content;
   } catch (error) {
-    console.error('OpenRouter API call failed:', error);
+    logger.error('OpenRouter API call failed:', error);
     throw error;
   }
 };
@@ -93,7 +95,7 @@ export const analyzeComplaint = async (
   relevantGuidance: string,
   similarCases: string
 ) => {
-  console.log('🔍 Analysis: Using Claude Sonnet 4.5 (1M context window)');
+  logger.info('🔍 Analysis: Using Claude Sonnet 4.5 (1M context window)');
   
   const response = await callOpenRouter({
     model: ANALYSIS_MODEL,
@@ -176,12 +178,12 @@ Return ONLY valid JSON with no markdown:
     let jsonText = response.trim();
     
     // Log the raw response for debugging
-    console.log('📝 Raw LLM response (first 200 chars):', jsonText.substring(0, 200));
+    logger.info('📝 Raw LLM response (first 200 chars):', jsonText.substring(0, 200));
     
     // Try to extract JSON from markdown code blocks (```json ... ``` or ``` ... ```)
     const jsonBlockMatch = jsonText.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
     if (jsonBlockMatch) {
-      console.log('🔧 Detected markdown code fence, extracting JSON');
+      logger.info('🔧 Detected markdown code fence, extracting JSON');
       jsonText = jsonBlockMatch[1].trim();
     }
     
@@ -201,18 +203,18 @@ Return ONLY valid JSON with no markdown:
       : (jsonStart !== -1 ? jsonStart : arrayStart);
     
     if (startPos > 0) {
-      console.log(`🔧 Trimming ${startPos} characters before JSON start`);
+      logger.info(`🔧 Trimming ${startPos} characters before JSON start`);
       jsonText = jsonText.substring(startPos);
     }
     
-    console.log('📝 Cleaned JSON (first 200 chars):', jsonText.substring(0, 200));
+    logger.info('📝 Cleaned JSON (first 200 chars):', jsonText.substring(0, 200));
     
     const parsed = JSON.parse(jsonText);
-    console.log('✅ Successfully parsed analysis JSON');
+    logger.info('✅ Successfully parsed analysis JSON');
     return parsed;
   } catch (error: any) {
-    console.error('❌ Failed to parse analysis:', error);
-    console.error('❌ Problematic response:', response.substring(0, 500));
+    logger.error('❌ Failed to parse analysis:', error);
+    logger.error('❌ Problematic response:', response.substring(0, 500));
     throw new Error(`Invalid analysis response format: ${error.message}`);
   }
 };
@@ -229,9 +231,9 @@ export const generateComplaintLetter = async (
   chargeOutRate?: number,
   additionalContext?: string
 ) => {
-  console.log('✍️ Letter Generation: Using Claude Opus 4.1 (superior writing quality)');
+  logger.info('✍️ Letter Generation: Using Claude Opus 4.1 (superior writing quality)');
   if (additionalContext) {
-    console.log('📝 Additional context provided for single-stage generation');
+    logger.info('📝 Additional context provided for single-stage generation');
   }
   
   const response = await callOpenRouter({
@@ -448,7 +450,7 @@ export const generateResponse = async (
     escalation: 'Generate a formal escalation letter to the Adjudicator, summarizing the complaint journey and HMRC\'s inadequate response.'
   };
   
-  console.log(`✍️ Response Generation (${responseType}): Using Claude Opus 4.1`);
+  logger.info(`✍️ Response Generation (${responseType}): Using Claude Opus 4.1`);
 
   const response = await callOpenRouter({
     model: LETTER_MODEL,

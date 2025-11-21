@@ -9,6 +9,8 @@ import { logTime } from '@/lib/timeTracking';
 import { sanitizeForLLM } from '@/lib/privacy';
 import { prepareAnalysisContext, estimateTokens } from '@/lib/contextManager';
 import { generateEmbedding } from '@/lib/embeddings';
+import { logger } from '../logger';
+
 
 export const appRouter = router({
   // Complaints
@@ -61,8 +63,8 @@ export const appRouter = router({
         const organizationId = ctx.organizationId;
         
         try {
-          console.log('📋 Fetching complaints for org:', organizationId);
-          console.log('📋 Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 30));
+          logger.info('📋 Fetching complaints for org:', organizationId);
+          logger.info('📋 Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 30));
           
           let query = supabaseAdmin
             .from('complaints')
@@ -73,10 +75,10 @@ export const appRouter = router({
             query = query.eq('status', input.status);
           }
           
-          console.log('📋 Executing Supabase query...');
+          logger.info('📋 Executing Supabase query...');
           const { data, error } = await query.order('created_at', { ascending: false });
           
-          console.log('📋 Supabase response:', { 
+          logger.info('📋 Supabase response:', { 
             hasData: !!data, 
             dataCount: data?.length, 
             hasError: !!error,
@@ -89,15 +91,15 @@ export const appRouter = router({
           });
           
           if (error) {
-            console.error('❌ Supabase error details:', JSON.stringify(error, null, 2));
+            logger.error('❌ Supabase error details:', JSON.stringify(error, null, 2));
             throw new Error(`Supabase error: ${error.message} (${error.code || 'no code'})`);
           }
           
-          console.log('✅ Successfully fetched complaints:', data?.length || 0);
+          logger.info('✅ Successfully fetched complaints:', data?.length || 0);
           return data;
         } catch (err: any) {
-          console.error('❌ Complaints list error:', err);
-          console.error('❌ Error stack:', err.stack);
+          logger.error('❌ Complaints list error:', err);
+          logger.error('❌ Error stack:', err.stack);
           throw err;
         }
       }),
@@ -140,7 +142,7 @@ export const appRouter = router({
         complaint_reference: z.string(),
       }))
       .mutation(async ({ input }) => {
-        console.log(`📝 Updating complaint reference to: ${input.complaint_reference}`);
+        logger.info(`📝 Updating complaint reference to: ${input.complaint_reference}`);
         
         const { data, error } = await (supabaseAdmin as any)
           .from('complaints')
@@ -153,11 +155,11 @@ export const appRouter = router({
           .single();
         
         if (error) {
-          console.error('❌ Failed to update reference:', error);
+          logger.error('❌ Failed to update reference:', error);
           throw new Error(error.message);
         }
         
-        console.log('✅ Reference updated successfully');
+        logger.info('✅ Reference updated successfully');
         return data;
       }),
 
@@ -168,7 +170,7 @@ export const appRouter = router({
         assignedBy: z.string(),
       }))
       .mutation(async ({ input }) => {
-        console.log(`👤 Assigning complaint ${input.complaintId} to user ${input.userId}`);
+        logger.info(`👤 Assigning complaint ${input.complaintId} to user ${input.userId}`);
         
         // Update complaint
         const { data: complaint, error: complaintError } = await (supabaseAdmin as any)
@@ -182,7 +184,7 @@ export const appRouter = router({
           .single();
         
         if (complaintError) {
-          console.error('❌ Failed to assign complaint:', complaintError);
+          logger.error('❌ Failed to assign complaint:', complaintError);
           throw new Error(complaintError.message);
         }
         
@@ -197,11 +199,11 @@ export const appRouter = router({
           });
         
         if (assignmentError) {
-          console.warn('⚠️ Failed to log assignment (non-critical):', assignmentError);
+          logger.warn('⚠️ Failed to log assignment (non-critical):', assignmentError);
           // Don't throw - assignment succeeded even if logging failed
         }
         
-        console.log('✅ Complaint assigned successfully');
+        logger.info('✅ Complaint assigned successfully');
         return complaint;
       }),
 
@@ -309,7 +311,7 @@ export const appRouter = router({
         
         // SAVE ADDITIONAL CONTEXT TO TIMELINE
         if (input.additionalContext) {
-          console.log('💾 Saving additional context to timeline');
+          logger.info('💾 Saving additional context to timeline');
           const timeline = (complaint as any)?.timeline || [];
           const newTimelineEvent = {
             date: new Date().toISOString(),
@@ -327,16 +329,16 @@ export const appRouter = router({
             })
             .eq('id', (document as any).complaint_id);
           
-          console.log('✅ Additional context saved to timeline');
+          logger.info('✅ Additional context saved to timeline');
         }
         
-        console.log('📋 Starting analysis:', {
+        logger.info('📋 Starting analysis:', {
           documentCount: (allDocuments as any[])?.length || 0,
           complaintContextLength: complaintContext.length
         });
         
         // Use multi-angle search for comprehensive knowledge base coverage
-        console.log('🔍 Performing multi-angle knowledge base search...');
+        logger.info('🔍 Performing multi-angle knowledge base search...');
         const guidance = await searchKnowledgeBaseMultiAngle(
           complaintContext, // Use complaint context for search, not full docs
           0.7,
@@ -350,7 +352,7 @@ export const appRouter = router({
           5
         );
         
-        console.log('📚 Search results:', {
+        logger.info('📚 Search results:', {
           guidanceCount: guidance.length,
           precedentsCount: precedents.length
         });
@@ -363,7 +365,7 @@ export const appRouter = router({
           precedents
         );
         
-        console.log('✅ Context prepared, estimated tokens:', estimateTokens(managedContext));
+        logger.info('✅ Context prepared, estimated tokens:', estimateTokens(managedContext));
         
         // Analyze with OpenRouter using managed context
         const analysis = await analyzeComplaint(
@@ -373,7 +375,7 @@ export const appRouter = router({
         );
         
         // SAVE ANALYSIS TO DATABASE to prevent re-running on refresh
-        console.log('💾 Saving analysis to database to lock it...');
+        logger.info('💾 Saving analysis to database to lock it...');
         try {
           await (supabaseAdmin as any)
             .from('complaints')
@@ -385,9 +387,9 @@ export const appRouter = router({
             })
             .eq('id', (document as any).complaint_id);
           
-          console.log('✅ Analysis saved and locked to database');
+          logger.info('✅ Analysis saved and locked to database');
         } catch (saveError) {
-          console.warn('⚠️ Failed to save analysis, but continuing:', saveError);
+          logger.warn('⚠️ Failed to save analysis, but continuing:', saveError);
           // Don't fail the request if saving fails - we still have the analysis
         }
         
@@ -433,9 +435,9 @@ export const appRouter = router({
         let letter: string;
         
         if (useThreeStage) {
-          console.log('🚀 Using THREE-STAGE pipeline for letter generation');
+          logger.info('🚀 Using THREE-STAGE pipeline for letter generation');
           if (input.additionalContext) {
-            console.log('📝 Additional context provided:', input.additionalContext.substring(0, 100) + '...');
+            logger.info('📝 Additional context provided:', input.additionalContext.substring(0, 100) + '...');
           }
           letter = await generateComplaintLetterThreeStage(
             input.analysis,
@@ -450,9 +452,9 @@ export const appRouter = router({
             input.additionalContext // Pass additional context
           );
         } else {
-          console.log('📝 Using SINGLE-STAGE letter generation (legacy)');
+          logger.info('📝 Using SINGLE-STAGE letter generation (legacy)');
           if (input.additionalContext) {
-            console.log('📝 Additional context provided:', input.additionalContext.substring(0, 100) + '...');
+            logger.info('📝 Additional context provided:', input.additionalContext.substring(0, 100) + '...');
           }
           letter = await generateComplaintLetter(
             input.analysis,
@@ -465,7 +467,7 @@ export const appRouter = router({
         }
         
         // Auto-save letter to database (don't rely on client callback due to timeout)
-        console.log('💾 Auto-saving letter to database...');
+        logger.info('💾 Auto-saving letter to database...');
         const { error: saveError } = await (supabaseAdmin as any)
           .from('generated_letters')
           .insert({
@@ -476,10 +478,10 @@ export const appRouter = router({
           });
         
         if (saveError) {
-          console.error('❌ Failed to auto-save letter:', saveError);
+          logger.error('❌ Failed to auto-save letter:', saveError);
           // Don't throw - still return the letter to client
         } else {
-          console.log('✅ Letter auto-saved to database');
+          logger.info('✅ Letter auto-saved to database');
         }
         
         // NOTE: Time logging is handled by frontend (page.tsx) which calculates
@@ -638,7 +640,7 @@ export const appRouter = router({
         try {
           await logTime(input.complaintId, 'response_drafting', 40);
         } catch (timeError) {
-          console.warn('⚠️ Failed to log time, but continuing:', timeError);
+          logger.warn('⚠️ Failed to log time, but continuing:', timeError);
         }
         
         return { response };
@@ -664,7 +666,7 @@ export const appRouter = router({
     getSignedUrl: publicProcedure
       .input(z.string()) // file_path (storage path)
       .query(async ({ input }) => {
-        console.log('🔗 Generating signed URL for:', input);
+        logger.info('🔗 Generating signed URL for:', input);
         
         const { data, error } = await supabaseAdmin
           .storage
@@ -672,11 +674,11 @@ export const appRouter = router({
           .createSignedUrl(input, 3600); // 1 hour expiry
         
         if (error) {
-          console.error('❌ Failed to generate signed URL:', error);
+          logger.error('❌ Failed to generate signed URL:', error);
           throw new Error(error.message);
         }
         
-        console.log('✅ Generated signed URL');
+        logger.info('✅ Generated signed URL');
         
         return { signedUrl: data.signedUrl };
       }),
@@ -684,7 +686,7 @@ export const appRouter = router({
     retryOCR: publicProcedure
       .input(z.string())
       .mutation(async ({ input }) => {
-        console.log('🔄 Retry OCR requested for document:', input);
+        logger.info('🔄 Retry OCR requested for document:', input);
         
         // Get the document
         const { data: document } = await supabaseAdmin
@@ -697,7 +699,7 @@ export const appRouter = router({
         
         const doc = document as any;
         
-        console.log('📋 Document metadata:', {
+        logger.info('📋 Document metadata:', {
           id: doc.id,
           filename: doc.filename,
           file_path: doc.file_path,
@@ -715,13 +717,13 @@ export const appRouter = router({
           throw new Error(`Failed to download file: ${downloadError?.message || 'Unknown error'}`);
         }
         
-        console.log('📥 File downloaded, size:', fileData.size);
+        logger.info('📥 File downloaded, size:', fileData.size);
         
         // Convert blob to buffer
         const arrayBuffer = await fileData.arrayBuffer();
         const fileBuffer = Buffer.from(arrayBuffer);
         
-        console.log('🔄 Starting OCR retry with processDocument...');
+        logger.info('🔄 Starting OCR retry with processDocument...');
         
         // Re-process the document (will retry OCR)
         // Use file_path as filePath since it contains the full path with filename
@@ -732,7 +734,7 @@ export const appRouter = router({
           doc.file_path  // Full path with filename
         );
         
-        console.log('✅ OCR retry complete');
+        logger.info('✅ OCR retry complete');
         
         return { success: true };
       }),
@@ -770,7 +772,7 @@ export const appRouter = router({
         automated: z.boolean().optional(), // Default true for system, false for manual
       }))
       .mutation(async ({ input }) => {
-        console.log('⏱️ Logging activity:', input.activity, input.duration, 'minutes');
+        logger.info('⏱️ Logging activity:', input.activity, input.duration, 'minutes');
         
         // Log time entry
         const { data: timeLog, error: timeError } = await (supabaseAdmin as any)
@@ -785,14 +787,14 @@ export const appRouter = router({
           .single();
         
         if (timeError) {
-          console.error('Time logging error:', timeError);
+          logger.error('Time logging error:', timeError);
           // Don't throw - time logging is optional
           return null;
         }
         
         // If manual entry with notes, also add to timeline
         if (input.notes && input.automated === false) {
-          console.log('📝 Adding manual activity to timeline');
+          logger.info('📝 Adding manual activity to timeline');
           
           // Get current timeline
           const { data: complaint } = await (supabaseAdmin as any)
@@ -820,11 +822,11 @@ export const appRouter = router({
               })
               .eq('id', input.complaintId);
             
-            console.log('✅ Added to timeline');
+            logger.info('✅ Added to timeline');
           }
         }
         
-        console.log('✅ Time logged successfully');
+        logger.info('✅ Time logged successfully');
         return timeLog;
       }),
 
@@ -834,7 +836,7 @@ export const appRouter = router({
         activityType: z.string(),
       }))
       .mutation(async ({ input }) => {
-        console.log(`🗑️ Deleting time logs for ${input.complaintId} / ${input.activityType}`);
+        logger.info(`🗑️ Deleting time logs for ${input.complaintId} / ${input.activityType}`);
         
         const { error } = await (supabaseAdmin as any)
           .from('time_logs')
@@ -844,19 +846,19 @@ export const appRouter = router({
           .eq('automated', true);
         
         if (error) {
-          console.error('Time log deletion error:', error);
+          logger.error('Time log deletion error:', error);
           // Don't throw - time logging is optional
           return null;
         }
         
-        console.log(`✅ Deleted ${input.activityType} time logs`);
+        logger.info(`✅ Deleted ${input.activityType} time logs`);
         return { success: true };
       }),
 
     deleteActivity: publicProcedure
       .input(z.string()) // time log ID
       .mutation(async ({ input }) => {
-        console.log(`🗑️ Deleting time log: ${input}`);
+        logger.info(`🗑️ Deleting time log: ${input}`);
         
         const { error } = await (supabaseAdmin as any)
           .from('time_logs')
@@ -864,11 +866,11 @@ export const appRouter = router({
           .eq('id', input);
         
         if (error) {
-          console.error('Time log deletion error:', error);
+          logger.error('Time log deletion error:', error);
           throw new Error(error.message);
         }
         
-        console.log(`✅ Deleted time log`);
+        logger.info(`✅ Deleted time log`);
         return { success: true };
       }),
   }),
@@ -933,7 +935,7 @@ export const appRouter = router({
         category: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
-        console.log('📚 Adding precedent from novel complaint:', input.title);
+        logger.info('📚 Adding precedent from novel complaint:', input.title);
         
         // Get the complaint details to extract proper precedent fields
         const { data: complaint, error: complaintError } = await supabaseAdmin
@@ -943,7 +945,7 @@ export const appRouter = router({
           .single();
         
         if (complaintError) {
-          console.error('❌ Failed to fetch complaint:', complaintError);
+          logger.error('❌ Failed to fetch complaint:', complaintError);
           throw new Error(complaintError.message);
         }
         
@@ -985,11 +987,11 @@ export const appRouter = router({
           .single();
         
         if (error) {
-          console.error('❌ Failed to add precedent:', error);
+          logger.error('❌ Failed to add precedent:', error);
           throw new Error(error.message);
         }
         
-        console.log('✅ Precedent added successfully to precedents table:', data.id);
+        logger.info('✅ Precedent added successfully to precedents table:', data.id);
         
         return data;
       }),
@@ -1012,12 +1014,12 @@ export const appRouter = router({
           } as any);
           
           if (error) {
-            console.warn('Timeline function not available yet:', error);
+            logger.warn('Timeline function not available yet:', error);
             return [];
           }
           return data;
         } catch (err) {
-          console.warn('Timeline query failed:', err);
+          logger.warn('Timeline query failed:', err);
           return [];
         }
       }),
@@ -1035,13 +1037,13 @@ export const appRouter = router({
       }))
       .mutation(async ({ input }) => {
         try {
-          console.log('📤 Server-side upload for:', input.filename);
-          console.log('   Category:', input.category);
-          console.log('   File type:', input.fileType);
-          console.log('   File size:', input.fileSize);
-          console.log('   Buffer length (base64):', input.fileBuffer?.length || 0);
-          console.log('   Extracted text length:', input.extractedText?.length || 0);
-          console.log('   Chunks:', input.documentChunks?.length || 0);
+          logger.info('📤 Server-side upload for:', input.filename);
+          logger.info('   Category:', input.category);
+          logger.info('   File type:', input.fileType);
+          logger.info('   File size:', input.fileSize);
+          logger.info('   Buffer length (base64):', input.fileBuffer?.length || 0);
+          logger.info('   Extracted text length:', input.extractedText?.length || 0);
+          logger.info('   Chunks:', input.documentChunks?.length || 0);
           
           // 1. Upload to storage (server-side with service key)
           const timestamp = Date.now();
@@ -1057,7 +1059,7 @@ export const appRouter = router({
           // Decode base64 to buffer
           const fileBuffer = Buffer.from(input.fileBuffer, 'base64');
           
-          console.log(`  📤 Uploading ${fileBuffer.length} bytes to: ${storagePath}`);
+          logger.info(`  📤 Uploading ${fileBuffer.length} bytes to: ${storagePath}`);
           
           const { error: uploadError } = await supabaseAdmin.storage
             .from('complaint-documents')
@@ -1068,43 +1070,43 @@ export const appRouter = router({
             });
           
           if (uploadError) {
-            console.error('  ❌ Storage upload failed:', uploadError);
+            logger.error('  ❌ Storage upload failed:', uploadError);
             throw new Error(`Storage upload failed: ${uploadError.message}`);
           }
           
-          console.log(`  ✅ Storage upload successful`);
+          logger.info(`  ✅ Storage upload successful`);
           
           // 2. Generate embedding for the document
-          console.log('  🔄 Generating embedding...');
+          logger.info('  🔄 Generating embedding...');
           let embedding;
           try {
             embedding = await generateEmbedding(input.extractedText);
-            console.log('  ✅ Embedding generated');
+            logger.info('  ✅ Embedding generated');
           } catch (embError: any) {
-            console.error('  ❌ Embedding generation failed:', embError);
+            logger.error('  ❌ Embedding generation failed:', embError);
             throw new Error(`Failed to generate embedding: ${embError.message || 'Unknown error'}`);
           }
         
           // 3. Check for duplicates in existing knowledge base
-          console.log('  🔍 Checking for duplicates...');
+          logger.info('  🔍 Checking for duplicates...');
           const { data: duplicates } = await supabaseAdmin.rpc('check_knowledge_duplicate', {
             p_embedding: embedding,
             p_similarity_threshold: 0.90,
           } as any) as { data: any[] | null };
-          console.log(`  ✅ Found ${(duplicates as any[] || []).length} potential duplicates`);
+          logger.info(`  ✅ Found ${(duplicates as any[] || []).length} potential duplicates`);
           
           // 4. Perform AI comparison using OpenRouter
-          console.log('  🤖 Performing AI comparison...');
+          logger.info('  🤖 Performing AI comparison...');
           const { compareDocumentToKnowledgeBase } = await import('@/lib/knowledgeComparison');
           const comparisonResult = await compareDocumentToKnowledgeBase(
             input.extractedText,
             input.documentChunks,
             duplicates || []
           );
-          console.log('  ✅ AI comparison complete');
+          logger.info('  ✅ AI comparison complete');
           
           // 5. Save to staging for review
-          console.log('  💾 Saving to staging...');
+          logger.info('  💾 Saving to staging...');
           const { data, error } = await (supabaseAdmin as any)
             .from('knowledge_base_staging')
             .insert({
@@ -1124,11 +1126,11 @@ export const appRouter = router({
             .single();
           
           if (error) {
-            console.error('  ❌ Failed to save to staging:', error);
+            logger.error('  ❌ Failed to save to staging:', error);
             throw new Error(error.message);
           }
           
-          console.log('  ✅ Saved to staging successfully');
+          logger.info('  ✅ Saved to staging successfully');
           
           return {
             stagingId: data.id,
@@ -1136,8 +1138,8 @@ export const appRouter = router({
             duplicates: duplicates || [],
           };
         } catch (err: any) {
-          console.error('❌ Upload for comparison failed:', err);
-          console.error('   Stack:', err.stack);
+          logger.error('❌ Upload for comparison failed:', err);
+          logger.error('   Stack:', err.stack);
           throw new Error(`Upload failed: ${err.message}`);
         }
       }),
@@ -1152,12 +1154,12 @@ export const appRouter = router({
             .order('created_at', { ascending: false });
           
           if (error) {
-            console.warn('RSS feeds table not available yet:', error);
+            logger.warn('RSS feeds table not available yet:', error);
             return [];
           }
           return data;
         } catch (err) {
-          console.warn('RSS feeds query failed:', err);
+          logger.warn('RSS feeds query failed:', err);
           return [];
         }
       }),
@@ -1168,7 +1170,7 @@ export const appRouter = router({
         stagedId: z.string(),
       }))
       .mutation(async ({ input, ctx }) => {
-        console.log('✅ Approving staged document:', input.stagedId);
+        logger.info('✅ Approving staged document:', input.stagedId);
         
         // Get staged document
         const { data: staged, error: stagedError } = await supabaseAdmin
@@ -1229,7 +1231,7 @@ export const appRouter = router({
           .delete()
           .eq('id', input.stagedId);
         
-        console.log('✅ Document approved and added to knowledge base');
+        logger.info('✅ Document approved and added to knowledge base');
         
         return { success: true, kbId: kbEntry.id };
       }),
@@ -1241,7 +1243,7 @@ export const appRouter = router({
           const { data, error } = await supabaseAdmin.rpc('get_rss_feed_stats');
           
           if (error) {
-            console.warn('RSS stats function not available yet:', error);
+            logger.warn('RSS stats function not available yet:', error);
             return {
               total_feeds: 0,
               active_feeds: 0,
@@ -1258,7 +1260,7 @@ export const appRouter = router({
             pending_items: 0,
           };
         } catch (err) {
-          console.warn('RSS stats query failed:', err);
+          logger.warn('RSS stats query failed:', err);
           return {
             total_feeds: 0,
             active_feeds: 0,
@@ -1283,12 +1285,12 @@ export const appRouter = router({
             .order('prompt_name', { ascending: true });
           
           if (error) {
-            console.warn('AI prompts table not available yet:', error);
+            logger.warn('AI prompts table not available yet:', error);
             return [];
           }
           return data;
         } catch (err) {
-          console.warn('AI prompts query failed:', err);
+          logger.warn('AI prompts query failed:', err);
           return [];
         }
       }),
@@ -1345,7 +1347,7 @@ export const appRouter = router({
         
         if (error) throw new Error(error.message);
         
-        console.log('✅ Prompt updated:', data.prompt_name, 'v' + data.version);
+        logger.info('✅ Prompt updated:', data.prompt_name, 'v' + data.version);
         return data;
       }),
 
@@ -1369,7 +1371,7 @@ export const appRouter = router({
         
         if (error) throw new Error(error.message);
         
-        console.log('✅ Prompt reset to default:', data.prompt_name);
+        logger.info('✅ Prompt reset to default:', data.prompt_name);
         return data;
       }),
 
@@ -1513,12 +1515,12 @@ export const appRouter = router({
           } as any);
           
           if (error) {
-            console.warn('Chat conversations not available yet:', error);
+            logger.warn('Chat conversations not available yet:', error);
             return [];
           }
           return data;
         } catch (err) {
-          console.warn('Chat query failed:', err);
+          logger.warn('Chat query failed:', err);
           return [];
         }
       }),
@@ -1669,7 +1671,7 @@ export const appRouter = router({
         job_title: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
-        console.log(`📧 Inviting user: ${input.email}`);
+        logger.info(`📧 Inviting user: ${input.email}`);
         
         // Get default organization
         const orgId = '00000000-0000-0000-0000-000000000001';
@@ -1688,7 +1690,7 @@ export const appRouter = router({
         );
         
         if (authError) {
-          console.error('❌ Failed to invite user:', authError);
+          logger.error('❌ Failed to invite user:', authError);
           throw new Error(authError.message);
         }
         
@@ -1708,13 +1710,13 @@ export const appRouter = router({
           .single();
         
         if (profileError) {
-          console.error('❌ Failed to create user profile:', profileError);
+          logger.error('❌ Failed to create user profile:', profileError);
           // Try to delete the auth user if profile creation failed
           await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
           throw new Error(profileError.message);
         }
         
-        console.log('✅ User invited successfully');
+        logger.info('✅ User invited successfully');
         return profile;
       }),
   }),

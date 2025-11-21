@@ -4,6 +4,8 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
+import { logger } from '../lib/logger';
+
 
 interface AuthContextType {
   user: User | null;
@@ -39,7 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await syncUserProfile(session.user);
         }
       } catch (error) {
-        console.error('Auth initialization error:', error);
+        logger.error('Auth initialization error:', error);
       } finally {
         setLoading(false);
       }
@@ -50,11 +52,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event);
+        logger.info('Auth state changed:', event);
         
         // Don't do anything if we're in the middle of signing out
         if (isSigningOut) {
-          console.log('⏭️ Skipping auth state change - signing out in progress');
+          logger.info('⏭️ Skipping auth state change - signing out in progress');
           return;
         }
         
@@ -85,7 +87,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (fetchError && fetchError.code === 'PGRST116') {
         // User doesn't exist, create profile
-        console.log('Creating user profile for:', authUser.email);
+        logger.info('Creating user profile for:', authUser.email);
         
         const { error: insertError } = await supabase
           .from('lightpoint_users')
@@ -99,18 +101,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           });
 
         if (insertError) {
-          console.error('Failed to create user profile:', insertError);
+          logger.error('Failed to create user profile:', insertError);
         }
       } else if (existingUser) {
-        console.log('User profile exists:', existingUser.email);
+        logger.info('User profile exists:', existingUser.email);
       }
     } catch (error) {
-      console.error('Error syncing user profile:', error);
+      logger.error('Error syncing user profile:', error);
     }
   };
 
   const signIn = async (email: string, password: string) => {
-    console.log('🔵 AuthContext: signIn() starting...');
+    logger.info('🔵 AuthContext: signIn() starting...');
     
     // Add timeout to prevent hanging
     const signInPromise = supabase.auth.signInWithPassword({
@@ -129,7 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       data = result.data;
       error = result.error;
     } catch (err) {
-      console.warn('⏰ AuthContext: signIn timed out, checking session directly...');
+      logger.warn('⏰ AuthContext: signIn timed out, checking session directly...');
       // If we timeout, check for session anyway (auth might have succeeded)
       try {
         const sessionPromise = supabase.auth.getSession();
@@ -140,39 +142,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const sessionResult = await Promise.race([sessionPromise, sessionTimeout]);
         
         if (sessionResult.data.session) {
-          console.log('✅ AuthContext: Session found despite timeout, continuing');
+          logger.info('✅ AuthContext: Session found despite timeout, continuing');
           data = { user: sessionResult.data.session.user };
           error = null;
         } else {
-          console.error('🔴 AuthContext: Timeout and no session found');
+          logger.error('🔴 AuthContext: Timeout and no session found');
           throw new Error('Sign in timed out and no session created');
         }
       } catch (sessionErr) {
-        console.error('🔴 AuthContext: Session check also timed out or failed');
+        logger.error('🔴 AuthContext: Session check also timed out or failed');
         // Last resort: just redirect anyway since SIGNED_IN event fired
-        console.log('🚨 AuthContext: SIGNED_IN event detected, forcing redirect anyway');
+        logger.info('🚨 AuthContext: SIGNED_IN event detected, forcing redirect anyway');
         window.location.href = '/dashboard';
         return;
       }
     }
     
     if (error) {
-      console.error('🔴 AuthContext: signIn error:', error);
+      logger.error('🔴 AuthContext: signIn error:', error);
       throw error;
     }
     
-    console.log('✅ AuthContext: signIn successful, user:', data?.user?.email);
+    logger.info('✅ AuthContext: signIn successful, user:', data?.user?.email);
     
     if (data?.user) {
-      console.log('🔄 AuthContext: Syncing user profile...');
+      logger.info('🔄 AuthContext: Syncing user profile...');
       await syncUserProfile(data.user);
-      console.log('✅ AuthContext: User profile synced');
+      logger.info('✅ AuthContext: User profile synced');
     }
     
-    console.log('🚀 AuthContext: Executing redirect to /dashboard NOW');
+    logger.info('🚀 AuthContext: Executing redirect to /dashboard NOW');
     // Use hard redirect to ensure clean navigation
     window.location.href = '/dashboard';
-    console.log('⚠️ AuthContext: This line should never execute (redirect should happen first)');
+    logger.info('⚠️ AuthContext: This line should never execute (redirect should happen first)');
   };
 
   const signUp = async (email: string, password: string, metadata?: any) => {
@@ -191,7 +193,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    console.log('🔓 AuthContext: Redirecting to /logout page');
+    logger.info('🔓 AuthContext: Redirecting to /logout page');
     // Just redirect to dedicated logout page - it will handle everything
     window.location.href = '/logout';
   };

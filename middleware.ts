@@ -1,13 +1,15 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { logger } from './lib/logger';
+
 
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
   
   // Debug: Log available cookies
   const allCookies = req.cookies.getAll();
-  console.log('🍪 Available cookies:', allCookies.map(c => ({ name: c.name, valueLength: c.value.length })));
+  logger.info('🍪 Available cookies:', allCookies.map(c => ({ name: c.name, valueLength: c.value.length })));
   
   // Create Supabase client with proper cookie handling for middleware
   const supabase = createServerClient(
@@ -17,11 +19,11 @@ export async function middleware(req: NextRequest) {
       cookies: {
         getAll() {
           const cookies = req.cookies.getAll();
-          console.log('📖 Supabase requesting cookies, found:', cookies.length);
+          logger.info('📖 Supabase requesting cookies, found:', cookies.length);
           return cookies;
         },
         setAll(cookiesToSet) {
-          console.log('📝 Supabase setting cookies:', cookiesToSet.map(c => c.name));
+          logger.info('📝 Supabase setting cookies:', cookiesToSet.map(c => c.name));
           cookiesToSet.forEach(({ name, value, options }) => {
             res.cookies.set(name, value, options);
           });
@@ -36,11 +38,11 @@ export async function middleware(req: NextRequest) {
   } = await supabase.auth.getSession();
   
   if (sessionError) {
-    console.error('❌ Session error:', sessionError.message);
+    logger.error('❌ Session error:', sessionError.message);
   }
 
   // Debug logging
-  console.log('🔐 Middleware check:', {
+  logger.info('🔐 Middleware check:', {
     path: req.nextUrl.pathname,
     hasSession: !!session,
     userId: session?.user?.id,
@@ -52,14 +54,14 @@ export async function middleware(req: NextRequest) {
 
   // Protect all routes except public ones
   if (!session && !isPublicRoute) {
-    console.log('❌ No session, redirecting to login from:', req.nextUrl.pathname);
+    logger.info('❌ No session, redirecting to login from:', req.nextUrl.pathname);
     const redirectUrl = new URL('/login', req.url);
     redirectUrl.searchParams.set('redirectedFrom', req.nextUrl.pathname);
     return NextResponse.redirect(redirectUrl);
   }
 
   if (session) {
-    console.log('✅ Session valid, allowing access to:', req.nextUrl.pathname);
+    logger.info('✅ Session valid, allowing access to:', req.nextUrl.pathname);
   }
 
   return res;

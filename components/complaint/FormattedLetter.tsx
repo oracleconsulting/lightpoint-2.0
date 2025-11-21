@@ -6,6 +6,8 @@ import { Card } from '@/components/ui/card';
 import { Copy, Download, Check } from 'lucide-react';
 import { Document, Packer, Paragraph, TextRun, AlignmentType, HeadingLevel } from 'docx';
 import { saveAs } from 'file-saver';
+import { logger } from '../../lib/logger';
+
 
 interface FormattedLetterProps {
   content: string;
@@ -91,7 +93,7 @@ export function FormattedLetter({ content, clientReference }: FormattedLetterPro
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
-      console.error('Failed to copy:', error);
+      logger.error('Failed to copy:', error);
       // Fallback to plain text
       await navigator.clipboard.writeText(content);
       setCopied(true);
@@ -150,7 +152,7 @@ export function FormattedLetter({ content, clientReference }: FormattedLetterPro
       const blob = await Packer.toBlob(doc);
       saveAs(blob, `HMRC_Complaint_${clientReference}_${new Date().toISOString().split('T')[0]}.docx`);
     } catch (error) {
-      console.error('Failed to export Word document:', error);
+      logger.error('Failed to export Word document:', error);
       alert('Failed to export Word document. Please try copying instead.');
     }
   };

@@ -7,6 +7,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Send, Bot, User, ThumbsUp, ThumbsDown, Copy, Check, ExternalLink } from 'lucide-react';
+import { logger } from '../../lib/logger';
+
 
 interface Message {
   id: string;
@@ -32,7 +34,7 @@ export default function KnowledgeBaseChat() {
   const startConversation = trpc.kbChat.startConversation.useMutation({
     onSuccess: (data) => {
       setConversationId(data.id);
-      console.log('✅ New conversation started:', data.id);
+      logger.info('✅ New conversation started:', data.id);
     },
   });
 
@@ -49,7 +51,7 @@ export default function KnowledgeBaseChat() {
       setIsLoading(false);
     },
     onError: (error) => {
-      console.error('❌ Chat error:', error);
+      logger.error('❌ Chat error:', error);
       alert('Failed to get response. Please try again.');
       setIsLoading(false);
     },

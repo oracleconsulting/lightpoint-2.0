@@ -14,6 +14,8 @@
 
 import { supabaseAdmin } from '../supabase/client';
 import { generateEmbedding } from '../embeddings';
+import { logger } from '../logger';
+
 
 const COHERE_API_KEY = process.env.COHERE_API_KEY;
 const VOYAGE_API_KEY = process.env.VOYAGE_API_KEY;
@@ -36,7 +38,7 @@ export async function vectorSearch(
   });
 
   if (error) {
-    console.error('❌ Vector search error:', error);
+    logger.error('❌ Vector search error:', error);
     return [];
   }
 
@@ -71,7 +73,7 @@ export async function keywordSearch(
     .limit(limit * 2);
 
   if (error) {
-    console.error('❌ Keyword search error:', error);
+    logger.error('❌ Keyword search error:', error);
     return [];
   }
 
@@ -148,7 +150,7 @@ export async function hybridSearch(
   vectorWeight: number = 0.7,  // Weight for semantic search
   keywordWeight: number = 0.3   // Weight for keyword search
 ): Promise<Array<{ id: string; content: string; score: number; source: 'hybrid' }>> {
-  console.log(`🔍 Hybrid search: "${query}"`);
+  logger.info(`🔍 Hybrid search: "${query}"`);
   
   // Run both searches in parallel
   const [vectorResults, keywordResults] = await Promise.all([
@@ -156,8 +158,8 @@ export async function hybridSearch(
     keywordSearch(query, limit)
   ]);
   
-  console.log(`  Vector: ${vectorResults.length} results`);
-  console.log(`  Keyword: ${keywordResults.length} results`);
+  logger.info(`  Vector: ${vectorResults.length} results`);
+  logger.info(`  Keyword: ${keywordResults.length} results`);
   
   // Apply weights
   const weightedVector = vectorResults.map(r => ({ ...r, score: r.score * vectorWeight }));
@@ -185,11 +187,11 @@ export async function cohereRerank(
   topN: number = 10
 ): Promise<Array<{ id: string; content: string; score: number; source: 'cohere-rerank' }>> {
   if (!COHERE_API_KEY) {
-    console.warn('⚠️  COHERE_API_KEY not set, skipping reranking');
+    logger.warn('⚠️  COHERE_API_KEY not set, skipping reranking');
     return documents.slice(0, topN).map(d => ({ ...d, score: 0, source: 'cohere-rerank' as const }));
   }
   
-  console.log(`🎯 Cohere reranking ${documents.length} documents...`);
+  logger.info(`🎯 Cohere reranking ${documents.length} documents...`);
   
   try {
     const response = await fetch('https://api.cohere.ai/v1/rerank', {
@@ -209,7 +211,7 @@ export async function cohereRerank(
 
     if (!response.ok) {
       const error = await response.text();
-      console.error('❌ Cohere rerank error:', error);
+      logger.error('❌ Cohere rerank error:', error);
       return documents.slice(0, topN).map(d => ({ ...d, score: 0, source: 'cohere-rerank' as const }));
     }
 
@@ -225,11 +227,11 @@ export async function cohereRerank(
       };
     });
     
-    console.log(`  ✓ Reranked to top ${reranked.length}`);
+    logger.info(`  ✓ Reranked to top ${reranked.length}`);
     return reranked;
     
   } catch (error: any) {
-    console.error('❌ Cohere rerank failed:', error.message);
+    logger.error('❌ Cohere rerank failed:', error.message);
     return documents.slice(0, topN).map(d => ({ ...d, score: 0, source: 'cohere-rerank' as const }));
   }
 }
@@ -247,11 +249,11 @@ export async function voyageRerank(
   topN: number = 10
 ): Promise<Array<{ id: string; content: string; score: number; source: 'voyage-rerank' }>> {
   if (!VOYAGE_API_KEY) {
-    console.warn('⚠️  VOYAGE_API_KEY not set, skipping reranking');
+    logger.warn('⚠️  VOYAGE_API_KEY not set, skipping reranking');
     return documents.slice(0, topN).map(d => ({ ...d, score: 0, source: 'voyage-rerank' as const }));
   }
   
-  console.log(`🎯 Voyage reranking ${documents.length} documents...`);
+  logger.info(`🎯 Voyage reranking ${documents.length} documents...`);
   
   try {
     const response = await fetch('https://api.voyageai.com/v1/rerank', {
@@ -270,7 +272,7 @@ export async function voyageRerank(
 
     if (!response.ok) {
       const error = await response.text();
-      console.error('❌ Voyage rerank error:', error);
+      logger.error('❌ Voyage rerank error:', error);
       return documents.slice(0, topN).map(d => ({ ...d, score: 0, source: 'voyage-rerank' as const }));
     }
 
@@ -286,11 +288,11 @@ export async function voyageRerank(
       };
     });
     
-    console.log(`  ✓ Reranked to top ${reranked.length}`);
+    logger.info(`  ✓ Reranked to top ${reranked.length}`);
     return reranked;
     
   } catch (error: any) {
-    console.error('❌ Voyage rerank failed:', error.message);
+    logger.error('❌ Voyage rerank failed:', error.message);
     return documents.slice(0, topN).map(d => ({ ...d, score: 0, source: 'voyage-rerank' as const }));
   }
 }
@@ -324,8 +326,8 @@ export async function search(
     keywordWeight = 0.3
   } = options;
   
-  console.log(`\n🔍 Advanced search: "${query}"`);
-  console.log(`   Hybrid: ${useHybrid}, Reranking: ${useReranking} (${reranker})`);
+  logger.info(`\n🔍 Advanced search: "${query}"`);
+  logger.info(`   Hybrid: ${useHybrid}, Reranking: ${useReranking} (${reranker})`);
   
   // Step 1: Get candidate documents (retrieve more for reranking)
   const candidateLimit = useReranking ? limit * 3 : limit;
@@ -338,7 +340,7 @@ export async function search(
   }
   
   if (candidates.length === 0) {
-    console.log('   ⚠️  No results found');
+    logger.info('   ⚠️  No results found');
     return [];
   }
   

@@ -28,6 +28,8 @@ import {
   Loader2
 } from 'lucide-react';
 import Link from 'next/link';
+import { logger } from '../../lib/logger';
+
 
 export default function KnowledgeBasePage() {
   const { currentUser, isAdmin, isManager } = useUser();
@@ -92,7 +94,7 @@ export default function KnowledgeBasePage() {
     setComparisonResults([]);
 
     try {
-      console.log('📤 Processing', uploadingFiles.length, 'documents...');
+      logger.info('📤 Processing', uploadingFiles.length, 'documents...');
 
       // Process all documents
       const processedDocs = await processMultipleDocuments(
@@ -103,12 +105,12 @@ export default function KnowledgeBasePage() {
         }
       );
 
-      console.log(`✅ Processed ${processedDocs.length} documents`);
+      logger.info(`✅ Processed ${processedDocs.length} documents`);
 
       // Upload each for AI comparison
       const comparisons = [];
       for (const doc of processedDocs) {
-        console.log(`🤖 Comparing: ${doc.filename}`);
+        logger.info(`🤖 Comparing: ${doc.filename}`);
         
         // Convert ArrayBuffer to base64 for transmission
         const base64Buffer = Buffer.from(doc.fileBuffer).toString('base64');
@@ -131,10 +133,10 @@ export default function KnowledgeBasePage() {
       }
 
       setComparisonResults(comparisons);
-      console.log('✅ All documents compared');
+      logger.info('✅ All documents compared');
 
     } catch (error: any) {
-      console.error('❌ Upload failed:', error);
+      logger.error('❌ Upload failed:', error);
       alert(`Upload failed: ${error.message}`);
     } finally {
       setIsProcessing(false);
@@ -154,9 +156,9 @@ export default function KnowledgeBasePage() {
       await utils.knowledge.list.invalidate();
       await utils.knowledge.getTimeline.invalidate();
       
-      console.log(`✅ Approved: ${filename}`);
+      logger.info(`✅ Approved: ${filename}`);
     } catch (error: any) {
-      console.error('❌ Approval failed:', error);
+      logger.error('❌ Approval failed:', error);
       alert(`Failed to approve: ${error.message}`);
     } finally {
       setProcessingDoc(null);
@@ -173,7 +175,7 @@ export default function KnowledgeBasePage() {
       // Just remove from comparison results (staged entry will remain until admin deletes it)
       setComparisonResults(prev => prev.filter(r => r.stagedId !== stagedId));
       
-      console.log(`❌ Rejected: ${filename}`);
+      logger.info(`❌ Rejected: ${filename}`);
     } finally {
       setProcessingDoc(null);
     }

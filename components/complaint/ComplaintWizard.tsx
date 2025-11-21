@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { useRouter } from 'next/navigation';
 import { Upload, X, FileText } from 'lucide-react';
+import { logger } from '../../lib/logger';
+
 
 interface ComplaintWizardProps {
   organizationId: string;
@@ -26,16 +28,16 @@ export function ComplaintWizard({ organizationId, userId }: ComplaintWizardProps
 
   const createComplaint = trpc.complaints.create.useMutation({
     onSuccess: async (data: any) => {
-      console.log('✅ Complaint created:', data);
+      logger.info('✅ Complaint created:', data);
       
       // After creating complaint, upload all documents
       if (files.length > 0) {
         setIsUploading(true);
-        console.log(`📤 Uploading ${files.length} documents...`);
+        logger.info(`📤 Uploading ${files.length} documents...`);
         
         try {
           for (const file of files) {
-            console.log(`Uploading: ${file.name}`);
+            logger.info(`Uploading: ${file.name}`);
             const formData = new FormData();
             formData.append('file', file);
             formData.append('complaintId', data.id);
@@ -47,24 +49,24 @@ export function ComplaintWizard({ organizationId, userId }: ComplaintWizardProps
             });
 
             if (!response.ok) {
-              console.error(`❌ Failed to upload ${file.name}:`, await response.text());
+              logger.error(`❌ Failed to upload ${file.name}:`, await response.text());
             } else {
-              console.log(`✅ Uploaded ${file.name}`);
+              logger.info(`✅ Uploaded ${file.name}`);
             }
           }
         } catch (error) {
-          console.error('❌ Error uploading files:', error);
+          logger.error('❌ Error uploading files:', error);
         } finally {
           setIsUploading(false);
         }
       }
       
       // Navigate to the complaint page
-      console.log(`🔄 Navigating to /complaints/${data.id}`);
+      logger.info(`🔄 Navigating to /complaints/${data.id}`);
       router.push(`/complaints/${data.id}`);
     },
     onError: (error) => {
-      console.error('❌ Failed to create complaint:', error);
+      logger.error('❌ Failed to create complaint:', error);
       alert(`Failed to create complaint: ${error.message}`);
     },
   });
@@ -81,9 +83,9 @@ export function ComplaintWizard({ organizationId, userId }: ComplaintWizardProps
   };
 
   const handleSubmit = () => {
-    console.log('🚀 handleSubmit called');
-    console.log('Form data:', formData);
-    console.log('Files:', files.map(f => f.name));
+    logger.info('🚀 handleSubmit called');
+    logger.info('Form data:', formData);
+    logger.info('Files:', files.map(f => f.name));
     
     createComplaint.mutate({
       organizationId,

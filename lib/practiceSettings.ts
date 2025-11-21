@@ -3,6 +3,8 @@
  * Store user's practice details for letter generation
  */
 
+import { logger } from './/logger';
+
 export interface PracticeSettings {
   firmName: string;
   address: {
@@ -33,7 +35,7 @@ export function getPracticeSettings(): PracticeSettings | null {
     
     return JSON.parse(stored);
   } catch (error) {
-    console.error('Failed to load practice settings:', error);
+    logger.error('Failed to load practice settings:', error);
     return null;
   }
 }
@@ -46,9 +48,9 @@ export function savePracticeSettings(settings: PracticeSettings): void {
   
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-    console.log('✅ Practice settings saved');
+    logger.info('✅ Practice settings saved');
   } catch (error) {
-    console.error('Failed to save practice settings:', error);
+    logger.error('Failed to save practice settings:', error);
     throw new Error('Failed to save settings');
   }
 }
@@ -60,7 +62,7 @@ export function clearPracticeSettings(): void {
   if (typeof window === 'undefined') return;
   
   localStorage.removeItem(STORAGE_KEY);
-  console.log('🗑️ Practice settings cleared');
+  logger.info('🗑️ Practice settings cleared');
 }
 
 /**

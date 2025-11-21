@@ -7,6 +7,8 @@
 
 import { callOpenRouter } from './openrouter/client';
 import { sanitizeForLLM } from './privacy';
+import { logger } from './/logger';
+
 
 // Use Sonnet 4.5 for document analysis (1M context, cheaper, fast)
 const ANALYSIS_MODEL = 'anthropic/claude-sonnet-4.5';
@@ -22,7 +24,7 @@ export async function analyzeIndividualDocument(
   fileName: string
 ): Promise<DocumentAnalysis> {
   
-  console.log(`📄 Stage 1 (Sonnet 4.5): Analyzing ${fileName} (${documentText.length} chars)`);
+  logger.info(`📄 Stage 1 (Sonnet 4.5): Analyzing ${fileName} (${documentText.length} chars)`);
   
   const response = await callOpenRouter({
     model: ANALYSIS_MODEL, // Sonnet 4.5 for analysis
@@ -87,11 +89,11 @@ Extract ALL information as structured JSON:`
     }
     
     const parsed = JSON.parse(jsonText);
-    console.log(`✅ Extracted ${parsed.dates?.length || 0} dates, ${parsed.amounts?.length || 0} amounts, ${parsed.issues?.length || 0} issues`);
+    logger.info(`✅ Extracted ${parsed.dates?.length || 0} dates, ${parsed.amounts?.length || 0} amounts, ${parsed.issues?.length || 0} issues`);
     
     return parsed;
   } catch (error: any) {
-    console.error('❌ Failed to parse document analysis:', error);
+    logger.error('❌ Failed to parse document analysis:', error);
     // Fallback: return basic structure
     return {
       dates: [],
@@ -116,7 +118,7 @@ export function combineDocumentAnalyses(
   complaintContext: string
 ): string {
   
-  console.log(`📊 Stage 2: Combining ${analyses.length} document analyses`);
+  logger.info(`📊 Stage 2: Combining ${analyses.length} document analyses`);
   
   // Aggregate all structured data
   const allDates = analyses.flatMap(a => a.dates || []);
@@ -161,7 +163,7 @@ DOCUMENT SUMMARIES:
 ${analyses.map((a, i) => `Document ${i + 1}: ${a.summary}`).join('\n\n')}
 `.trim();
   
-  console.log(`✅ Combined context: ${combined.length} chars, ~${Math.ceil(combined.length / 4)} tokens`);
+  logger.info(`✅ Combined context: ${combined.length} chars, ~${Math.ceil(combined.length / 4)} tokens`);
   
   return combined;
 }
@@ -180,7 +182,7 @@ export function shouldUseStructuredAnalysis(
   const estimatedTokens = Math.ceil(totalTextLength / 4);
   const threshold = 100000; // If >100K tokens in raw text, use structured
   
-  console.log(`📊 Document analysis decision: ${estimatedTokens} tokens, threshold: ${threshold}`);
+  logger.info(`📊 Document analysis decision: ${estimatedTokens} tokens, threshold: ${threshold}`);
   
   return estimatedTokens > threshold;
 }

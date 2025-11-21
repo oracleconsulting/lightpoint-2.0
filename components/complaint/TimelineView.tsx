@@ -8,6 +8,8 @@ import { CheckCircle, Circle, Clock, AlertCircle, FileText, Download, Eye } from
 import { useState } from 'react';
 import { DocumentViewer } from './DocumentViewer';
 import { trpc } from '@/lib/trpc/Provider';
+import { logger } from '../../lib/logger';
+
 
 interface TimelineEvent {
   date: string;
@@ -53,7 +55,7 @@ export function TimelineView({ events, documents = [], letters = [] }: TimelineV
     }
   );
 
-  console.log('TimelineView state:', { 
+  logger.info('TimelineView state:', { 
     viewingDoc: viewingDoc?.filename, 
     filePath: viewingDoc?.file_path,
     signedUrlData: signedUrlData?.signedUrl?.substring(0, 50),
@@ -173,7 +175,7 @@ export function TimelineView({ events, documents = [], letters = [] }: TimelineV
                               variant="ghost"
                               size="sm"
                               onClick={() => {
-                                console.log('View button clicked:', (event as any).documentData);
+                                logger.info('View button clicked:', (event as any).documentData);
                                 setViewingDoc((event as any).documentData);
                               }}
                               title="View document"

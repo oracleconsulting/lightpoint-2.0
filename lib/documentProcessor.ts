@@ -7,14 +7,16 @@ import pdfParse from 'pdf-parse';
 // @ts-ignore - mammoth doesn't have proper types
 import mammoth from 'mammoth';
 import * as XLSX from 'xlsx';
+import { logger } from './/logger';
+
 
 /**
  * Extract text from scanned PDF using OCR (for PDFs with no text layer)
  * Note: Vision AI models cannot read PDFs directly - they need images
  */
 const extractTextFromScannedPDF = async (pdfBuffer: Buffer): Promise<string> => {
-  console.log('⚠️ Scanned PDF detected (no text layer)');
-  console.log('📋 Vision models require images, not PDFs');
+  logger.info('⚠️ Scanned PDF detected (no text layer)');
+  logger.info('📋 Vision models require images, not PDFs');
   
   // Return helpful guidance message
   return `[SCANNED PDF DETECTED - NO TEXT LAYER]
@@ -73,18 +75,18 @@ const extractTextFromImage = async (imageBuffer: Buffer): Promise<string> => {
     const base64Image = imageBuffer.toString('base64');
     const mimeType = detectImageMimeType(imageBuffer);
     
-    console.log(`🔍 Performing OCR on image (${mimeType}, ${Math.round(imageBuffer.length / 1024)}KB)...`);
+    logger.info(`🔍 Performing OCR on image (${mimeType}, ${Math.round(imageBuffer.length / 1024)}KB)...`);
     
     // Compress large images if needed (max 5MB for API)
     let processedImage = base64Image;
     if (imageBuffer.length > 5 * 1024 * 1024) {
-      console.log('⚠️ Image too large, attempting compression...');
+      logger.info('⚠️ Image too large, attempting compression...');
       // For now, just warn - we'll handle compression if needed
     }
     
     // Try Claude 3.5 Sonnet first (best vision model on OpenRouter)
     // OpenRouter uses OpenAI-compatible format for all models
-    console.log('🤖 Attempting OCR with Claude 3.5 Sonnet via OpenRouter...');
+    logger.info('🤖 Attempting OCR with Claude 3.5 Sonnet via OpenRouter...');
     try {
       const claudeResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
@@ -130,25 +132,25 @@ This is critical for complaint analysis - accuracy is essential.`
       
       if (!claudeResponse.ok) {
         const errorText = await claudeResponse.text();
-        console.error(`❌ Claude OCR failed: ${claudeResponse.status} - ${errorText}`);
+        logger.error(`❌ Claude OCR failed: ${claudeResponse.status} - ${errorText}`);
         throw new Error(`Claude API error: ${claudeResponse.status}`);
       }
       
       const claudeData = await claudeResponse.json();
       
       if (!claudeData.choices || !claudeData.choices[0] || !claudeData.choices[0].message) {
-        console.error('❌ Unexpected Claude response format:', JSON.stringify(claudeData));
+        logger.error('❌ Unexpected Claude response format:', JSON.stringify(claudeData));
         throw new Error('Unexpected Claude response format');
       }
       
       const extractedText = claudeData.choices[0].message.content;
-      console.log(`✅ Claude OCR extracted ${extractedText.length} characters from image`);
+      logger.info(`✅ Claude OCR extracted ${extractedText.length} characters from image`);
       
       return extractedText;
       
     } catch (claudeError: any) {
-      console.error('❌ Claude OCR failed:', claudeError.message);
-      console.log('🔄 Falling back to GPT-4o...');
+      logger.error('❌ Claude OCR failed:', claudeError.message);
+      logger.info('🔄 Falling back to GPT-4o...');
       
       // Fallback to GPT-4o
       const gptResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -195,26 +197,26 @@ This is critical for complaint analysis - accuracy is essential.`
       
       if (!gptResponse.ok) {
         const errorText = await gptResponse.text();
-        console.error(`❌ GPT-4o OCR also failed: ${gptResponse.status} - ${errorText}`);
+        logger.error(`❌ GPT-4o OCR also failed: ${gptResponse.status} - ${errorText}`);
         throw new Error(`Both Claude and GPT-4o OCR failed. Last error: ${gptResponse.status} - ${errorText}`);
       }
       
       const gptData = await gptResponse.json();
       
       if (!gptData.choices || !gptData.choices[0] || !gptData.choices[0].message) {
-        console.error('❌ Unexpected GPT response format:', JSON.stringify(gptData));
+        logger.error('❌ Unexpected GPT response format:', JSON.stringify(gptData));
         throw new Error('Unexpected GPT response format');
       }
       
       const extractedText = gptData.choices[0].message.content;
-      console.log(`✅ GPT-4o OCR extracted ${extractedText.length} characters from image`);
+      logger.info(`✅ GPT-4o OCR extracted ${extractedText.length} characters from image`);
       
       return extractedText;
     }
     
   } catch (error: any) {
-    console.error('❌ Image OCR completely failed:', error.message);
-    console.error('Error stack:', error.stack);
+    logger.error('❌ Image OCR completely failed:', error.message);
+    logger.error('Error stack:', error.stack);
     return `[OCR failed for image: ${error.message}. Image stored for manual review. Please check server logs for details.]`;
   }
 };
@@ -261,19 +263,19 @@ export interface ProcessedDocument {
 const extractTextFromFile = async (fileBuffer: Buffer, fileName: string): Promise<string> => {
   const fileExtension = fileName.toLowerCase().split('.').pop();
   
-  console.log(`🔍 Detected file type: .${fileExtension}`);
+  logger.info(`🔍 Detected file type: .${fileExtension}`);
   
   try {
     switch (fileExtension) {
       case 'pdf':
-        console.log('📄 Extracting text from PDF...');
+        logger.info('📄 Extracting text from PDF...');
         const pdfData = await pdfParse(fileBuffer);
         const extractedText = pdfData.text.trim();
         
         // Check if PDF is scanned (no text extracted or very little text)
         if (!extractedText || extractedText.length < 50) {
-          console.log('⚠️ PDF appears to be scanned (no text layer detected)');
-          console.log('🔄 Attempting OCR on PDF pages...');
+          logger.info('⚠️ PDF appears to be scanned (no text layer detected)');
+          logger.info('🔄 Attempting OCR on PDF pages...');
           
           // For scanned PDFs, we need to use OCR
           // pdf-parse doesn't give us the images, so we'll use a different approach
@@ -285,18 +287,18 @@ const extractTextFromFile = async (fileBuffer: Buffer, fileName: string): Promis
       
       case 'doc':
       case 'docx':
-        console.log('📝 Extracting text from DOCX...');
+        logger.info('📝 Extracting text from DOCX...');
         const docResult = await mammoth.extractRawText({ buffer: fileBuffer });
         return docResult.value;
       
       case 'txt':
-        console.log('📝 Reading text file...');
+        logger.info('📝 Reading text file...');
         return fileBuffer.toString('utf-8');
       
       case 'xls':
       case 'xlsx':
       case 'csv':
-        console.log('📊 Extracting text from spreadsheet...');
+        logger.info('📊 Extracting text from spreadsheet...');
         const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
         let allText = '';
         
@@ -316,15 +318,15 @@ const extractTextFromFile = async (fileBuffer: Buffer, fileName: string): Promis
       case 'bmp':
       case 'tiff':
       case 'webp':
-        console.log('🖼️ Extracting text from image using OCR...');
+        logger.info('🖼️ Extracting text from image using OCR...');
         return await extractTextFromImage(fileBuffer);
       
       default:
-        console.warn(`⚠️ Unsupported file type: .${fileExtension}`);
+        logger.warn(`⚠️ Unsupported file type: .${fileExtension}`);
         return `[Text extraction not supported for .${fileExtension} files - file stored for manual review]`;
     }
   } catch (error: any) {
-    console.error(`❌ Text extraction failed for .${fileExtension}:`, error.message);
+    logger.error(`❌ Text extraction failed for .${fileExtension}:`, error.message);
     throw new Error(`Failed to extract text from .${fileExtension} file: ${error.message}`);
   }
 };
@@ -340,28 +342,28 @@ export const processDocument = async (
 ): Promise<ProcessedDocument> => {
   try {
     const fileName = filePath.split('/').pop() || 'unknown';
-    console.log('📄 Processing document:', { complaintId, documentType, fileName, size: fileBuffer.length });
+    logger.info('📄 Processing document:', { complaintId, documentType, fileName, size: fileBuffer.length });
     
     // 1. Extract text from file (supports multiple formats)
     let rawText = '';
     try {
       rawText = await extractTextFromFile(fileBuffer, fileName);
-      console.log(`✅ Extracted ${rawText.length} characters from ${fileName}`);
+      logger.info(`✅ Extracted ${rawText.length} characters from ${fileName}`);
     } catch (extractError: any) {
-      console.error('❌ Text extraction failed:', extractError.message);
+      logger.error('❌ Text extraction failed:', extractError.message);
       // Store document anyway with placeholder text
       rawText = `[Text extraction failed for ${fileName}: ${extractError.message}]`;
     }
     
     // 2. Anonymize PII
-    console.log('🔄 Anonymizing PII...');
+    logger.info('🔄 Anonymizing PII...');
     const anonymizedText = anonymizePII(rawText);
-    console.log('✅ PII anonymized');
+    logger.info('✅ PII anonymized');
     
     // 3. Extract structured data
-    console.log('🔄 Extracting structured data...');
+    logger.info('🔄 Extracting structured data...');
     const extractedData = extractStructuredData(anonymizedText);
-    console.log('✅ Structured data extracted:', extractedData);
+    logger.info('✅ Structured data extracted:', extractedData);
     
     // Check if we have meaningful text to process
     const hasValidText = rawText.length > 50 && 
@@ -369,7 +371,7 @@ export const processDocument = async (
                         !rawText.includes('[Document text extraction pending');
     
     // 3.5 STAGE 1: Deep document analysis (captures EVERYTHING)
-    console.log('🔄 Stage 1: Performing deep document analysis...');
+    logger.info('🔄 Stage 1: Performing deep document analysis...');
     let detailedAnalysis = null;
     if (hasValidText) {
       try {
@@ -378,13 +380,13 @@ export const processDocument = async (
           documentType,
           fileName
         );
-        console.log('✅ Stage 1 analysis complete - ALL details captured');
+        logger.info('✅ Stage 1 analysis complete - ALL details captured');
       } catch (analysisError: any) {
-        console.error('❌ Document analysis failed:', analysisError.message);
+        logger.error('❌ Document analysis failed:', analysisError.message);
         // Continue without detailed analysis - basic extraction is still available
       }
     } else {
-      console.log('⏭️ Skipping deep analysis (insufficient text)');
+      logger.info('⏭️ Skipping deep analysis (insufficient text)');
     }
     
     // 4. Generate embedding for similarity search (only if we have meaningful text)
@@ -392,19 +394,19 @@ export const processDocument = async (
     
     if (hasValidText) {
       try {
-        console.log('🔄 Generating embedding...');
+        logger.info('🔄 Generating embedding...');
         embedding = await generateEmbedding(anonymizedText);
-        console.log(`✅ Embedding generated: ${embedding.length} dimensions`);
+        logger.info(`✅ Embedding generated: ${embedding.length} dimensions`);
       } catch (embError: any) {
-        console.error('❌ Embedding generation failed:', embError.message);
+        logger.error('❌ Embedding generation failed:', embError.message);
         // Continue without embedding - we can regenerate later
       }
     } else {
-      console.log('⏭️ Skipping embedding generation (insufficient text)');
+      logger.info('⏭️ Skipping embedding generation (insufficient text)');
     }
     
     // 5. Store in Supabase
-    console.log('🔄 Inserting document record into database...');
+    logger.info('🔄 Inserting document record into database...');
     const { data: document, error} = await (supabaseAdmin as any)
       .from('documents')
       .insert({
@@ -426,14 +428,14 @@ export const processDocument = async (
       .single();
     
     if (error) {
-      console.error('❌ Database insert error:', JSON.stringify(error, null, 2));
+      logger.error('❌ Database insert error:', JSON.stringify(error, null, 2));
       throw error;
     }
     
-    console.log(`✅ Document stored in database: ${document.id}`);
+    logger.info(`✅ Document stored in database: ${document.id}`);
     return document;
   } catch (error: any) {
-    console.error('❌ Document processing error:', {
+    logger.error('❌ Document processing error:', {
       message: error.message,
       stack: error.stack,
       name: error.name,
@@ -461,7 +463,7 @@ export const uploadDocument = async (
     
     return (data as any).path;
   } catch (error) {
-    console.error('File upload error:', error);
+    logger.error('File upload error:', error);
     throw new Error('Failed to upload file');
   }
 };
@@ -479,7 +481,7 @@ export const getDocumentUrl = async (filePath: string): Promise<string> => {
     
     return (data as any).signedUrl;
   } catch (error) {
-    console.error('Get document URL error:', error);
+    logger.error('Get document URL error:', error);
     throw new Error('Failed to get document URL');
   }
 };
@@ -499,7 +501,7 @@ export const getComplaintDocuments = async (complaintId: string) => {
     
     return data;
   } catch (error) {
-    console.error('Get documents error:', error);
+    logger.error('Get documents error:', error);
     throw new Error('Failed to retrieve documents');
   }
 };

@@ -3,6 +3,8 @@
  * Ensures we stay within OpenRouter/Claude token limits (200K)
  */
 
+import { logger } from './/logger';
+
 interface ContextBudget {
   total: number;
   documents: number;
@@ -89,7 +91,7 @@ export function prepareAnalysisContext(
 ) {
   const budget = DEFAULT_BUDGET;
   
-  console.log('📊 Context budget:', budget);
+  logger.info('📊 Context budget:', budget);
   
   // 1. DOCUMENTS - Summarize and combine
   const documentSummaries = documents.map(doc => {
@@ -100,7 +102,7 @@ export function prepareAnalysisContext(
   const allDocumentText = documentSummaries.join('\n\n');
   const documentsContext = truncateToTokens(allDocumentText, budget.documents);
   
-  console.log(`📄 Documents context: ${estimateTokens(documentsContext)} tokens (budget: ${budget.documents})`);
+  logger.info(`📄 Documents context: ${estimateTokens(documentsContext)} tokens (budget: ${budget.documents})`);
   
   // 2. KNOWLEDGE BASE - Keep most relevant, summarize
   const knowledgeSummaries = knowledgeResults
@@ -115,7 +117,7 @@ export function prepareAnalysisContext(
     budget.knowledge
   );
   
-  console.log(`📚 Knowledge context: ${estimateTokens(knowledgeContext)} tokens (budget: ${budget.knowledge})`);
+  logger.info(`📚 Knowledge context: ${estimateTokens(knowledgeContext)} tokens (budget: ${budget.knowledge})`);
   
   // 3. PRECEDENTS - Keep most relevant, extract key info
   const precedentSummaries = precedentResults
@@ -134,7 +136,7 @@ Citations: ${(prec.effective_citations || []).join('; ')}`;
     budget.precedents
   );
   
-  console.log(`⚖️ Precedents context: ${estimateTokens(precedentsContext)} tokens (budget: ${budget.precedents})`);
+  logger.info(`⚖️ Precedents context: ${estimateTokens(precedentsContext)} tokens (budget: ${budget.precedents})`);
   
   // 4. COMPLAINT CONTEXT - Keep full if possible
   const complaintCtx = truncateToTokens(complaintContext, 5000);
@@ -156,10 +158,10 @@ ${precedentsContext}
   
   const totalTokens = estimateTokens(finalContext);
   
-  console.log(`✅ Final context: ${totalTokens} tokens (${Math.round(totalTokens / budget.total * 100)}% of budget)`);
+  logger.info(`✅ Final context: ${totalTokens} tokens (${Math.round(totalTokens / budget.total * 100)}% of budget)`);
   
   if (totalTokens > budget.total) {
-    console.warn(`⚠️ Context still exceeds budget! Applying final truncation...`);
+    logger.warn(`⚠️ Context still exceeds budget! Applying final truncation...`);
     return truncateToTokens(finalContext, budget.total);
   }
   

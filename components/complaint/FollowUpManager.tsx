@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Clock, AlertTriangle, FileText, Send } from 'lucide-react';
 import { format, differenceInDays, addDays } from 'date-fns';
 import { trpc } from '@/lib/trpc/Provider';
+import { logger } from '../../lib/logger';
+
 
 interface FollowUpManagerProps {
   complaintId: string;
@@ -110,7 +112,7 @@ INSTRUCTIONS:
       setAdditionalContext('');
       onFollowUpGenerated?.();
     } catch (error) {
-      console.error('Follow-up preparation error:', error);
+      logger.error('Follow-up preparation error:', error);
       alert('Failed to prepare follow-up');
     } finally {
       setGenerating(false);

@@ -5,6 +5,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { X, Download, Maximize2, Minimize2, FileText, Image as ImageIcon } from 'lucide-react';
+import { logger } from '../../lib/logger';
+
 
 interface DocumentViewerProps {
   filename: string;
@@ -102,7 +104,7 @@ export function DocumentViewer({ filename, fileType, storageUrl, onClose }: Docu
                 alt={filename}
                 className="max-w-full max-h-full object-contain"
                 onError={(e) => {
-                  console.error('Image failed to load:', storageUrl);
+                  logger.error('Image failed to load:', storageUrl);
                   (e.target as HTMLImageElement).style.display = 'none';
                 }}
               />
@@ -113,7 +115,7 @@ export function DocumentViewer({ filename, fileType, storageUrl, onClose }: Docu
               className="w-full h-full border-0"
               title={filename}
               onError={() => {
-                console.error('PDF failed to load:', storageUrl);
+                logger.error('PDF failed to load:', storageUrl);
               }}
             />
           ) : isOfficeDoc ? (
@@ -123,7 +125,7 @@ export function DocumentViewer({ filename, fileType, storageUrl, onClose }: Docu
                 className="w-full h-full border-0"
                 title={filename}
                 onError={() => {
-                  console.error('Office doc failed to load:', storageUrl);
+                  logger.error('Office doc failed to load:', storageUrl);
                 }}
               />
               <div className="absolute bottom-4 right-4 bg-white p-2 rounded shadow text-xs text-muted-foreground">

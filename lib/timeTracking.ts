@@ -1,4 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase/client';
+import { logger } from './/logger';
+
 
 /**
  * Log time spent on complaint activities
@@ -23,13 +25,13 @@ export const logTime = async (
       .single();
     
     if (error) {
-      console.error('❌ Failed to log time:', error);
+      logger.error('❌ Failed to log time:', error);
       throw new Error('Failed to log time');
     }
     
     return data;
   } catch (error) {
-    console.error('Time logging error:', error);
+    logger.error('Time logging error:', error);
     throw new Error('Failed to log time');
   }
 };
@@ -61,7 +63,7 @@ export const getComplaintTime = async (complaintId: string) => {
       totalHours: (totalMinutes / 60).toFixed(2),
     };
   } catch (error) {
-    console.error('Get complaint time error:', error);
+    logger.error('Get complaint time error:', error);
     throw new Error('Failed to retrieve time logs');
   }
 };

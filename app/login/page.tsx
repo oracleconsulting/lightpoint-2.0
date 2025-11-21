@@ -10,6 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AlertCircle, Lock, Mail, FileText } from 'lucide-react';
 import Link from 'next/link';
+import { logger } from '../../lib/logger';
+
 
 function LoginForm() {
   const [email, setEmail] = useState('');
@@ -33,7 +35,7 @@ function LoginForm() {
       const logoutParam = searchParams.get('logout') === 'true';
       
       if (logoutParam) {
-        console.log('🔴 Login page: logout=true detected, forcing signout');
+        logger.info('🔴 Login page: logout=true detected, forcing signout');
         
         try {
           // Clear all storage
@@ -42,13 +44,13 @@ function LoginForm() {
           
           // Force signout
           await supabase.auth.signOut();
-          console.log('✅ Login page: Forced signout complete');
+          logger.info('✅ Login page: Forced signout complete');
           
           // Remove the query parameter
           window.history.replaceState({}, '', '/login');
           
         } catch (error) {
-          console.error('❌ Login page: Force signout error:', error);
+          logger.error('❌ Login page: Force signout error:', error);
         }
       }
     };
@@ -64,7 +66,7 @@ function LoginForm() {
       await signIn(email, password);
       // signIn will handle the redirect to /dashboard via window.location.href
     } catch (err: any) {
-      console.error('Login error:', err);
+      logger.error('Login error:', err);
       setError(err.message || 'Failed to sign in. Please check your credentials.');
     } finally {
       setLoading(false);
@@ -80,7 +82,7 @@ function LoginForm() {
       await resetPassword(email);
       setResetSent(true);
     } catch (err: any) {
-      console.error('Password reset error:', err);
+      logger.error('Password reset error:', err);
       setError(err.message || 'Failed to send password reset email.');
     } finally {
       setLoading(false);

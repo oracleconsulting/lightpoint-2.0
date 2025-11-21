@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { logger } from '../../../lib/logger';
+
 
 export async function GET() {
   const envCheck = {
@@ -11,7 +13,7 @@ export async function GET() {
     nodeVersion: process.version,
   };
 
-  console.log('🏥 Health check:', envCheck);
+  logger.info('🏥 Health check:', envCheck);
 
   return NextResponse.json({
     status: 'ok',

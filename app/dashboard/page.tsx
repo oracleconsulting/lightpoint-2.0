@@ -9,6 +9,8 @@ import { useUser } from '@/contexts/UserContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Plus, FileText, AlertCircle, CheckCircle, TrendingUp, Clock, Building2, Trash2, Users, Shield, LogOut, BookOpen, Settings } from 'lucide-react';
 import { useState } from 'react';
+import { logger } from '../../lib/logger';
+
 
 // Mock data for demo - replace with actual auth
 const MOCK_ORGANIZATION_ID = '00000000-0000-0000-0000-000000000001';
@@ -21,16 +23,16 @@ export default function DashboardPage() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   
   const handleLogout = async () => {
-    console.log('🔴 LOGOUT BUTTON CLICKED');
+    logger.info('🔴 LOGOUT BUTTON CLICKED');
     
     if (confirm('Are you sure you want to sign out?')) {
-      console.log('🔴 USER CONFIRMED LOGOUT');
+      logger.info('🔴 USER CONFIRMED LOGOUT');
       setIsLoggingOut(true);
       
       // Don't await - signOut redirects immediately
       signOut();
     } else {
-      console.log('🔴 USER CANCELLED LOGOUT');
+      logger.info('🔴 USER CANCELLED LOGOUT');
     }
   };
   
@@ -62,7 +64,7 @@ export default function DashboardPage() {
   };
 
   // Debug logging
-  console.log('🔍 Dashboard State:', { 
+  logger.info('🔍 Dashboard State:', { 
     isLoading, 
     hasData: !!complaints, 
     dataLength: complaints?.length,

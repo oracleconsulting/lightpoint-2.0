@@ -5,10 +5,6 @@
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
-interface LogContext {
-  [key: string]: unknown;
-}
-
 class Logger {
   private isDevelopment = process.env.NODE_ENV === 'development';
   private isTest = process.env.NODE_ENV === 'test';
@@ -16,62 +12,55 @@ class Logger {
   /**
    * Log debug messages (only in development)
    */
-  debug(message: string, context?: LogContext): void {
+  debug(message: string, ...args: unknown[]): void {
     if (this.isDevelopment && !this.isTest) {
       // eslint-disable-next-line no-console
-      console.log(`🔍 [DEBUG] ${message}`, context || '');
+      console.log(`🔍 [DEBUG] ${message}`, ...args);
     }
   }
 
   /**
    * Log informational messages
    */
-  info(message: string, context?: LogContext): void {
+  info(message: string, ...args: unknown[]): void {
     if (!this.isTest) {
       // eslint-disable-next-line no-console
-      console.info(`ℹ️  [INFO] ${message}`, context || '');
+      console.info(`ℹ️  [INFO] ${message}`, ...args);
     }
   }
 
   /**
    * Log warnings
    */
-  warn(message: string, context?: LogContext): void {
+  warn(message: string, ...args: unknown[]): void {
     // eslint-disable-next-line no-console
-    console.warn(`⚠️  [WARN] ${message}`, context || '');
+    console.warn(`⚠️  [WARN] ${message}`, ...args);
   }
 
   /**
-   * Log errors
+   * Log errors (accepts error object and/or additional context)
    */
-  error(message: string, error?: Error | unknown, context?: LogContext): void {
+  error(message: string, ...args: unknown[]): void {
     // eslint-disable-next-line no-console
-    console.error(`❌ [ERROR] ${message}`, {
-      error: error instanceof Error ? {
-        message: error.message,
-        stack: error.stack,
-        name: error.name,
-      } : error,
-      ...context,
-    });
+    console.error(`❌ [ERROR] ${message}`, ...args);
   }
 
   /**
    * Log with custom level
    */
-  log(level: LogLevel, message: string, context?: LogContext): void {
+  log(level: LogLevel, message: string, ...args: unknown[]): void {
     switch (level) {
       case 'debug':
-        this.debug(message, context);
+        this.debug(message, ...args);
         break;
       case 'info':
-        this.info(message, context);
+        this.info(message, ...args);
         break;
       case 'warn':
-        this.warn(message, context);
+        this.warn(message, ...args);
         break;
       case 'error':
-        this.error(message, undefined, context);
+        this.error(message, ...args);
         break;
     }
   }

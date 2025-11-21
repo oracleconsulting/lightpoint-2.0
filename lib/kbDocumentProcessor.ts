@@ -5,6 +5,8 @@
  * Note: Storage upload is now handled server-side via tRPC
  */
 
+import { logger } from './/logger';
+
 interface ProcessedDocument {
   filename: string;
   fileType: string;
@@ -86,27 +88,27 @@ export async function processDocumentForKB(
   _orgId: string
 ): Promise<ProcessedDocument> {
   const startTime = Date.now();
-  console.log(`📄 Processing ${file.name}...`);
+  logger.info(`📄 Processing ${file.name}...`);
   
   // 1. Read file buffer (will be uploaded server-side)
-  console.log(`  ⏳ Step 1/3: Reading file buffer...`);
+  logger.info(`  ⏳ Step 1/3: Reading file buffer...`);
   const fileBuffer = await file.arrayBuffer();
-  console.log(`  ✅ Step 1/3: Read ${fileBuffer.byteLength} bytes (${Date.now() - startTime}ms)`);
+  logger.info(`  ✅ Step 1/3: Read ${fileBuffer.byteLength} bytes (${Date.now() - startTime}ms)`);
   
   // 2. Extract text
-  console.log(`  ⏳ Step 2/3: Extracting text from ${file.type || 'PDF'}...`);
+  logger.info(`  ⏳ Step 2/3: Extracting text from ${file.type || 'PDF'}...`);
   const extractStartTime = Date.now();
   const extractedText = await extractTextFromFile(file);
-  console.log(`  ✅ Step 2/3: Extracted ${extractedText.length} characters (${Date.now() - extractStartTime}ms)`);
+  logger.info(`  ✅ Step 2/3: Extracted ${extractedText.length} characters (${Date.now() - extractStartTime}ms)`);
   
   if (extractedText.length < 100) {
     throw new Error('Document appears to be empty or text extraction failed');
   }
   
   // 3. Chunk text
-  console.log(`  ⏳ Step 3/3: Chunking text...`);
+  logger.info(`  ⏳ Step 3/3: Chunking text...`);
   const documentChunks = chunkText(extractedText);
-  console.log(`  ✅ Step 3/3: Created ${documentChunks.length} chunks (${Date.now() - startTime}ms total)`);
+  logger.info(`  ✅ Step 3/3: Created ${documentChunks.length} chunks (${Date.now() - startTime}ms total)`);
   
   return {
     filename: file.name,
@@ -139,7 +141,7 @@ export async function processMultipleDocuments(
       const processed = await processDocumentForKB(file, orgId);
       results.push(processed);
     } catch (error: any) {
-      console.error(`❌ Failed to process ${file.name}:`, error);
+      logger.error(`❌ Failed to process ${file.name}:`, error);
       // Continue with other files
     }
   }

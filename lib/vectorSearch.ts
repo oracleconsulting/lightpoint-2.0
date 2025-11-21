@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabase/client';
 import { generateEmbedding } from '@/lib/embeddings';
 import { cohereRerank, voyageRerank } from '@/lib/search/hybridSearch';
+import { logger } from './logger';
 import {
   getCachedKnowledgeSearch,
   cacheKnowledgeSearch,
@@ -34,12 +35,12 @@ export const searchKnowledgeBaseMultiAngle = async (
   matchCount: number = 10
 ) => {
   try {
-    console.log('🔍 Starting multi-angle knowledge base search with reranking...');
+    logger.info('🔍 Starting multi-angle knowledge base search with reranking...');
     
     // Extract key components for targeted searches
     const searchQueries = generateSearchQueries(queryText);
     
-    console.log(`📊 Generated ${searchQueries.length} search angles:`, searchQueries);
+    logger.info(`📊 Generated ${searchQueries.length} search angles:`, searchQueries);
     
     // Get MORE candidates for reranking (3x the final count)
     const candidateCount = matchCount * 3;
@@ -52,11 +53,11 @@ export const searchKnowledgeBaseMultiAngle = async (
     // Combine and deduplicate results
     let combinedResults = deduplicateResults(allResults.flat());
     
-    console.log(`📦 Multi-angle search found ${combinedResults.length} candidates`);
+    logger.info(`📦 Multi-angle search found ${combinedResults.length} candidates`);
     
     // RERANK for precision
     if (USE_RERANKING && combinedResults.length > matchCount) {
-      console.log(`🎯 Reranking with ${RERANKER}...`);
+      logger.info(`🎯 Reranking with ${RERANKER}...`);
       
       const documentsToRerank = combinedResults.map(r => ({
         id: r.id,
@@ -68,16 +69,16 @@ export const searchKnowledgeBaseMultiAngle = async (
       } else if (RERANKER === 'voyage') {
         combinedResults = await voyageRerank(queryText, documentsToRerank, matchCount);
       } else {
-        console.log('⚠️  No reranker API key set, using vector scores only');
+        logger.info('⚠️  No reranker API key set, using vector scores only');
         combinedResults = combinedResults.slice(0, matchCount);
       }
       
-      console.log(`✅ Reranked to top ${combinedResults.length} results`);
+      logger.info(`✅ Reranked to top ${combinedResults.length} results`);
     }
     
     return combinedResults;
   } catch (error) {
-    console.error('Multi-angle search error:', error);
+    logger.error('Multi-angle search error:', error);
     // Fall back to single search
     return searchKnowledgeBase(queryText, threshold, matchCount);
   }
@@ -174,7 +175,7 @@ export const searchKnowledgeBase = async (
     // Check cache first
     const cached = await getCachedKnowledgeSearch(queryText, threshold, matchCount);
     if (cached) {
-      console.log('✅ Using cached knowledge base results');
+      logger.info('✅ Using cached knowledge base results');
       return cached;
     }
 
@@ -197,7 +198,7 @@ export const searchKnowledgeBase = async (
     
     return results;
   } catch (error) {
-    console.error('Knowledge base search error:', error);
+    logger.error('Knowledge base search error:', error);
     throw new Error('Failed to search knowledge base');
   }
 };
@@ -212,12 +213,12 @@ export const searchPrecedents = async (
   matchCount: number = 5
 ) => {
   try {
-    console.log('📚 Searching precedents with reranking + caching...');
+    logger.info('📚 Searching precedents with reranking + caching...');
     
     // Check cache first
     const cached = await getCachedPrecedentSearch(queryText, threshold, matchCount);
     if (cached) {
-      console.log('✅ Using cached precedent results');
+      logger.info('✅ Using cached precedent results');
       return cached;
     }
     
@@ -240,7 +241,7 @@ export const searchPrecedents = async (
     
     // RERANK precedents for maximum accuracy
     if (USE_RERANKING && results.length > matchCount) {
-      console.log(`🎯 Reranking ${results.length} precedents with ${RERANKER}...`);
+      logger.info(`🎯 Reranking ${results.length} precedents with ${RERANKER}...`);
       
       const documentsToRerank = results.map((r: any) => ({
         id: r.id,
@@ -252,11 +253,11 @@ export const searchPrecedents = async (
       } else if (RERANKER === 'voyage') {
         results = await voyageRerank(queryText, documentsToRerank, matchCount);
       } else {
-        console.log('⚠️  No reranker API key set, using vector scores only');
+        logger.info('⚠️  No reranker API key set, using vector scores only');
         results = results.slice(0, matchCount);
       }
       
-      console.log(`✅ Reranked to top ${results.length} precedents`);
+      logger.info(`✅ Reranked to top ${results.length} precedents`);
     }
     
     // Cache the results
@@ -264,7 +265,7 @@ export const searchPrecedents = async (
     
     return results;
   } catch (error) {
-    console.error('Precedents search error:', error);
+    logger.error('Precedents search error:', error);
     throw new Error('Failed to search precedents');
   }
 };
@@ -301,7 +302,7 @@ export const addToKnowledgeBase = async (
     
     return data;
   } catch (error) {
-    console.error('Failed to add to knowledge base:', error);
+    logger.error('Failed to add to knowledge base:', error);
     throw error;
   }
 };
@@ -347,7 +348,7 @@ export const addPrecedent = async (
     
     return data;
   } catch (error) {
-    console.error('Failed to add precedent:', error);
+    logger.error('Failed to add precedent:', error);
     throw error;
   }
 };

@@ -9,6 +9,8 @@
  */
 
 import { createClient } from 'redis';
+import { logger } from '../logger';
+
 
 // Redis client singleton
 let redisClient: ReturnType<typeof createClient> | null = null;
@@ -24,7 +26,7 @@ export const getRedisClient = async () => {
   const redisUrl = process.env.REDIS_URL || process.env.KV_URL;
   
   if (!redisUrl) {
-    console.warn('⚠️  Redis not configured, caching disabled');
+    logger.warn('⚠️  Redis not configured, caching disabled');
     return null;
   }
 
@@ -34,7 +36,7 @@ export const getRedisClient = async () => {
       socket: {
         reconnectStrategy: (retries) => {
           if (retries > 3) {
-            console.error('❌ Redis reconnect failed after 3 attempts');
+            logger.error('❌ Redis reconnect failed after 3 attempts');
             return new Error('Redis reconnect failed');
           }
           return Math.min(retries * 100, 3000);
@@ -43,19 +45,19 @@ export const getRedisClient = async () => {
     });
 
     redisClient.on('error', (err) => {
-      console.error('❌ Redis Client Error:', err);
+      logger.error('❌ Redis Client Error:', err);
     });
 
     redisClient.on('connect', () => {
-      console.log('✅ Redis connected');
+      logger.info('✅ Redis connected');
     });
 
     await redisClient.connect();
-    console.log('✅ Redis client initialized');
+    logger.info('✅ Redis client initialized');
     
     return redisClient;
   } catch (error) {
-    console.error('❌ Failed to initialize Redis:', error);
+    logger.error('❌ Failed to initialize Redis:', error);
     redisClient = null;
     return null;
   }
@@ -105,9 +107,9 @@ const cacheSearchResults = async (
       matchCount,
     });
     await redis.setEx(cacheKey, 86400, JSON.stringify(results));
-    console.log(`✅ Cached ${label}: ${cacheKey}`);
+    logger.info(`✅ Cached ${label}: ${cacheKey}`);
   } catch (error) {
-    console.error(`❌ Failed to cache ${label}:`, error);
+    logger.error(`❌ Failed to cache ${label}:`, error);
   }
 };
 
@@ -132,13 +134,13 @@ const getCachedSearchResults = async (
     });
     const cached = await redis.get(cacheKey);
     if (cached) {
-      console.log(`✅ Cache HIT for ${label}: ${cacheKey}`);
+      logger.info(`✅ Cache HIT for ${label}: ${cacheKey}`);
       return JSON.parse(cached);
     }
-    console.log(`❌ Cache MISS for ${label}: ${cacheKey}`);
+    logger.info(`❌ Cache MISS for ${label}: ${cacheKey}`);
     return null;
   } catch (error) {
-    console.error(`❌ Failed to get cached ${label}:`, error);
+    logger.error(`❌ Failed to get cached ${label}:`, error);
     return null;
   }
 };
@@ -154,10 +156,10 @@ const invalidateCache = async (pattern: string, label: string): Promise<void> =>
     const keys = await redis.keys(pattern);
     if (keys.length > 0) {
       await redis.del(keys);
-      console.log(`✅ Invalidated ${keys.length} ${label} caches`);
+      logger.info(`✅ Invalidated ${keys.length} ${label} caches`);
     }
   } catch (error) {
-    console.error(`❌ Failed to invalidate ${label} cache:`, error);
+    logger.error(`❌ Failed to invalidate ${label} cache:`, error);
   }
 };
 
@@ -216,7 +218,7 @@ export const getCacheStats = async (): Promise<{
       memory,
     };
   } catch (error) {
-    console.error('❌ Failed to get cache stats:', error);
+    logger.error('❌ Failed to get cache stats:', error);
     return null;
   }
 };
@@ -228,7 +230,7 @@ export const closeRedis = async (): Promise<void> => {
   if (redisClient) {
     await redisClient.quit();
     redisClient = null;
-    console.log('✅ Redis connection closed');
+    logger.info('✅ Redis connection closed');
   }
 };
 

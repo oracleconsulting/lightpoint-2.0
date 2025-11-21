@@ -6,6 +6,8 @@
  */
 
 import { searchKnowledgeBase } from '@/lib/vectorSearch';
+import { logger } from './/logger';
+
 
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const CHAT_MODEL = 'anthropic/claude-opus-4.1'; // Best conversational AI
@@ -41,7 +43,7 @@ export async function chatWithKnowledgeBase(
   userQuestion: string,
   conversationHistory: ChatMessage[] = []
 ): Promise<ChatResponse> {
-  console.log('💬 KB Chat: Processing question:', userQuestion);
+  logger.info('💬 KB Chat: Processing question:', userQuestion);
 
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
@@ -55,7 +57,7 @@ export async function chatWithKnowledgeBase(
     10   // Top 10 results
   );
 
-  console.log(`📚 Found ${knowledgeResults.length} relevant KB entries`);
+  logger.info(`📚 Found ${knowledgeResults.length} relevant KB entries`);
 
   // Step 2: Prepare context from knowledge base
   const kbContext = knowledgeResults
@@ -127,7 +129,7 @@ Guidelines:
     const answer = data.choices[0].message.content;
     const processingTime = Date.now() - startTime;
 
-    console.log(`✅ KB Chat response generated in ${processingTime}ms`);
+    logger.info(`✅ KB Chat response generated in ${processingTime}ms`);
 
     // Step 4: Extract sources cited in the response
     const sources = knowledgeResults.slice(0, 5).map((result: any) => ({
@@ -143,7 +145,7 @@ Guidelines:
       knowledgeChunks: knowledgeResults,
     };
   } catch (error: any) {
-    console.error('❌ KB Chat error:', error);
+    logger.error('❌ KB Chat error:', error);
     throw new Error(`Chat failed: ${error.message}`);
   }
 }
