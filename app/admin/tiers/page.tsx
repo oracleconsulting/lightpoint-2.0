@@ -1,5 +1,6 @@
 'use client';
 
+import * as React from 'react';
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { trpc } from '@/lib/trpc/client';
+import { trpc } from '@/lib/trpc/Provider';
 import { Loader2, Save, Plus, Trash2, Eye, EyeOff } from 'lucide-react';
 
 export default function TierManagementPage() {
@@ -18,7 +19,6 @@ export default function TierManagementPage() {
   const { data: tiers, isLoading } = trpc.subscription.listTiers.useQuery({ includeHidden: true });
   const updateTierMutation = trpc.subscription.updateTier.useMutation();
   const createTierMutation = trpc.subscription.createTier.useMutation();
-  const deleteTierMutation = trpc.subscription.deleteTier.useMutation();
   
   if (isLoading) {
     return (
@@ -44,7 +44,7 @@ export default function TierManagementPage() {
       </div>
       
       <div className="grid gap-6 md:grid-cols-3">
-        {tiers?.map((tier) => (
+        {tiers?.map((tier: any) => (
           <TierCard 
             key={tier.id} 
             tier={tier}
@@ -64,7 +64,7 @@ export default function TierManagementPage() {
 }
 
 interface TierCardProps {
-  tier: any;
+  tier: any; // TODO: Type this with proper Tier interface
   isSelected: boolean;
   onClick: () => void;
 }
@@ -115,16 +115,26 @@ interface TierEditorProps {
 }
 
 function TierEditor({ tierId }: TierEditorProps) {
-  const { data: tier, isLoading } = trpc.subscription.getTier.useQuery({ id: tierId });
+  const { data: rawTier, isLoading } = trpc.subscription.getTier.useQuery({ id: tierId });
   const updateMutation = trpc.subscription.updateTier.useMutation();
   
-  const [formData, setFormData] = useState(tier);
+  const tier: any = rawTier;
+  const [formData, setFormData] = useState<any>(tier);
   
-  if (isLoading || !tier) {
+  // Update formData when tier data loads
+  React.useEffect(() => {
+    if (tier) {
+      setFormData(tier);
+    }
+  }, [tier]);
+  
+  if (isLoading || !tier || !formData) {
     return <Loader2 className="h-6 w-6 animate-spin" />;
   }
   
   const handleSave = async () => {
+    if (!formData) return;
+    
     await updateMutation.mutateAsync({
       id: tierId,
       ...formData,

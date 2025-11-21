@@ -82,7 +82,7 @@ export const subscriptionRouter = router({
       // TODO: Check if user is admin
       // For now, allow any authenticated user (you'll want to add admin check)
       
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await (supabaseAdmin as any)
         .from('subscription_tiers')
         .update({
           ...updates,
@@ -120,7 +120,7 @@ export const subscriptionRouter = router({
     .mutation(async ({ input, ctx }) => {
       // TODO: Check if user is admin
       
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await (supabaseAdmin as any)
         .from('subscription_tiers')
         .insert({
           ...input,
@@ -150,7 +150,7 @@ export const subscriptionRouter = router({
       });
     }
     
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await (supabaseAdmin as any)
       .from('user_subscriptions')
       .select(`
         *,
@@ -165,7 +165,7 @@ export const subscriptionRouter = router({
       return null;
     }
     
-    return data;
+    return data as any;
   }),
   
   /**
@@ -179,7 +179,7 @@ export const subscriptionRouter = router({
       });
     }
     
-    const { data: subscription, error } = await supabaseAdmin
+    const { data: subscription, error } = await (supabaseAdmin as any)
       .from('user_subscriptions')
       .select(`
         *,
@@ -220,7 +220,7 @@ export const subscriptionRouter = router({
       return { allowed: false, reason: 'No organization' };
     }
     
-    const { data: subscription } = await supabaseAdmin
+    const { data: subscription } = await (supabaseAdmin as any)
       .from('user_subscriptions')
       .select(`
         *,
@@ -271,7 +271,7 @@ export const subscriptionRouter = router({
       });
     }
     
-    const { error } = await supabaseAdmin.rpc('increment_complaint_usage', {
+    const { error } = await (supabaseAdmin as any).rpc('increment_complaint_usage', {
       org_id: ctx.organizationId,
     });
     
@@ -299,7 +299,7 @@ export const subscriptionRouter = router({
         return false;
       }
       
-      const { data } = await supabaseAdmin.rpc('has_feature_access', {
+      const { data } = await (supabaseAdmin as any).rpc('has_feature_access', {
         org_id: ctx.organizationId,
         feature_path: input.feature,
       });

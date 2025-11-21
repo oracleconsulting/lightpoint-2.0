@@ -10,9 +10,14 @@ import { sanitizeForLLM } from '@/lib/privacy';
 import { prepareAnalysisContext, estimateTokens } from '@/lib/contextManager';
 import { generateEmbedding } from '@/lib/embeddings';
 import { logger } from '../logger';
+import { subscriptionRouter } from './routers/subscription';
 
 
 export const appRouter = router({
+  // Subscription management
+  subscription: subscriptionRouter,
+  
+  // Existing routes
   // Complaints
   complaints: router({
     create: protectedProcedure

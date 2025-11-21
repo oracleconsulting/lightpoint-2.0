@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { trpc } from '@/lib/trpc/client';
+import { trpc } from '@/lib/trpc/Provider';
 import { Check, Zap, Crown, Building2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -73,7 +73,7 @@ export default function PricingPage() {
         
         {/* Pricing Cards */}
         <div className="grid gap-8 md:grid-cols-3 max-w-6xl mx-auto">
-          {tiers?.map((tier) => {
+          {tiers?.map((tier: any) => {
             const price = billingPeriod === 'monthly' 
               ? tier.monthly_price 
               : tier.annual_price;
