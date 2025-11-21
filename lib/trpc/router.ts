@@ -1219,7 +1219,7 @@ export const appRouter = router({
             title: title,
             category: 'CHG',
             source: 'Manual Upload',
-            user_name: 'Admin', // TODO: Use actual user from context
+            user_name: ctx.user?.email || 'System',
           });
         
         // Delete from staging
@@ -1322,6 +1322,7 @@ export const appRouter = router({
         const updateData: any = {
           system_prompt: input.systemPrompt,
           last_modified_at: new Date().toISOString(),
+          last_modified_by: ctx.user?.email || 'System',
         };
 
         if (input.userPromptTemplate !== undefined) {
@@ -1333,8 +1334,6 @@ export const appRouter = router({
         if (input.maxTokens !== undefined) {
           updateData.max_tokens = input.maxTokens;
         }
-
-        // TODO: Add last_modified_by from auth context
 
         const { data, error } = await (supabaseAdmin as any)
           .from('ai_prompts')
@@ -1396,9 +1395,8 @@ export const appRouter = router({
   kbChat: router({
     // Start new conversation
     startConversation: publicProcedure
-      .mutation(async () => {
-        // TODO: Get user_id from auth context
-        const userId = '00000000-0000-0000-0000-000000000001'; // Placeholder
+      .mutation(async ({ ctx }) => {
+        const userId = ctx.user?.id || '00000000-0000-0000-0000-000000000001';
         
         const { data, error } = await (supabaseAdmin as any)
           .from('kb_chat_conversations')
@@ -1504,9 +1502,8 @@ export const appRouter = router({
 
     // List user's conversations
     listConversations: publicProcedure
-      .query(async () => {
-        // TODO: Get user_id from auth context
-        const userId = '00000000-0000-0000-0000-000000000001'; // Placeholder
+      .query(async ({ ctx }) => {
+        const userId = ctx.user?.id || '00000000-0000-0000-0000-000000000001';
         
         try {
           const { data, error } = await supabaseAdmin.rpc('get_user_kb_conversations', {
@@ -1547,9 +1544,8 @@ export const appRouter = router({
         isHelpful: z.boolean(),
         feedbackText: z.string().optional(),
       }))
-      .mutation(async ({ input }) => {
-        // TODO: Get user_id from auth context
-        const userId = '00000000-0000-0000-0000-000000000001'; // Placeholder
+      .mutation(async ({ input, ctx }) => {
+        const userId = ctx.user?.id || '00000000-0000-0000-0000-000000000001';
         
         const { data, error } = await (supabaseAdmin as any)
           .from('kb_chat_feedback')
