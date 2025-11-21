@@ -21,7 +21,7 @@ export interface Context {
  * This runs on every tRPC request
  */
 export async function createContext(
-  opts?: FetchCreateContextFnOptions
+  _opts?: FetchCreateContextFnOptions
 ): Promise<Context> {
   // Create Supabase server client with proper cookie handling
   const cookieStore = cookies();
@@ -39,7 +39,7 @@ export async function createContext(
             cookiesToSet.forEach(({ name, value, options }) => {
               cookieStore.set(name, value, options);
             });
-          } catch (error) {
+          } catch {
             // Cookie setting might fail in read-only contexts (like tRPC queries)
             // This is expected and safe to ignore
           }

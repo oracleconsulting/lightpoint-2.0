@@ -8,6 +8,15 @@ import {
   cachePrecedentSearch,
 } from '@/lib/cache/redis';
 
+// Type for search results
+interface SearchResult {
+  id: string;
+  title?: string;
+  content?: string;
+  similarity?: number;
+  [key: string]: unknown;
+}
+
 // Reranking configuration
 const USE_RERANKING = true;  // Always use reranking for quality
 const RERANKER = process.env.COHERE_API_KEY ? 'cohere' : 
@@ -136,9 +145,9 @@ function generateSearchQueries(originalQuery: string): string[] {
 /**
  * Deduplicate search results by ID and rank by relevance
  */
-function deduplicateResults(results: any[]): any[] {
+function deduplicateResults(results: SearchResult[]): SearchResult[] {
   const seen = new Set();
-  const unique: any[] = [];
+  const unique: SearchResult[] = [];
   
   for (const result of results) {
     const id = result.id || result.title;
