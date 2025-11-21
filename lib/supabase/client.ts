@@ -42,7 +42,7 @@ export const supabaseAdmin = new Proxy({} as ReturnType<typeof createClient>, {
     if (!_supabaseAdmin) {
       _supabaseAdmin = createServerClient();
     }
-    return (_supabaseAdmin as any)[prop];
+    return _supabaseAdmin[prop];
   }
 });
 
