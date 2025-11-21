@@ -69,7 +69,7 @@ export const generateCacheKey = (
   params: Record<string, any>
 ): string => {
   const sortedParams = Object.keys(params)
-    .sort()
+    .sort((a, b) => a.localeCompare(b))
     .map((key) => `${key}=${JSON.stringify(params[key])}`)
     .join('&');
   
