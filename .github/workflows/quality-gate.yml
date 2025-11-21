@@ -1,0 +1,89 @@
+name: Quality Gate Enforcement
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  quality-gate:
+    name: Enforce Quality Standards
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for better analysis
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run TypeScript type checking
+        run: npx tsc --noEmit
+        continue-on-error: false
+      
+      - name: Run SonarCloud Scan
+        uses: SonarSource/sonarqube-scan-action@v5.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      
+      - name: Wait for SonarCloud Quality Gate
+        uses: sonarsource/sonarqube-quality-gate-action@master
+        timeout-minutes: 5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          scanMetadataReportFile: .scannerwork/report-task.txt
+      
+      - name: Quality Gate Status
+        if: failure()
+        run: |
+          echo "❌ Quality Gate FAILED"
+          echo "Fix the issues before merging:"
+          echo "- Check: https://sonarcloud.io/project/overview?id=oracleconsulting_lightpoint-2.0"
+          exit 1
+
+  auto-fix-minor-issues:
+    name: Auto-fix Minor Issues
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run ESLint with auto-fix
+        run: |
+          npx eslint . --ext .ts,.tsx --fix || true
+      
+      - name: Run Prettier
+        run: |
+          npx prettier --write "**/*.{ts,tsx,js,jsx,json,css,md}"
+      
+      - name: Commit auto-fixes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: auto-fix linting and formatting issues"
+          commit_author: "GitHub Actions <actions@github.com>"
+

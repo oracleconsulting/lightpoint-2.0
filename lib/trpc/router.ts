@@ -1166,11 +1166,11 @@ export const appRouter = router({
       .input(z.object({
         stagedId: z.string(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         console.log('✅ Approving staged document:', input.stagedId);
         
         // Get staged document
-        const { data: staged, error: stagedError} = await supabaseAdmin
+        const { data: staged, error: stagedError } = await supabaseAdmin
           .from('knowledge_base_staging')
           .select('*')
           .eq('id', input.stagedId)
@@ -1318,7 +1318,7 @@ export const appRouter = router({
         temperature: z.number().optional(),
         maxTokens: z.number().optional(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         const updateData: any = {
           system_prompt: input.systemPrompt,
           last_modified_at: new Date().toISOString(),

@@ -1,0 +1,25 @@
+#!/bin/sh
+
+# Pre-commit hook for quality enforcement
+# Runs before every commit to catch issues early
+
+echo "🔍 Running pre-commit quality checks..."
+
+# 1. TypeScript type checking
+echo "📝 TypeScript type checking..."
+if ! npx tsc --noEmit; then
+  echo "❌ TypeScript errors found. Fix them before committing."
+  exit 1
+fi
+
+# 2. Check for hardcoded credentials
+echo "🚨 Checking for common issues..."
+SECRETS=$(git diff --cached | grep -iE '^\+.*(password|api_key|secret|token)\s*=\s*["'"'"'][^"'"'"']{8,}' | grep -v 'SONAR_TOKEN' | grep -v '$' || true)
+if [ -n "$SECRETS" ]; then
+  echo "❌ Potential hardcoded credentials detected!"
+  echo "$SECRETS"
+  exit 1
+fi
+
+echo "✅ All pre-commit checks passed!"
+exit 0
