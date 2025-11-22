@@ -23,7 +23,7 @@ interface RichTextEditorProps {
   content: string;
   onChange: (content: string) => void;
   placeholder?: string;
-  bucket?: 'blog-images' | 'cpd-media' | 'webinar-videos';
+  bucket?: 'blog-images' | 'cpd-media' | 'webinar-videos' | 'documents';
 }
 
 export function RichTextEditor({ 

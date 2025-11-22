@@ -6,82 +6,88 @@ import { RichTextEditor } from '@/components/RichTextEditor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { ArrowLeft, Save, Eye, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { trpc } from '@/lib/trpc/Provider';
 
-interface BlogPostFormProps {
-  postId?: string;
+interface ExampleFormProps {
+  exampleId?: string;
 }
 
-export function BlogPostForm({ postId }: BlogPostFormProps) {
+export function ExampleForm({ exampleId }: ExampleFormProps) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   
   // Form state
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
-  const [excerpt, setExcerpt] = useState('');
-  const [content, setContent] = useState('');
-  const [featuredImage, setFeaturedImage] = useState('');
-  const [featuredImageAlt, setFeaturedImageAlt] = useState('');
-  const [author, setAuthor] = useState('');
+  const [summary, setSummary] = useState('');
+  const [background, setBackground] = useState('');
+  const [actionsTaken, setActionsTaken] = useState('');
+  const [outcome, setOutcome] = useState('');
+  const [lessonsLearned, setLessonsLearned] = useState('');
   const [category, setCategory] = useState('');
+  const [complexity, setComplexity] = useState<'simple' | 'intermediate' | 'complex'>('intermediate');
+  const [feeRecoveryAmount, setFeeRecoveryAmount] = useState<number>(0);
+  const [durationDays, setDurationDays] = useState<number>(0);
   const [tags, setTags] = useState('');
   const [metaTitle, setMetaTitle] = useState('');
   const [metaDescription, setMetaDescription] = useState('');
   const [isPublished, setIsPublished] = useState(false);
 
   // tRPC mutations
-  const createPost = trpc.blog.create.useMutation();
-  const updatePost = trpc.blog.update.useMutation();
-  const deletePost = trpc.blog.delete.useMutation();
+  const createExample = trpc.examples.create.useMutation();
+  const updateExample = trpc.examples.update.useMutation();
+  const deleteExample = trpc.examples.delete.useMutation();
 
-  // Load existing post if editing
-  const { data: existingPost, isLoading: isLoadingPost } = trpc.blog.getById.useQuery(
-    { id: postId! },
-    { enabled: !!postId }
+  // Load existing example if editing
+  const { data: existingExample, isLoading: isLoadingExample } = trpc.examples.getById.useQuery(
+    { id: exampleId! },
+    { enabled: !!exampleId }
   );
 
   // Populate form when editing
   React.useEffect(() => {
-    if (existingPost) {
-      setTitle(existingPost.title || '');
-      setSlug(existingPost.slug || '');
-      setExcerpt(existingPost.excerpt || '');
-      setContent(existingPost.content || '');
-      setFeaturedImage(existingPost.featured_image_url || '');
-      setFeaturedImageAlt(existingPost.featured_image_alt || '');
-      setAuthor(''); // Author is managed by backend
-      setCategory(existingPost.category || '');
-      setTags(existingPost.tags?.join(', ') || '');
-      setMetaTitle(existingPost.seo_title || '');
-      setMetaDescription(existingPost.seo_description || '');
-      setIsPublished(existingPost.status === 'published');
+    if (existingExample) {
+      setTitle(existingExample.title || '');
+      setSlug(existingExample.slug || '');
+      setSummary(existingExample.summary || '');
+      setBackground(existingExample.background || '');
+      setActionsTaken(existingExample.actions_taken || '');
+      setOutcome(existingExample.outcome || '');
+      setLessonsLearned(existingExample.lessons_learned || '');
+      setCategory(existingExample.category || '');
+      setComplexity(existingExample.complexity_rating || 'intermediate');
+      setFeeRecoveryAmount(existingExample.fee_recovery_amount || 0);
+      setDurationDays(existingExample.duration_days || 0);
+      setTags(existingExample.tags?.join(', ') || '');
+      setMetaTitle(existingExample.seo_title || '');
+      setMetaDescription(existingExample.seo_description || '');
+      setIsPublished(existingExample.status === 'published');
     }
-  }, [existingPost]);
+  }, [existingExample]);
 
   // Auto-generate slug from title
   useEffect(() => {
-    if (!postId && title) {
+    if (!exampleId && title) {
       const generatedSlug = title
         .toLowerCase()
         .replace(/[^a-z0-9\s-]/g, '')
         .replace(/\s+/g, '-');
       setSlug(generatedSlug);
     }
-  }, [title, postId]);
+  }, [title, exampleId]);
 
   // Auto-generate meta fields
   useEffect(() => {
     if (!metaTitle && title) {
       setMetaTitle(title.substring(0, 60));
     }
-    if (!metaDescription && excerpt) {
-      setMetaDescription(excerpt.substring(0, 160));
+    if (!metaDescription && summary) {
+      setMetaDescription(summary.substring(0, 160));
     }
-  }, [title, excerpt, metaTitle, metaDescription]);
+  }, [title, summary, metaTitle, metaDescription]);
 
   const handleSave = async () => {
     if (!title || !slug) {
@@ -91,63 +97,64 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
 
     setSaving(true);
     try {
-      const postData = {
+      const exampleData = {
         title,
         slug,
-        excerpt: excerpt || undefined,
-        content,
-        featuredImage: featuredImage || undefined,
-        featuredImageAlt: featuredImageAlt || undefined,
-        author: author || 'Admin',
+        summary: summary || undefined,
+        background,
+        actionsTaken,
+        outcome,
+        lessonsLearned,
         category: category || undefined,
+        complexity,
+        feeRecoveryAmount: feeRecoveryAmount || undefined,
+        durationDays: durationDays || undefined,
         tags: tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : undefined,
         metaTitle: metaTitle || undefined,
         metaDescription: metaDescription || undefined,
         isPublished,
       };
 
-      if (postId) {
-        // Update existing post
-        await updatePost.mutateAsync({
-          id: postId,
-          data: postData,
+      if (exampleId) {
+        await updateExample.mutateAsync({
+          id: exampleId,
+          data: exampleData,
         });
-        alert('Blog post updated successfully!');
+        alert('Worked example updated successfully!');
       } else {
-        // Create new post
-        await createPost.mutateAsync(postData);
-        alert('Blog post created successfully!');
+        await createExample.mutateAsync(exampleData);
+        alert('Worked example created successfully!');
       }
       
-      router.push('/admin/blog');
+      router.push('/admin/examples');
     } catch (error: any) {
-      console.error('Error saving blog post:', error);
-      alert(`Failed to save blog post: ${error?.message || 'Unknown error'}`);
+      console.error('Error saving worked example:', error);
+      alert(`Failed to save worked example: ${error?.message || 'Unknown error'}`);
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!postId) return;
-    if (!confirm('Are you sure you want to delete this blog post? This action cannot be undone.')) return;
+    if (!exampleId) return;
+    if (!confirm('Are you sure you want to delete this worked example? This action cannot be undone.')) return;
 
     try {
-      await deletePost.mutateAsync({ id: postId });
-      alert('Blog post deleted successfully!');
-      router.push('/admin/blog');
+      await deleteExample.mutateAsync({ id: exampleId });
+      alert('Worked example deleted successfully!');
+      router.push('/admin/examples');
     } catch (error: any) {
-      console.error('Error deleting blog post:', error);
-      alert(`Failed to delete blog post: ${error?.message || 'Unknown error'}`);
+      console.error('Error deleting worked example:', error);
+      alert(`Failed to delete worked example: ${error?.message || 'Unknown error'}`);
     }
   };
 
-  if (isLoadingPost) {
+  if (isLoadingExample) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading post...</p>
+          <p className="mt-4 text-gray-600">Loading example...</p>
         </div>
       </div>
     );
@@ -158,14 +165,14 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link href="/admin/blog">
+          <Link href="/admin/examples">
             <Button variant="outline" size="sm">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back
             </Button>
           </Link>
           <h1 className="text-3xl font-heading font-bold">
-            {postId ? 'Edit Blog Post' : 'New Blog Post'}
+            {exampleId ? 'Edit Worked Example' : 'New Worked Example'}
           </h1>
         </div>
         <div className="flex items-center gap-2">
@@ -192,7 +199,7 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Enter post title..."
+              placeholder="Enter case title..."
               required
             />
           </div>
@@ -207,35 +214,64 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
               required
             />
             <p className="text-sm text-gray-500 mt-1">
-              URL: /blog/{slug || 'your-slug-here'}
+              URL: /examples/{slug || 'your-slug-here'}
             </p>
           </div>
 
           <div>
-            <Label htmlFor="excerpt">Excerpt</Label>
+            <Label htmlFor="summary">Summary</Label>
             <textarea
-              id="excerpt"
-              value={excerpt}
-              onChange={(e) => setExcerpt(e.target.value)}
-              placeholder="Brief summary (160 characters recommended for SEO)..."
+              id="summary"
+              value={summary}
+              onChange={(e) => setSummary(e.target.value)}
+              placeholder="Brief summary of the case..."
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               rows={3}
               maxLength={200}
             />
             <p className="text-sm text-gray-500 mt-1">
-              {excerpt.length}/200 characters
+              {summary.length}/200 characters
             </p>
           </div>
 
-          <div>
-            <Label htmlFor="author">Author *</Label>
-            <Input
-              id="author"
-              value={author}
-              onChange={(e) => setAuthor(e.target.value)}
-              placeholder="Author name"
-              required
-            />
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="complexity">Complexity</Label>
+              <select
+                id="complexity"
+                value={complexity}
+                onChange={(e) => setComplexity(e.target.value as any)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="simple">Simple</option>
+                <option value="intermediate">Intermediate</option>
+                <option value="complex">Complex</option>
+              </select>
+            </div>
+
+            <div>
+              <Label htmlFor="feeRecoveryAmount">Fee Recovery (£)</Label>
+              <Input
+                id="feeRecoveryAmount"
+                type="number"
+                value={feeRecoveryAmount}
+                onChange={(e) => setFeeRecoveryAmount(Number(e.target.value))}
+                placeholder="e.g., 1250"
+                min="0"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="durationDays">Duration (days)</Label>
+              <Input
+                id="durationDays"
+                type="number"
+                value={durationDays}
+                onChange={(e) => setDurationDays(Number(e.target.value))}
+                placeholder="e.g., 45"
+                min="1"
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -245,7 +281,7 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
                 id="category"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                placeholder="e.g., HMRC Updates"
+                placeholder="e.g., Penalty Appeals"
               />
             </div>
             <div>
@@ -254,66 +290,74 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
                 id="tags"
                 value={tags}
                 onChange={(e) => setTags(e.target.value)}
-                placeholder="tax, hmrc, complaints (comma-separated)"
+                placeholder="penalty, appeal, success (comma-separated)"
               />
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Content Editor */}
+      {/* Background Section */}
       <Card>
         <CardHeader>
-          <CardTitle>Content</CardTitle>
+          <CardTitle>Background</CardTitle>
+          <CardDescription>Describe the initial situation and problem</CardDescription>
         </CardHeader>
         <CardContent>
           <RichTextEditor
-            content={content}
-            onChange={setContent}
-            placeholder="Write your blog post content..."
-            bucket="blog-images"
+            content={background}
+            onChange={setBackground}
+            placeholder="What was the initial situation? What problem did the client face?"
+            bucket="documents"
           />
         </CardContent>
       </Card>
 
-      {/* Featured Image */}
+      {/* Actions Taken Section */}
       <Card>
         <CardHeader>
-          <CardTitle>Featured Image</CardTitle>
+          <CardTitle>Actions Taken</CardTitle>
+          <CardDescription>Detail the steps and strategies used</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="featuredImage">Image URL</Label>
-            <Input
-              id="featuredImage"
-              value={featuredImage}
-              onChange={(e) => setFeaturedImage(e.target.value)}
-              placeholder="https://..."
-            />
-            <p className="text-sm text-gray-500 mt-1">
-              Or upload via Media Library (coming soon)
-            </p>
-          </div>
+        <CardContent>
+          <RichTextEditor
+            content={actionsTaken}
+            onChange={setActionsTaken}
+            placeholder="What steps did you take? What was your strategy?"
+            bucket="documents"
+          />
+        </CardContent>
+      </Card>
 
-          {featuredImage && (
-            <div>
-              <img
-                src={featuredImage}
-                alt="Featured image preview"
-                className="max-w-md rounded-lg border"
-              />
-            </div>
-          )}
+      {/* Outcome Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Outcome</CardTitle>
+          <CardDescription>Explain the results achieved</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <RichTextEditor
+            content={outcome}
+            onChange={setOutcome}
+            placeholder="What was the final result? Was the complaint resolved?"
+            bucket="documents"
+          />
+        </CardContent>
+      </Card>
 
-          <div>
-            <Label htmlFor="featuredImageAlt">Image Alt Text (for SEO)</Label>
-            <Input
-              id="featuredImageAlt"
-              value={featuredImageAlt}
-              onChange={(e) => setFeaturedImageAlt(e.target.value)}
-              placeholder="Describe the image..."
-            />
-          </div>
+      {/* Lessons Learned Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Lessons Learned</CardTitle>
+          <CardDescription>Key takeaways and insights</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <RichTextEditor
+            content={lessonsLearned}
+            onChange={setLessonsLearned}
+            placeholder="What did you learn? What would you do differently?"
+            bucket="documents"
+          />
         </CardContent>
       </Card>
 
@@ -352,22 +396,6 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
               {metaDescription.length}/160 characters
             </p>
           </div>
-
-          {/* SEO Preview */}
-          <div className="border rounded-lg p-4 bg-gray-50">
-            <p className="text-xs text-gray-500 mb-2">Google Search Preview:</p>
-            <div>
-              <p className="text-blue-600 text-lg hover:underline cursor-pointer">
-                {metaTitle || title || 'Your Post Title Here'}
-              </p>
-              <p className="text-green-700 text-sm">
-                lightpoint.uk › blog › {slug || 'your-slug'}
-              </p>
-              <p className="text-sm text-gray-600 mt-1">
-                {metaDescription || excerpt || 'Your post description will appear here...'}
-              </p>
-            </div>
-          </div>
         </CardContent>
       </Card>
 
@@ -391,19 +419,19 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
           </div>
           <p className="text-sm text-gray-500 mt-2">
             {isPublished
-              ? 'This post will be visible on your blog.'
-              : 'This post will be saved as a draft.'}
+              ? 'This example will be visible on your site.'
+              : 'This example will be saved as a draft.'}
           </p>
         </CardContent>
       </Card>
 
       {/* Action Buttons */}
       <div className="flex items-center justify-between pb-8">
-        <Button variant="outline" onClick={() => router.push('/admin/blog')}>
+        <Button variant="outline" onClick={() => router.push('/admin/examples')}>
           Cancel
         </Button>
         <div className="flex items-center gap-2">
-          {postId && (
+          {exampleId && (
             <Button 
               variant="outline" 
               className="text-red-600 hover:bg-red-50"
@@ -422,4 +450,3 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
     </div>
   );
 }
-
