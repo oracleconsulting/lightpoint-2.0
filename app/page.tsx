@@ -71,7 +71,7 @@ export default function HomePage() {
               <div className="mt-12 flex flex-col sm:flex-row gap-4 justify-center animate-slide-in" style={{animationDelay: '0.2s'}}>
                 {hero.cta_primary_text && (
                   <Link
-                    href={hero.cta_primary_link || '/pricing'}
+                    href={hero.cta_primary_link || '/subscription/checkout'}
                     className="group inline-flex items-center justify-center px-8 py-4 text-lg font-semibold rounded-button bg-gradient-to-r from-brand-gold to-amber-500 text-white hover:from-brand-gold-dark hover:to-amber-600 transition-all shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
                   >
                     {hero.cta_primary_text}
@@ -80,7 +80,7 @@ export default function HomePage() {
                 )}
                 {hero.cta_secondary_text && (
                   <Link
-                    href={hero.cta_secondary_link || '#demo'}
+                    href={hero.cta_secondary_link || '/subscription/checkout'}
                     className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold rounded-button bg-white/10 backdrop-blur text-white hover:bg-white/20 transition-all border-2 border-white/30 hover:border-white/50"
                   >
                     {hero.cta_secondary_text}
@@ -312,7 +312,7 @@ export default function HomePage() {
                     )}
                     
                     <Link
-                      href={roi.left_column.cta_link || '/pricing'}
+                      href={roi.left_column.cta_link || '/subscription/checkout'}
                       className="inline-flex items-center justify-center px-6 py-3 text-base font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-all"
                     >
                       {roi.left_column.cta_text}
@@ -421,7 +421,7 @@ export default function HomePage() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               {finalCta.cta_primary_text && (
                 <Link
-                  href={finalCta.cta_primary_link || '/pricing'}
+                  href={finalCta.cta_primary_link || '/subscription/checkout'}
                   className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold rounded-button bg-gradient-to-r from-brand-gold to-amber-500 text-white hover:from-brand-gold-dark hover:to-amber-600 transition-all shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
                 >
                   {finalCta.cta_primary_text}
@@ -430,7 +430,7 @@ export default function HomePage() {
               )}
               {finalCta.cta_secondary_text && (
                 <Link
-                  href={finalCta.cta_secondary_link || '/contact'}
+                  href={finalCta.cta_secondary_link || '/subscription/checkout'}
                   className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold rounded-lg bg-transparent text-white hover:bg-white/10 transition-all border-2 border-white"
                 >
                   {finalCta.cta_secondary_text}

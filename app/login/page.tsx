@@ -247,10 +247,22 @@ function LoginForm() {
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="flex flex-col gap-2 text-center text-sm text-muted-foreground border-t pt-4">
-          <p>
-            Don't have an account? Contact your administrator.
-          </p>
+        <CardFooter className="flex flex-col gap-3 text-center border-t pt-4">
+          <div className="text-sm text-muted-foreground">
+            <p>
+              Don't have an account? Contact your administrator.
+            </p>
+          </div>
+          <div className="w-full">
+            <Link href="/subscription/checkout">
+              <Button 
+                variant="outline" 
+                className="w-full border-2 border-brand-gold text-brand-gold hover:bg-brand-gold hover:text-white transition-all"
+              >
+                Join Our Waitlist →
+              </Button>
+            </Link>
+          </div>
         </CardFooter>
       </Card>
     </div>

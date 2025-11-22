@@ -323,10 +323,10 @@ export default function Navigation() {
                     Login
                   </Link>
                   <Link
-                    href="/pricing"
+                    href="/subscription/checkout"
                     className="group inline-flex items-center gap-2 px-6 py-2.5 rounded-button font-semibold transition-all shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 bg-gradient-to-r from-brand-gold to-amber-500 text-white"
                   >
-                    Start Free Trial
+                    Join Waitlist
                     <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
                   </Link>
                 </>
@@ -462,11 +462,11 @@ export default function Navigation() {
                       Login
                     </Link>
                     <Link
-                      href="/pricing"
+                      href="/subscription/checkout"
                       onClick={() => setIsMobileMenuOpen(false)}
                       className="flex items-center justify-center gap-2 w-full px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors shadow-lg"
                     >
-                      Start Free Trial
+                      Join Waitlist
                     </Link>
                   </>
                 )}
