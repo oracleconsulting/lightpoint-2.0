@@ -3,11 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { RichTextEditor } from '@/components/RichTextEditor';
+import { MediaLibraryModal } from '@/components/MediaLibraryModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { ArrowLeft, Save, Eye, Trash2 } from 'lucide-react';
+import { ArrowLeft, Save, Eye, Trash2, Image } from 'lucide-react';
 import Link from 'next/link';
 import { trpc } from '@/lib/trpc/Provider';
 
@@ -18,6 +19,7 @@ interface BlogPostFormProps {
 export function BlogPostForm({ postId }: BlogPostFormProps) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const [showMediaLibrary, setShowMediaLibrary] = useState(false);
   
   // Form state
   const [title, setTitle] = useState('');
@@ -283,15 +285,26 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <Label htmlFor="featuredImage">Image URL</Label>
-            <Input
-              id="featuredImage"
-              value={featuredImage}
-              onChange={(e) => setFeaturedImage(e.target.value)}
-              placeholder="https://..."
-            />
+            <Label htmlFor="featuredImage">Featured Image</Label>
+            <div className="flex gap-2">
+              <Input
+                id="featuredImage"
+                value={featuredImage}
+                onChange={(e) => setFeaturedImage(e.target.value)}
+                placeholder="https://..."
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowMediaLibrary(true)}
+              >
+                <Image className="h-4 w-4 mr-2" />
+                Browse
+              </Button>
+            </div>
             <p className="text-sm text-gray-500 mt-1">
-              Or upload via Media Library (coming soon)
+              Upload or select from media library
             </p>
           </div>
 
@@ -419,6 +432,17 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
           </Button>
         </div>
       </div>
+
+      {/* Media Library Modal */}
+      <MediaLibraryModal
+        isOpen={showMediaLibrary}
+        onClose={() => setShowMediaLibrary(false)}
+        onSelect={(url) => {
+          setFeaturedImage(url);
+          setShowMediaLibrary(false);
+        }}
+        bucket="blog-images"
+      />
     </div>
   );
 }
