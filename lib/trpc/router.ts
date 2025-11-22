@@ -13,6 +13,9 @@ import { logger } from '../logger';
 import { subscriptionRouter } from './routers/subscription';
 import { cmsRouter } from './routers/cms';
 import { blogRouter } from './routers/blog';
+import { cpdRouter } from './routers/cpd';
+import { webinarRouter } from './routers/webinars';
+import { examplesRouter } from './routers/examples';
 
 
 export const appRouter = router({
@@ -24,6 +27,15 @@ export const appRouter = router({
   
   // Blog management
   blog: blogRouter,
+  
+  // CPD articles management
+  cpd: cpdRouter,
+  
+  // Webinars management
+  webinars: webinarRouter,
+  
+  // Worked examples management
+  examples: examplesRouter,
   
   // Existing routes
   // Complaints
