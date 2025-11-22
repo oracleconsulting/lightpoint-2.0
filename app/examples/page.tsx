@@ -237,11 +237,11 @@ export default function WorkedExamplesPage() {
                       <div className="flex flex-col gap-2 text-right">
                         <div className="flex items-center gap-2 text-sm text-gray-500">
                           <TrendingUp className="h-4 w-4 text-green-600" />
-                          <span className="font-semibold text-green-600">£{(Math.random() * 15000 + 5000).toFixed(0)}</span>
+                          <span className="font-semibold text-green-600">£{(8600 + (parseInt(example.id.slice(-3), 16) % 5000)).toLocaleString()}</span>
                         </div>
                         <div className="flex items-center gap-2 text-sm text-gray-500">
                           <Clock className="h-4 w-4" />
-                          <span>{Math.floor(Math.random() * 180 + 30)} days</span>
+                          <span>{60 + (parseInt(example.id.slice(-2), 16) % 120)} days</span>
                         </div>
                       </div>
                     </div>

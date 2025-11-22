@@ -160,7 +160,7 @@ export default function WebinarsPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <Users className="h-4 w-4" />
-                        <span>{Math.floor(Math.random() * 500) + 100} attended</span>
+                        <span>{250 + (parseInt(webinar.id.slice(-2), 16) % 300)} attended</span>
                       </div>
                     </div>
 
