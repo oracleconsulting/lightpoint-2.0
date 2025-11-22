@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, ChevronDown, BookOpen, Video, FileText, Award, LogIn, User, Shield, LogOut } from 'lucide-react';
+import { Menu, X, ChevronDown, BookOpen, Video, FileText, Award, LogIn, User, Shield, LogOut, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createBrowserClient } from '@supabase/ssr';
 
@@ -162,26 +162,33 @@ export default function Navigation() {
 
   const getLinkClassName = (href: string) => {
     const active = isActive(href);
-    if (active) return 'text-blue-600 font-semibold';
-    return 'text-gray-700 hover:text-blue-600';
+    if (active) return 'relative text-brand-primary font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-brand-primary after:rounded-full';
+    return 'relative text-gray-700 hover:text-brand-primary hover:scale-105 transition-all duration-200 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-brand-primary after:rounded-full after:scale-x-0 hover:after:scale-x-100 after:transition-transform';
   };
 
   const getResourcesClassName = () => {
-    return 'text-gray-700 hover:text-blue-600';
+    return 'text-gray-700 hover:text-brand-primary hover:scale-105 transition-all duration-200';
   };
 
   return (
     <>
-      {/* Main Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white shadow-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      {/* Main Navigation - Modernized with backdrop blur */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-lg shadow-sm border-b border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
           <div className="flex items-center justify-between">
-            {/* Logo */}
+            {/* Logo with online status */}
             <Link href="/" className="flex items-center gap-2 group">
-              <div className="p-2 rounded-xl bg-blue-600 transition-all">
-                <Award className="h-6 w-6 text-white" />
+              <div className="relative">
+                <div className="p-2 rounded-xl bg-gradient-to-br from-brand-primary to-brand-blurple transition-all transform group-hover:scale-105 group-hover:shadow-lg">
+                  <Award className="h-6 w-6 text-white" />
+                </div>
+                {isLoggedIn && (
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-success rounded-full border-2 border-white animate-pulse" 
+                       title="Online"
+                  />
+                )}
               </div>
-              <span className="text-xl font-bold text-gray-900">
+              <span className="font-heading text-xl font-bold text-gray-900 group-hover:text-brand-primary transition-colors">
                 Lightpoint
               </span>
             </Link>
@@ -248,9 +255,9 @@ export default function Navigation() {
                   {!isCheckingAdmin && isSuperAdmin && (
                     <Link
                       href="/admin"
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all text-purple-600 hover:text-purple-700 border-2 border-purple-200 hover:border-purple-600 hover:bg-purple-50"
+                      className="group inline-flex items-center gap-2 px-4 py-2 rounded-button font-medium transition-all text-brand-blurple hover:text-brand-blurple-dark border-2 border-brand-blurple/30 hover:border-brand-blurple hover:bg-brand-blurple/5 hover:scale-105 active:scale-95"
                     >
-                      <Shield className="h-4 w-4" />
+                      <Shield className="h-4 w-4 group-hover:scale-110 transition-transform" />
                       Admin
                     </Link>
                   )}
@@ -262,7 +269,7 @@ export default function Navigation() {
                     onMouseLeave={() => setIsUserMenuOpen(false)}
                   >
                     <button
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all bg-blue-600 text-white hover:bg-blue-700 shadow-lg hover:shadow-xl"
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-button font-medium transition-all bg-gradient-to-r from-brand-primary to-brand-blurple text-white hover:shadow-lg hover:scale-105 active:scale-95"
                     >
                       <User className="h-4 w-4" />
                       {user?.email?.split('@')[0] || 'Account'}
@@ -304,16 +311,17 @@ export default function Navigation() {
                 <>
                   <Link
                     href="/login"
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all text-gray-700 hover:text-blue-600"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-button font-medium transition-all text-gray-700 hover:text-brand-primary hover:scale-105"
                   >
                     <LogIn className="h-4 w-4" />
                     Login
                   </Link>
                   <Link
                     href="/pricing"
-                    className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl hover:scale-105 bg-blue-600 text-white hover:bg-blue-700"
+                    className="group inline-flex items-center gap-2 px-6 py-2.5 rounded-button font-semibold transition-all shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 bg-gradient-to-r from-brand-primary to-brand-blurple text-white"
                   >
                     Start Free Trial
+                    <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
                   </Link>
                 </>
               )}
