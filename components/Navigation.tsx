@@ -32,6 +32,16 @@ export default function Navigation() {
       }
 
       console.log('🔍 Checking super admin status for:', user.email, 'ID:', user.id);
+      
+      // TEMPORARY: Hardcode your user ID as super admin
+      const SUPER_ADMIN_USER_ID = '19583c08-6993-4113-b46a-bd30e3375f54';
+      if (user.id === SUPER_ADMIN_USER_ID) {
+        console.log('👑 HARDCODED: User is super admin!');
+        setIsSuperAdmin(true);
+        setIsCheckingAdmin(false);
+        return;
+      }
+
       setIsCheckingAdmin(true);
 
       console.log('🔧 Creating Supabase client...');
