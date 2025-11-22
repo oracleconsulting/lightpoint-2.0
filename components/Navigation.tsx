@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, ChevronDown, BookOpen, Video, FileText, Award, LogIn, User, Shield } from 'lucide-react';
+import { Menu, X, ChevronDown, BookOpen, Video, FileText, Award, LogIn, User, Shield, LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createBrowserClient } from '@supabase/ssr';
 
@@ -11,10 +11,11 @@ export default function Navigation() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isResourcesOpen, setIsResourcesOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const pathname = usePathname();
 
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const isLoggedIn = !!user;
 
   // Check if user is super admin
@@ -25,21 +26,28 @@ export default function Navigation() {
         return;
       }
 
+      console.log('🔍 Checking super admin status for:', user.email);
+
       const supabase = createBrowserClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
       );
 
       try {
-        const { data: roles } = await supabase
+        const { data: roles, error } = await supabase
           .from('user_roles')
           .select('role')
-          .eq('user_id', user.id)
-          .eq('role', 'super_admin')
-          .single();
+          .eq('user_id', user.id);
 
-        setIsSuperAdmin(!!roles);
+        console.log('📋 User roles:', roles);
+        console.log('❌ Roles error:', error);
+
+        const hasSuper = roles?.some(r => r.role === 'super_admin');
+        console.log('👑 Is super admin?', hasSuper);
+        
+        setIsSuperAdmin(hasSuper || false);
       } catch (error) {
+        console.error('🔴 Error checking super admin:', error);
         setIsSuperAdmin(false);
       }
     };
@@ -164,13 +172,49 @@ export default function Navigation() {
                       Admin
                     </Link>
                   )}
-                  <Link
-                    href="/dashboard"
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all bg-blue-600 text-white hover:bg-blue-700 shadow-lg hover:shadow-xl"
+                  
+                  {/* User Dropdown Menu */}
+                  <div 
+                    className="relative"
+                    onMouseEnter={() => setIsUserMenuOpen(true)}
+                    onMouseLeave={() => setIsUserMenuOpen(false)}
                   >
-                    <User className="h-4 w-4" />
-                    Dashboard
-                  </Link>
+                    <button
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all bg-blue-600 text-white hover:bg-blue-700 shadow-lg hover:shadow-xl"
+                    >
+                      <User className="h-4 w-4" />
+                      {user?.email?.split('@')[0] || 'Account'}
+                      <ChevronDown className={`h-4 w-4 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {/* Dropdown Menu */}
+                    {isUserMenuOpen && (
+                      <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 p-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                        <div className="px-4 py-3 border-b border-gray-100">
+                          <p className="text-sm font-semibold text-gray-900">{user?.email}</p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {isSuperAdmin ? '👑 Super Admin' : 'User'}
+                          </p>
+                        </div>
+                        
+                        <Link
+                          href="/dashboard"
+                          className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors group"
+                        >
+                          <User className="h-5 w-5 text-gray-600 group-hover:text-blue-600" />
+                          <span className="font-medium text-gray-900">Dashboard</span>
+                        </Link>
+                        
+                        <button
+                          onClick={() => signOut()}
+                          className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-red-50 transition-colors group"
+                        >
+                          <LogOut className="h-5 w-5 text-gray-600 group-hover:text-red-600" />
+                          <span className="font-medium text-gray-900 group-hover:text-red-600">Logout</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </>
               ) : (
                 <>
@@ -270,6 +314,14 @@ export default function Navigation() {
               <div className="pt-4 border-t border-gray-200 space-y-3">
                 {isLoggedIn ? (
                   <>
+                    <div className="px-4 py-2 bg-gray-50 rounded-lg">
+                      <p className="text-xs font-semibold text-gray-500">Logged in as</p>
+                      <p className="text-sm text-gray-900 truncate">{user?.email}</p>
+                      {isSuperAdmin && (
+                        <p className="text-xs text-purple-600 font-semibold mt-1">👑 Super Admin</p>
+                      )}
+                    </div>
+                    
                     {isSuperAdmin && (
                       <Link
                         href="/admin/tiers"
@@ -280,6 +332,7 @@ export default function Navigation() {
                         Admin Panel
                       </Link>
                     )}
+                    
                     <Link
                       href="/dashboard"
                       onClick={() => setIsMobileMenuOpen(false)}
@@ -288,6 +341,17 @@ export default function Navigation() {
                       <User className="h-5 w-5" />
                       Dashboard
                     </Link>
+                    
+                    <button
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        signOut();
+                      }}
+                      className="flex items-center justify-center gap-2 w-full px-6 py-3 border-2 border-red-200 text-red-600 rounded-xl font-semibold hover:bg-red-50 transition-colors"
+                    >
+                      <LogOut className="h-5 w-5" />
+                      Logout
+                    </button>
                   </>
                 ) : (
                   <>
