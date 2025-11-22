@@ -94,10 +94,12 @@ export default function Navigation() {
               ))}
 
               {/* Resources Dropdown */}
-              <div className="relative">
+              <div 
+                className="relative"
+                onMouseEnter={() => setIsResourcesOpen(true)}
+                onMouseLeave={() => setIsResourcesOpen(false)}
+              >
                 <button
-                  onMouseEnter={() => setIsResourcesOpen(true)}
-                  onMouseLeave={() => setIsResourcesOpen(false)}
                   className={`flex items-center gap-1 font-medium transition-all ${getResourcesClassName()}`}
                 >
                   Resources
@@ -106,10 +108,8 @@ export default function Navigation() {
 
                 {/* Dropdown Menu */}
                 {isResourcesOpen && (
-                  <div
-                    onMouseEnter={() => setIsResourcesOpen(true)}
-                    onMouseLeave={() => setIsResourcesOpen(false)}
-                    className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 p-2 animate-in fade-in slide-in-from-top-2 duration-200"
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 w-64">
+                    <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-2 animate-in fade-in slide-in-from-top-2 duration-200"
                   >
                     {resourceLinks.map((link) => {
                       const Icon = link.icon;
@@ -129,6 +129,7 @@ export default function Navigation() {
                         </Link>
                       );
                     })}
+                    </div>
                   </div>
                 )}
               </div>
