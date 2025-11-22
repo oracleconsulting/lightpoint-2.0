@@ -64,10 +64,21 @@ export async function middleware(req: NextRequest) {
     '/admin-debug',               // Debug page for admin access
   ];
   const isPublicRoute = publicRoutes.some(route => req.nextUrl.pathname.startsWith(route));
+  
+  // Admin routes (require login, super admin check done in pages)
+  const isAdminRoute = req.nextUrl.pathname.startsWith('/admin');
 
   // Protect all routes except public ones
-  if (!session && !isPublicRoute) {
+  if (!session && !isPublicRoute && !isAdminRoute) {
     logger.info('❌ No session, redirecting to login from:', req.nextUrl.pathname);
+    const redirectUrl = new URL('/login', req.url);
+    redirectUrl.searchParams.set('redirectedFrom', req.nextUrl.pathname);
+    return NextResponse.redirect(redirectUrl);
+  }
+  
+  // Admin routes require session (super admin check done in page)
+  if (isAdminRoute && !session) {
+    logger.info('❌ Admin route without session, redirecting to login');
     const redirectUrl = new URL('/login', req.url);
     redirectUrl.searchParams.set('redirectedFrom', req.nextUrl.pathname);
     return NextResponse.redirect(redirectUrl);

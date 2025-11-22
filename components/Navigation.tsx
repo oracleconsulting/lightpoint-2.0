@@ -247,7 +247,7 @@ export default function Navigation() {
                 <>
                   {!isCheckingAdmin && isSuperAdmin && (
                     <Link
-                      href="/admin/tiers"
+                      href="/admin"
                       className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all text-purple-600 hover:text-purple-700 border-2 border-purple-200 hover:border-purple-600 hover:bg-purple-50"
                     >
                       <Shield className="h-4 w-4" />
@@ -408,7 +408,7 @@ export default function Navigation() {
                     
                     {!isCheckingAdmin && isSuperAdmin && (
                       <Link
-                        href="/admin/tiers"
+                        href="/admin"
                         onClick={() => setIsMobileMenuOpen(false)}
                         className="flex items-center justify-center gap-2 w-full px-6 py-3 border-2 border-purple-200 text-purple-600 rounded-xl font-semibold hover:bg-purple-50 transition-colors"
                       >
