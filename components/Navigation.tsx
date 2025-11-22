@@ -34,17 +34,21 @@ export default function Navigation() {
       console.log('🔍 Checking super admin status for:', user.email, 'ID:', user.id);
       setIsCheckingAdmin(true);
 
+      console.log('🔧 Creating Supabase client...');
       const supabase = createBrowserClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
       );
+      console.log('✅ Supabase client created');
 
       try {
+        console.log('📡 Starting user_roles query for user_id:', user.id);
         const { data: roles, error } = await supabase
           .from('user_roles')
           .select('role')
           .eq('user_id', user.id);
 
+        console.log('✅ Query completed!');
         console.log('📋 User roles query result:', { roles, error });
 
         // Only update state if component is still mounted
