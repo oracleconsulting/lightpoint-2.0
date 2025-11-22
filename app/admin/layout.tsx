@@ -19,6 +19,7 @@ import {
   ArrowLeft,
   Menu,
   X,
+  Users,
 } from 'lucide-react';
 
 export default function AdminLayout({
@@ -32,6 +33,7 @@ export default function AdminLayout({
 
   const adminLinks = [
     { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/admin/waitlist', label: 'Waitlist', icon: Users },
     { href: '/admin/tiers', label: 'Subscription Tiers', icon: DollarSign },
     { href: '/admin/content', label: 'Page Content', icon: Home },
     { href: '/admin/blog', label: 'Blog Posts', icon: FileText },

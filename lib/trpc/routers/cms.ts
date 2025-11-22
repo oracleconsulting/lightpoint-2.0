@@ -410,5 +410,125 @@ export const cmsRouter = router({
       
       return { success: true };
     }),
+  
+  /**
+   * Join waitlist (public)
+   */
+  joinWaitlist: publicProcedure
+    .input(z.object({
+      email: z.string().email(),
+      fullName: z.string().optional(),
+      companyName: z.string().optional(),
+      phone: z.string().optional(),
+      selectedTierId: z.string().uuid().optional(),
+      selectedTierName: z.string().optional(),
+      estimatedComplaintsPerMonth: z.number().optional(),
+      referralSource: z.string().optional(),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      // Check if already on waitlist
+      const { data: existing } = await supabaseAdmin
+        .from('waitlist')
+        .select('id')
+        .eq('email', input.email)
+        .single();
+      
+      if (existing) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Email already on waitlist',
+        });
+      }
+      
+      const { data, error } = await (supabaseAdmin as any)
+        .from('waitlist')
+        .insert({
+          email: input.email,
+          full_name: input.fullName,
+          company_name: input.companyName,
+          phone: input.phone,
+          selected_tier_id: input.selectedTierId,
+          selected_tier_name: input.selectedTierName,
+          estimated_complaints_per_month: input.estimatedComplaintsPerMonth,
+          referral_source: input.referralSource,
+          notes: input.notes,
+          status: 'pending',
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to join waitlist',
+        });
+      }
+      
+      return data;
+    }),
+  
+  /**
+   * Get all waitlist entries (admin only)
+   */
+  getWaitlist: protectedProcedure
+    .input(z.object({
+      status: z.enum(['pending', 'contacted', 'converted', 'declined']).optional(),
+      limit: z.number().min(1).max(100).optional().default(50),
+      offset: z.number().min(0).optional().default(0),
+    }))
+    .query(async ({ input }) => {
+      let query = supabaseAdmin
+        .from('waitlist')
+        .select('*', { count: 'exact' })
+        .order('signed_up_at', { ascending: false });
+      
+      if (input.status) {
+        query = query.eq('status', input.status);
+      }
+      
+      query = query.range(input.offset, input.offset + input.limit - 1);
+      
+      const { data, error, count } = await query;
+      
+      if (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch waitlist',
+        });
+      }
+      
+      return { entries: data, total: count || 0 };
+    }),
+  
+  /**
+   * Update waitlist entry status (admin only)
+   */
+  updateWaitlistStatus: protectedProcedure
+    .input(z.object({
+      id: z.string().uuid(),
+      status: z.enum(['pending', 'contacted', 'converted', 'declined']),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const { data, error } = await (supabaseAdmin as any)
+        .from('waitlist')
+        .update({
+          status: input.status,
+          notes: input.notes,
+        })
+        .eq('id', input.id)
+        .select()
+        .single();
+      
+      if (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to update waitlist entry',
+        });
+      }
+      
+      return data;
+    }),
 });
 
