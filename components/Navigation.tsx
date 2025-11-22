@@ -44,7 +44,7 @@ export default function Navigation() {
       try {
         console.log('📡 Starting user_roles query for user_id:', user.id);
         
-        // Add 3-second timeout to prevent hanging
+        // Add 5-second timeout (increased from 3)
         const queryPromise = supabase
           .from('user_roles')
           .select('role')
@@ -52,15 +52,18 @@ export default function Navigation() {
         
         const timeoutPromise = new Promise<{ data: null; error: any }>((resolve) => 
           setTimeout(() => {
-            console.log('⏰ Query timeout after 3 seconds');
+            console.log('⏰ Query timeout after 5 seconds');
             resolve({ data: null, error: { message: 'Query timeout' } });
-          }, 3000)
+          }, 5000)
         );
         
         const { data: roles, error } = await Promise.race([queryPromise, timeoutPromise]);
 
         console.log('✅ Query completed!');
         console.log('📋 User roles query result:', { roles, error });
+        console.log('🔍 Raw roles data:', roles);
+        console.log('🔍 Is array?', Array.isArray(roles));
+        console.log('🔍 Roles length?', roles?.length);
 
         // Only update state if component is still mounted
         if (!isMounted) {
@@ -70,12 +73,24 @@ export default function Navigation() {
 
         if (error) {
           console.error('❌ Roles query error:', error);
+          // If it's just a timeout and no data, assume not admin
+          if (error.message === 'Query timeout' && !roles) {
+            console.log('⏰ Timeout with no data - assuming not admin');
+            setIsSuperAdmin(false);
+            setIsCheckingAdmin(false);
+            return;
+          }
+        }
+
+        // Check if roles is null, undefined, or empty array
+        if (!roles || !Array.isArray(roles) || roles.length === 0) {
+          console.log('⚠️ No roles found (null, not array, or empty)');
           setIsSuperAdmin(false);
           setIsCheckingAdmin(false);
           return;
         }
 
-        const hasSuper = roles?.some(r => r.role === 'super_admin');
+        const hasSuper = roles.some(r => r.role === 'super_admin');
         console.log('👑 Is super admin?', hasSuper, 'Roles:', roles);
         
         setIsSuperAdmin(hasSuper || false);
