@@ -34,7 +34,7 @@ export default function HomePage() {
             <div className="mt-12 flex flex-col sm:flex-row gap-4 justify-center animate-slide-in" style={{animationDelay: '0.2s'}}>
               <Link
                 href="/pricing"
-                className="group inline-flex items-center justify-center px-8 py-4 text-lg font-semibold rounded-button bg-white text-brand-primary hover:bg-blue-50 transition-all shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+                className="group inline-flex items-center justify-center px-8 py-4 text-lg font-semibold rounded-button bg-gradient-to-r from-brand-gold to-amber-500 text-white hover:from-brand-gold-dark hover:to-amber-600 transition-all shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
               >
                 Start Free Trial
                 <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
@@ -437,7 +437,7 @@ export default function HomePage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               href="/pricing"
-              className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold rounded-lg bg-white text-blue-600 hover:bg-blue-50 transition-all shadow-lg hover:shadow-xl"
+              className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold rounded-button bg-gradient-to-r from-brand-gold to-amber-500 text-white hover:from-brand-gold-dark hover:to-amber-600 transition-all shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
             >
               Start Free Trial
               <ArrowRight className="ml-2 h-5 w-5" />

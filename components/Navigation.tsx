@@ -324,7 +324,7 @@ export default function Navigation() {
                   </Link>
                   <Link
                     href="/pricing"
-                    className="group inline-flex items-center gap-2 px-6 py-2.5 rounded-button font-semibold transition-all shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 bg-gradient-to-r from-brand-primary to-brand-blurple text-white"
+                    className="group inline-flex items-center gap-2 px-6 py-2.5 rounded-button font-semibold transition-all shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 bg-gradient-to-r from-brand-gold to-amber-500 text-white"
                   >
                     Start Free Trial
                     <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
