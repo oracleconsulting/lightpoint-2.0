@@ -306,5 +306,50 @@ export const subscriptionRouter = router({
       
       return data === true;
     }),
+  
+  /**
+   * Get user's subscription (for dashboard)
+   */
+  getUserSubscription: protectedProcedure.query(async ({ ctx }) => {
+    if (!ctx.user?.id) {
+      return null;
+    }
+    
+    const { data, error } = await (supabaseAdmin as any)
+      .from('user_subscriptions')
+      .select('*')
+      .eq('user_id', ctx.user.id)
+      .in('status', ['trial', 'active'])
+      .single();
+    
+    if (error) {
+      return null;
+    }
+    
+    return data;
+  }),
+  
+  /**
+   * Get tier features by tier ID
+   */
+  getTierFeatures: publicProcedure
+    .input(z.string().uuid())
+    .query(async ({ input }) => {
+      if (!input) {
+        return null;
+      }
+      
+      const { data, error } = await supabaseAdmin
+        .from('subscription_tiers')
+        .select('*')
+        .eq('id', input)
+        .single();
+      
+      if (error || !data) {
+        return null;
+      }
+      
+      return data;
+    }),
 });
 
