@@ -49,7 +49,19 @@ export async function middleware(req: NextRequest) {
   });
 
   // Public routes that don't require authentication
-  const publicRoutes = ['/login', '/logout', '/auth/callback', '/auth/reset-password'];
+  const publicRoutes = [
+    '/',                          // Homepage - public for marketing
+    '/login',                     // Login page
+    '/logout',                    // Logout page
+    '/signup',                    // Signup page
+    '/auth/callback',             // OAuth callback
+    '/auth/reset-password',       // Password reset
+    '/pricing',                   // Pricing page
+    '/blog',                      // Blog listing and posts
+    '/cpd',                       // CPD resources (or make subscription-only later)
+    '/webinars',                  // Webinars (or make subscription-only later)
+    '/examples',                  // Worked examples (or make subscription-only later)
+  ];
   const isPublicRoute = publicRoutes.some(route => req.nextUrl.pathname.startsWith(route));
 
   // Protect all routes except public ones
