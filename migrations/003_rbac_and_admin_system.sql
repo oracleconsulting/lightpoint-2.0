@@ -41,7 +41,26 @@ CREATE INDEX idx_user_roles_user_id ON user_roles(user_id);
 CREATE INDEX idx_user_roles_role ON user_roles(role) WHERE revoked_at IS NULL;
 
 -- ============================================
--- 2. SUPER ADMIN SETUP
+-- 2. USER SUBSCRIPTIONS TABLE - Add user_id column
+-- ============================================
+
+-- Add user_id column to existing user_subscriptions table if it doesn't exist
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'user_subscriptions' AND column_name = 'user_id'
+  ) THEN
+    ALTER TABLE user_subscriptions 
+    ADD COLUMN user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;
+    
+    -- Create index for user_id lookups
+    CREATE INDEX idx_user_subscriptions_user_id ON user_subscriptions(user_id);
+  END IF;
+END $$;
+
+-- ============================================
+-- 3. SUPER ADMIN SETUP
 -- ============================================
 
 -- Function to check if user is super admin
@@ -111,17 +130,13 @@ CREATE POLICY "Super admins can manage tiers"
 -- Enable RLS on user_subscriptions
 ALTER TABLE user_subscriptions ENABLE ROW LEVEL SECURITY;
 
--- Users can view their organization's subscription
-CREATE POLICY "Users can view their org subscription"
+-- Users can view their own subscription
+CREATE POLICY "Users can view their own subscription"
   ON user_subscriptions
   FOR SELECT
-  USING (
-    organization_id IN (
-      SELECT organization_id 
-      FROM organization_members 
-      WHERE user_id = auth.uid()
-    )
-  );
+  USING (auth.uid() = user_id OR auth.uid() IN (
+    SELECT user_id FROM user_subscriptions WHERE organization_id = user_subscriptions.organization_id
+  ));
 
 -- Admins can view all subscriptions
 CREATE POLICY "Admins can view all subscriptions"
@@ -129,11 +144,11 @@ CREATE POLICY "Admins can view all subscriptions"
   FOR SELECT
   USING (has_permission(auth.uid(), 'manage_users'));
 
--- Only system can create/update subscriptions (via Stripe webhooks)
+-- Only system can create/update subscriptions (via Stripe webhooks or super admin)
 CREATE POLICY "System can manage subscriptions"
   ON user_subscriptions
   FOR ALL
-  USING (has_permission(auth.uid(), 'manage_billing'));
+  USING (has_permission(auth.uid(), 'manage_billing') OR is_super_admin(auth.uid()));
 
 -- Enable RLS on user_roles
 ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
@@ -367,13 +382,14 @@ BEGIN
   SELECT 
     st.name,
     st.id,
-    (COALESCE((st.features->>'complaints'->>'max_per_month')::INTEGER, 0) - 
+    (COALESCE((st.features->'complaints'->>'max_per_month')::INTEGER, 0) - 
      COALESCE(us.complaints_used_this_period, 0)) as complaints_remaining,
     (us.trial_ends_at IS NOT NULL AND us.trial_ends_at > NOW()) as is_trial
   FROM user_subscriptions us
   JOIN subscription_tiers st ON us.tier_id = st.id
-  JOIN organization_members om ON us.organization_id = om.organization_id
-  WHERE om.user_id = user_uuid
+  WHERE (us.user_id = user_uuid OR us.organization_id IN (
+    SELECT organization_id FROM user_subscriptions WHERE user_id = user_uuid
+  ))
   AND us.status IN ('trial', 'active')
   LIMIT 1;
 END;
@@ -392,8 +408,9 @@ BEGIN
   SELECT st.features INTO tier_features
   FROM user_subscriptions us
   JOIN subscription_tiers st ON us.tier_id = st.id
-  JOIN organization_members om ON us.organization_id = om.organization_id
-  WHERE om.user_id = user_uuid
+  WHERE (us.user_id = user_uuid OR us.organization_id IN (
+    SELECT organization_id FROM user_subscriptions WHERE user_id = user_uuid
+  ))
   AND us.status IN ('trial', 'active')
   LIMIT 1;
   
