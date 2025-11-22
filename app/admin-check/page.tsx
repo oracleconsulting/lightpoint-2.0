@@ -9,47 +9,94 @@ export default function AdminCheckPage() {
 
   useEffect(() => {
     const checkAdmin = async () => {
-      const supabase = createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      );
+      try {
+        const supabase = createBrowserClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        );
 
-      // Get current user
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        setStatus({ error: 'Not logged in' });
+        // Get current user
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('Session error:', sessionError);
+          setStatus({ error: `Session error: ${sessionError.message}` });
+          setLoading(false);
+          return;
+        }
+        
+        if (!session) {
+          setStatus({ error: 'Not logged in' });
+          setLoading(false);
+          return;
+        }
+
+        console.log('User session found:', session.user.email);
+
+        // Check roles - wrap in try/catch in case table doesn't exist or RLS blocks
+        let roles = [];
+        let rolesError = null;
+        try {
+          const result = await supabase
+            .from('user_roles')
+            .select('*')
+            .eq('user_id', session.user.id);
+          
+          roles = result.data || [];
+          rolesError = result.error;
+          
+          if (result.error) {
+            console.error('Roles query error:', result.error);
+          } else {
+            console.log('Roles found:', roles);
+          }
+        } catch (err) {
+          console.error('Roles query exception:', err);
+          rolesError = err;
+        }
+
+        // Check subscription - also wrap in try/catch
+        let subscription = null;
+        let subError = null;
+        try {
+          const result = await supabase
+            .from('user_subscriptions')
+            .select('*, subscription_tiers(*)')
+            .eq('user_id', session.user.id)
+            .single();
+          
+          subscription = result.data;
+          subError = result.error;
+          
+          if (result.error && result.error.code !== 'PGRST116') {
+            console.error('Subscription query error:', result.error);
+          }
+        } catch (err) {
+          console.error('Subscription query exception:', err);
+          subError = err;
+        }
+
+        setStatus({
+          user: {
+            id: session.user.id,
+            email: session.user.email,
+          },
+          roles: roles || [],
+          rolesError,
+          subscription,
+          subError,
+          isSuperAdmin: roles?.some((r: any) => r.role === 'super_admin'),
+          isAdmin: roles?.some((r: any) => r.role === 'admin'),
+        });
+        
         setLoading(false);
-        return;
+      } catch (error) {
+        console.error('Check admin error:', error);
+        setStatus({ 
+          error: `Failed to check admin status: ${error instanceof Error ? error.message : 'Unknown error'}` 
+        });
+        setLoading(false);
       }
-
-      // Check roles
-      const { data: roles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('*')
-        .eq('user_id', session.user.id);
-
-      // Check subscription
-      const { data: subscription, error: subError } = await supabase
-        .from('user_subscriptions')
-        .select('*, subscription_tiers(*)')
-        .eq('user_id', session.user.id)
-        .single();
-
-      setStatus({
-        user: {
-          id: session.user.id,
-          email: session.user.email,
-        },
-        roles: roles || [],
-        rolesError,
-        subscription,
-        subError,
-        isSuperAdmin: roles?.some((r: any) => r.role === 'super_admin'),
-        isAdmin: roles?.some((r: any) => r.role === 'admin'),
-      });
-      
-      setLoading(false);
     };
 
     checkAdmin();
