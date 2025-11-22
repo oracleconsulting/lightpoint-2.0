@@ -42,9 +42,25 @@ export default function Navigation() {
       console.log('✅ Supabase client created');
 
       try {
+        console.log('📡 Checking super admin using RPC function...');
+        
+        // Try using the RPC function first (bypasses RLS)
+        const { data: isSuperAdminRpc, error: rpcError } = await supabase
+          .rpc('is_super_admin', { user_uuid: user.id });
+        
+        console.log('🔧 RPC result:', { isSuperAdminRpc, rpcError });
+        
+        if (!rpcError && isSuperAdminRpc !== null) {
+          console.log('✅ RPC succeeded! Is super admin:', isSuperAdminRpc);
+          setIsSuperAdmin(isSuperAdminRpc);
+          setIsCheckingAdmin(false);
+          return;
+        }
+        
+        console.log('⚠️ RPC failed or returned null, falling back to direct query');
         console.log('📡 Starting user_roles query for user_id:', user.id);
         
-        // Add 5-second timeout (increased from 3)
+        // Fallback to direct query with timeout
         const queryPromise = supabase
           .from('user_roles')
           .select('role')
