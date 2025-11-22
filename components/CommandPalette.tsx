@@ -85,10 +85,18 @@ export default function CommandPalette() {
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop with keyboard accessibility */}
       <div 
         className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 animate-fade-in"
         onClick={() => setIsOpen(false)}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape' || e.key === 'Enter') {
+            setIsOpen(false);
+          }
+        }}
+        role="button"
+        tabIndex={0}
+        aria-label="Close command palette"
       />
       
       {/* Command Palette */}
