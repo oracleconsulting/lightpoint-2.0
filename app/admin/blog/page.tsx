@@ -1,256 +1,181 @@
 'use client';
 
-import { useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
+import React, { useState } from 'react';
+import Link from 'next/link';
+import { Plus, Search, Edit, Trash2, Eye, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Save, Plus, Trash2, Eye, EyeOff, Calendar, User, BookOpen } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
 
-interface BlogPost {
-  id: string;
-  title: string;
-  slug: string;
-  excerpt: string;
-  content: string;
-  author: string;
-  publishedAt: string;
-  isPublished: boolean;
-  tags: string[];
-}
+// Placeholder data - will be replaced with tRPC
+const dummyPosts = [
+  {
+    id: '1',
+    title: 'Introducing Lightpoint: Revolutionizing HMRC Complaint Management',
+    slug: 'introducing-lightpoint-platform',
+    excerpt: 'Today we launch Lightpoint, the first AI-powered platform...',
+    author: 'James Howard',
+    status: 'published',
+    publishedAt: '2024-11-22',
+    views: 1250,
+  },
+  {
+    id: '2',
+    title: 'Case Study: How One Firm Recovered £50,000',
+    slug: 'case-study-50k-recovery',
+    excerpt: 'A detailed look at how a mid-sized practice...',
+    author: 'James Howard',
+    status: 'published',
+    publishedAt: '2024-11-15',
+    views: 856,
+  },
+  {
+    id: '3',
+    title: '5 Quick Tips for Faster Complaint Resolution',
+    slug: '5-tips-faster-resolution',
+    excerpt: 'Speed up your HMRC complaints with these proven tactics...',
+    author: 'Lightpoint Team',
+    status: 'draft',
+    publishedAt: null,
+    views: 0,
+  },
+];
 
-export default function BlogManagement() {
-  const [posts, setPosts] = useState<BlogPost[]>([
-    {
-      id: '1',
-      title: 'Understanding HMRC Charter Breaches',
-      slug: 'understanding-hmrc-charter-breaches',
-      excerpt: 'Learn how to identify and document charter breaches for successful complaint resolution.',
-      content: 'Full article content here...',
-      author: 'James Howard',
-      publishedAt: '2024-11-15',
-      isPublished: true,
-      tags: ['HMRC', 'Complaints', 'Charter'],
-    },
-  ]);
+export default function AdminBlogPage() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filter, setFilter] = useState<'all' | 'published' | 'draft'>('all');
 
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState<Partial<BlogPost>>({});
-
-  const handleEdit = (post: BlogPost) => {
-    setEditingId(post.id);
-    setFormData(post);
-  };
-
-  const handleSave = () => {
-    if (editingId && editingId !== 'new') {
-      setPosts(posts.map(p => p.id === editingId ? { ...p, ...formData } as BlogPost : p));
-      setEditingId(null);
-      setFormData({});
-    }
-  };
-
-  const handleAdd = () => {
-    const newPost: BlogPost = {
-      id: Date.now().toString(),
-      title: formData.title || 'Untitled Post',
-      slug: (formData.title || 'untitled').toLowerCase().replace(/\s+/g, '-'),
-      excerpt: formData.excerpt || '',
-      content: formData.content || '',
-      author: formData.author || 'Admin',
-      publishedAt: new Date().toISOString().split('T')[0],
-      isPublished: false,
-      tags: formData.tags || [],
-    };
-    setPosts([newPost, ...posts]);
-    setFormData({});
-    setEditingId(null);
-  };
-
-  const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this blog post?')) {
-      setPosts(posts.filter(p => p.id !== id));
-    }
-  };
-
-  const togglePublish = (id: string) => {
-    setPosts(posts.map(p => 
-      p.id === id ? { ...p, isPublished: !p.isPublished } : p
-    ));
-  };
+  const filteredPosts = dummyPosts.filter(post => {
+    const matchesSearch = post.title.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFilter = filter === 'all' || post.status === filter;
+    return matchesSearch && matchesFilter;
+  });
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-heading text-3xl font-bold text-gray-900">Blog Posts</h1>
-          <p className="text-gray-600 mt-2">Create and manage blog articles</p>
+          <h1 className="text-3xl font-heading font-bold">Blog Posts</h1>
+          <p className="text-gray-600 mt-1">Manage your blog content</p>
         </div>
-        <Button onClick={() => setEditingId('new')} className="gap-2">
-          <Plus className="h-4 w-4" />
-          New Post
-        </Button>
+        <Link href="/admin/blog/new">
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />
+            New Post
+          </Button>
+        </Link>
       </div>
 
-      {/* Editor */}
-      {(editingId === 'new' || editingId) && (
-        <Card className="border-brand-gold/30 shadow-lg">
-          <CardHeader>
-            <CardTitle>{editingId === 'new' ? 'Create New Post' : 'Edit Post'}</CardTitle>
-            <CardDescription>Write and publish blog content</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Title *</label>
-              <input
-                type="text"
-                className="w-full px-3 py-2 border border-gray-200 rounded-button focus:outline-none focus:ring-2 focus:ring-brand-gold"
-                placeholder="Post title..."
-                value={formData.title || ''}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Excerpt</label>
-              <textarea
-                rows={2}
-                className="w-full px-3 py-2 border border-gray-200 rounded-button focus:outline-none focus:ring-2 focus:ring-brand-gold"
-                placeholder="Short description for previews..."
-                value={formData.excerpt || ''}
-                onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Content</label>
-              <textarea
-                rows={10}
-                className="w-full px-3 py-2 border border-gray-200 rounded-button focus:outline-none focus:ring-2 focus:ring-brand-gold font-mono text-sm"
-                placeholder="Full post content (markdown supported)..."
-                value={formData.content || ''}
-                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-              />
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Author</label>
-                <input
-                  type="text"
-                  className="w-full px-3 py-2 border border-gray-200 rounded-button focus:outline-none focus:ring-2 focus:ring-brand-gold"
-                  placeholder="Author name"
-                  value={formData.author || ''}
-                  onChange={(e) => setFormData({ ...formData, author: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Tags (comma-separated)</label>
-                <input
-                  type="text"
-                  className="w-full px-3 py-2 border border-gray-200 rounded-button focus:outline-none focus:ring-2 focus:ring-brand-gold"
-                  placeholder="HMRC, Complaints, Tips"
-                  value={formData.tags?.join(', ') || ''}
-                  onChange={(e) => setFormData({ ...formData, tags: e.target.value.split(',').map(t => t.trim()) })}
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-2 justify-end pt-4">
-              <Button variant="outline" onClick={() => { setEditingId(null); setFormData({}); }}>
-                Cancel
-              </Button>
-              <Button onClick={editingId === 'new' ? handleAdd : handleSave}>
-                <Save className="h-4 w-4 mr-2" />
-                {editingId === 'new' ? 'Create Post' : 'Save Changes'}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Posts Grid */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {posts.map((post) => (
-          <Card key={post.id} className={`${!post.isPublished ? 'opacity-60' : ''} hover:shadow-lg transition-shadow`}>
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  {post.isPublished ? (
-                    <Eye className="h-4 w-4 text-brand-gold" aria-label="Published" />
-                  ) : (
-                    <EyeOff className="h-4 w-4 text-gray-400" aria-label="Draft" />
-                  )}
-                  <span className="text-xs text-gray-500">
-                    {post.isPublished ? 'Published' : 'Draft'}
-                  </span>
-                </div>
-              </div>
-
-              <h3 className="font-heading text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
-                {post.title}
-              </h3>
-              <p className="text-sm text-gray-600 mb-4 line-clamp-3">{post.excerpt}</p>
-
-              <div className="flex items-center gap-4 text-xs text-gray-500 mb-4">
-                <div className="flex items-center gap-1">
-                  <User className="h-3 w-3" />
-                  {post.author}
-                </div>
-                <div className="flex items-center gap-1">
-                  <Calendar className="h-3 w-3" />
-                  {post.publishedAt}
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-1 mb-4">
-                {post.tags.map((tag, i) => (
-                  <span key={i} className="text-xs px-2 py-0.5 rounded-button bg-brand-blurple/10 text-brand-blurple">
-                    {tag}
-                  </span>
-                ))}
-              </div>
-
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => togglePublish(post.id)}
-                  className="flex-1"
-                >
-                  {post.isPublished ? 'Unpublish' : 'Publish'}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleEdit(post)}
-                >
-                  Edit
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleDelete(post.id)}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {posts.length === 0 && (
-        <Card>
-          <CardContent className="p-12 text-center">
-            <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500 mb-4">No blog posts yet</p>
-            <Button onClick={() => setEditingId('new')}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create First Post
+      {/* Filters & Search */}
+      <Card className="p-4">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              type="text"
+              placeholder="Search posts..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant={filter === 'all' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilter('all')}
+            >
+              All ({dummyPosts.length})
             </Button>
-          </CardContent>
-        </Card>
-      )}
+            <Button
+              variant={filter === 'published' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilter('published')}
+            >
+              Published ({dummyPosts.filter(p => p.status === 'published').length})
+            </Button>
+            <Button
+              variant={filter === 'draft' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilter('draft')}
+            >
+              Drafts ({dummyPosts.filter(p => p.status === 'draft').length})
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      {/* Posts List */}
+      <div className="space-y-4">
+        {filteredPosts.length === 0 ? (
+          <Card className="p-12 text-center">
+            <p className="text-gray-500">No posts found</p>
+          </Card>
+        ) : (
+          filteredPosts.map((post) => (
+            <Card key={post.id} className="p-6 hover:shadow-lg transition">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h3 className="text-xl font-heading font-semibold">
+                      {post.title}
+                    </h3>
+                    <span
+                      className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        post.status === 'published'
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-yellow-100 text-yellow-700'
+                      }`}
+                    >
+                      {post.status}
+                    </span>
+                  </div>
+                  <p className="text-gray-600 mb-3">{post.excerpt}</p>
+                  <div className="flex items-center gap-4 text-sm text-gray-500">
+                    <span>By {post.author}</span>
+                    {post.publishedAt && (
+                      <>
+                        <span>•</span>
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-4 w-4" />
+                          {new Date(post.publishedAt).toLocaleDateString()}
+                        </span>
+                      </>
+                    )}
+                    {post.views > 0 && (
+                      <>
+                        <span>•</span>
+                        <span className="flex items-center gap-1">
+                          <Eye className="h-4 w-4" />
+                          {post.views} views
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 ml-4">
+                  {post.status === 'published' && (
+                    <Link href={`/blog/${post.slug}`} target="_blank">
+                      <Button variant="outline" size="sm">
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </Link>
+                  )}
+                  <Link href={`/admin/blog/edit/${post.id}`}>
+                    <Button variant="outline" size="sm">
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                  <Button variant="outline" size="sm" className="text-red-600 hover:bg-red-50">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
     </div>
   );
 }
