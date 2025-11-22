@@ -198,9 +198,17 @@ export default function Navigation() {
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-40 md:hidden">
           {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm w-full h-full"
             onClick={() => setIsMobileMenuOpen(false)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') {
+                e.preventDefault();
+                setIsMobileMenuOpen(false);
+              }
+            }}
+            aria-label="Close menu"
           />
 
           {/* Menu Panel */}
