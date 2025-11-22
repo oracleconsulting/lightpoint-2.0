@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu, X, ChevronDown, BookOpen, Video, FileText, Award, LogIn, User } from 'lucide-react';
-import { trpc } from '@/lib/trpc/Provider';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Navigation() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -12,8 +12,8 @@ export default function Navigation() {
   const [isResourcesOpen, setIsResourcesOpen] = useState(false);
   const pathname = usePathname();
 
-  const { data: subscription } = trpc.subscription.getUserSubscription.useQuery();
-  const isLoggedIn = !!subscription;
+  const { user } = useAuth();
+  const isLoggedIn = !!user;
 
   useEffect(() => {
     const handleScroll = () => {
