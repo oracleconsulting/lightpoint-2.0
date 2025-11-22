@@ -38,6 +38,20 @@ export default function Navigation() {
 
   const isActive = (href: string) => pathname === href;
 
+  const getLinkClassName = (href: string) => {
+    const active = isActive(href);
+    if (active && isScrolled) return 'text-blue-600';
+    if (active && !isScrolled) return 'text-white font-semibold';
+    if (!active && isScrolled) return 'text-gray-700 hover:text-blue-600';
+    return 'text-white/90 hover:text-white';
+  };
+
+  const getResourcesClassName = () => {
+    return isScrolled
+      ? 'text-gray-700 hover:text-blue-600'
+      : 'text-white/90 hover:text-white';
+  };
+
   return (
     <>
       {/* Main Navigation */}
@@ -57,7 +71,7 @@ export default function Navigation() {
                   ? 'bg-blue-600'
                   : 'bg-white/10 backdrop-blur-md group-hover:bg-white/20'
               }`}>
-                <Award className={`h-6 w-6 ${isScrolled ? 'text-white' : 'text-white'}`} />
+                <Award className="h-6 w-6 text-white" />
               </div>
               <span className={`text-xl font-bold transition-colors ${
                 isScrolled ? 'text-gray-900' : 'text-white'
@@ -73,15 +87,7 @@ export default function Navigation() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`font-medium transition-all ${
-                    isActive(link.href)
-                      ? isScrolled
-                        ? 'text-blue-600'
-                        : 'text-white font-semibold'
-                      : isScrolled
-                      ? 'text-gray-700 hover:text-blue-600'
-                      : 'text-white/90 hover:text-white'
-                  }`}
+                  className={`font-medium transition-all ${getLinkClassName(link.href)}`}
                 >
                   {link.label}
                 </Link>
@@ -92,11 +98,7 @@ export default function Navigation() {
                 <button
                   onMouseEnter={() => setIsResourcesOpen(true)}
                   onMouseLeave={() => setIsResourcesOpen(false)}
-                  className={`flex items-center gap-1 font-medium transition-all ${
-                    isScrolled
-                      ? 'text-gray-700 hover:text-blue-600'
-                      : 'text-white/90 hover:text-white'
-                  }`}
+                  className={`flex items-center gap-1 font-medium transition-all ${getResourcesClassName()}`}
                 >
                   Resources
                   <ChevronDown className={`h-4 w-4 transition-transform ${isResourcesOpen ? 'rotate-180' : ''}`} />
