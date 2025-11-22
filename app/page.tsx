@@ -147,56 +147,68 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Problem/Solution Section */}
-      <section className="py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Problem/Solution Section - Centered & Modern */}
+      <section className="py-20 bg-gradient-to-b from-gray-50 to-white">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
+            <h2 className="text-3xl sm:text-4xl font-heading font-bold text-gray-900 mb-4">
               Stop Losing Revenue on HMRC Complaints
             </h2>
-            <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
               Every year, accountants write off thousands in fees because HMRC complaint management is complex, 
               time-consuming, and inconsistent. Lightpoint changes that.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-6">The Problem</h3>
-              <ul className="space-y-4">
-                {[
-                  'HMRC complaints take 20+ hours per case',
-                  'Fee recovery requires detailed time tracking',
-                  'Charter breaches are easy to miss',
-                  'No standardized complaint structure',
-                  'Clients balk at upfront fees'
-                ].map((problem, idx) => (
-                  <li key={idx} className="flex items-start">
-                    <div className="flex-shrink-0 h-6 w-6 rounded-full bg-red-100 text-red-600 flex items-center justify-center mr-3">
+          {/* Problem Section - Centered */}
+          <div className="mb-16">
+            <div className="text-center mb-8">
+              <h3 className="text-2xl font-heading font-bold text-gray-900 inline-flex items-center gap-2">
+                <span className="text-red-500">✕</span> The Problem
+              </h3>
+            </div>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-5xl mx-auto">
+              {[
+                'HMRC complaints take 20+ hours per case',
+                'Fee recovery requires detailed time tracking',
+                'Charter breaches are easy to miss',
+                'No standardized complaint structure',
+                'Clients balk at upfront fees'
+              ].map((problem, idx) => (
+                <div key={idx} className="bg-red-50 border border-red-100 rounded-card p-4 text-center">
+                  <div className="flex items-center justify-center mb-2">
+                    <div className="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center font-bold text-lg">
                       ✕
                     </div>
-                    <span className="text-gray-700">{problem}</span>
-                  </li>
-                ))}
-              </ul>
+                  </div>
+                  <p className="text-gray-700 text-sm">{problem}</p>
+                </div>
+              ))}
             </div>
+          </div>
 
-            <div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-6">The Solution</h3>
-              <ul className="space-y-4">
-                {[
-                  'AI analyzes cases in minutes, not hours',
-                  'Automatic fee calculation & HMRC-compliant invoicing',
-                  'Charter breach detection with precedent matching',
-                  'Proven templates for every complaint stage',
-                  'No-win, no-fee structure with ROI prediction'
-                ].map((solution, idx) => (
-                  <li key={idx} className="flex items-start">
-                    <CheckCircle className="flex-shrink-0 h-6 w-6 text-green-600 mr-3" />
-                    <span className="text-gray-700">{solution}</span>
-                  </li>
-                ))}
-              </ul>
+          {/* Solution Section - Centered */}
+          <div>
+            <div className="text-center mb-8">
+              <h3 className="text-2xl font-heading font-bold text-gray-900 inline-flex items-center gap-2">
+                <CheckCircle className="h-6 w-6 text-success" /> The Solution
+              </h3>
+            </div>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-5xl mx-auto">
+              {[
+                'AI analyzes cases in minutes, not hours',
+                'Automatic fee calculation & HMRC-compliant invoicing',
+                'Charter breach detection with precedent matching',
+                'Proven templates for every complaint stage',
+                'No-win, no-fee structure with ROI prediction'
+              ].map((solution, idx) => (
+                <div key={idx} className="bg-success/5 border border-success/20 rounded-card p-4 text-center hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-center mb-2">
+                    <CheckCircle className="h-8 w-8 text-success" />
+                  </div>
+                  <p className="text-gray-700 text-sm font-medium">{solution}</p>
+                </div>
+              ))}
             </div>
           </div>
         </div>
