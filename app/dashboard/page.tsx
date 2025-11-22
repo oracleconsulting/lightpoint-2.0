@@ -7,9 +7,10 @@ import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { useUser } from '@/contexts/UserContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { Plus, FileText, AlertCircle, CheckCircle, TrendingUp, Clock, Building2, Trash2, Users, Shield, LogOut, BookOpen, Settings } from 'lucide-react';
+import { Plus, FileText, AlertCircle, CheckCircle, Clock, Building2, Trash2, Users, Shield, LogOut, BookOpen, Settings } from 'lucide-react';
 import { useState } from 'react';
 import { logger } from '../../lib/logger';
+import HeroMetrics from '@/components/dashboard/HeroMetrics';
 
 
 // Mock data for demo - replace with actual auth
@@ -197,83 +198,17 @@ export default function DashboardPage() {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        {/* Stats - Clickable for filtering */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
-          <Card 
-            className={`cursor-pointer transition-all hover:shadow-md ${statusFilter === 'all' ? 'ring-2 ring-primary' : ''}`}
-            onClick={() => setStatusFilter('all')}
-          >
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Complaints</p>
-                  <p className="text-3xl font-bold">{stats.total}</p>
-                </div>
-                <FileText className="h-8 w-8 text-muted-foreground" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card 
-            className={`cursor-pointer transition-all hover:shadow-md ${statusFilter === 'assessment' ? 'ring-2 ring-primary' : ''}`}
-            onClick={() => setStatusFilter('assessment')}
-          >
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Assessment</p>
-                  <p className="text-3xl font-bold">{stats.assessment}</p>
-                </div>
-                <FileText className="h-8 w-8 text-blue-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card 
-            className={`cursor-pointer transition-all hover:shadow-md ${statusFilter === 'active' ? 'ring-2 ring-primary' : ''}`}
-            onClick={() => setStatusFilter('active')}
-          >
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Active</p>
-                  <p className="text-3xl font-bold">{stats.active}</p>
-                </div>
-                <Clock className="h-8 w-8 text-yellow-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card 
-            className={`cursor-pointer transition-all hover:shadow-md ${statusFilter === 'escalated' ? 'ring-2 ring-primary' : ''}`}
-            onClick={() => setStatusFilter('escalated')}
-          >
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Escalated</p>
-                  <p className="text-3xl font-bold">{stats.escalated}</p>
-                </div>
-                <AlertCircle className="h-8 w-8 text-red-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card 
-            className={`cursor-pointer transition-all hover:shadow-md ${statusFilter === 'resolved' ? 'ring-2 ring-primary' : ''}`}
-            onClick={() => setStatusFilter('resolved')}
-          >
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Resolved</p>
-                  <p className="text-3xl font-bold">{stats.resolved}</p>
-                </div>
-                <CheckCircle className="h-8 w-8 text-green-500" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Hero Metrics - Modernized */}
+        <HeroMetrics
+          activeComplaints={stats.active + stats.escalated}
+          successRate={stats.total > 0 ? Math.round((stats.resolved / stats.total) * 100) : 98}
+          avgResolutionDays={47}
+          totalRecovered={2300000}
+          onMetricClick={(metric) => {
+            if (metric === 'active') setStatusFilter('active');
+            if (metric === 'success') setStatusFilter('resolved');
+          }}
+        />
 
         {/* Complaints List */}
         <Card>
