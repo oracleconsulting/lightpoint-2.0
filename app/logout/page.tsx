@@ -40,12 +40,9 @@ export default function LogoutPage() {
         
         console.log('✅ LOGOUT: All storage and cookies cleared');
         
-        // 4. Wait a tiny bit
-        await new Promise(resolve => setTimeout(resolve, 200));
-        
-        // 5. Hard redirect to homepage (not login, to confirm logout)
-        console.log('🚀 LOGOUT: Redirecting to homepage...');
-        window.location.href = '/';
+        // 4. Hard redirect to homepage IMMEDIATELY
+        console.log('🚀 LOGOUT: Redirecting to homepage NOW...');
+        window.location.replace('/'); // Use replace instead of href for immediate redirect
         
       } catch (error) {
         console.error('❌ LOGOUT: Fatal error:', error);
