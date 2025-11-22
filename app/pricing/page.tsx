@@ -7,10 +7,13 @@ import { Badge } from '@/components/ui/badge';
 import { trpc } from '@/lib/trpc/Provider';
 import { Check, Zap, Crown, Building2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function PricingPage() {
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('monthly');
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
   const router = useRouter();
+  const { user } = useAuth();
   
   const { data: tiers, isLoading } = trpc.subscription.listTiers.useQuery({ 
     includeHidden: false 
@@ -29,6 +32,47 @@ export default function PricingPage() {
     const monthlyCost = monthlyPrice * 12;
     const savings = ((monthlyCost - annualPrice) / monthlyCost) * 100;
     return Math.round(savings);
+  };
+
+  const handleStartTrial = async (tier: any) => {
+    // If not logged in, redirect to login
+    if (!user) {
+      router.push(`/login?redirectTo=/pricing`);
+      return;
+    }
+
+    setCheckoutLoading(tier.id);
+
+    try {
+      // Get the correct price ID based on billing period
+      const priceId = billingPeriod === 'monthly' 
+        ? tier.stripe_price_id_monthly 
+        : tier.stripe_price_id_annual;
+
+      // Create Stripe checkout session
+      const response = await fetch('/api/stripe/create-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          priceId,
+          tierId: tier.id,
+          billingCycle: billingPeriod,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.url) {
+        // Redirect to Stripe checkout
+        window.location.href = data.url;
+      } else {
+        console.error('No checkout URL returned');
+        setCheckoutLoading(null);
+      }
+    } catch (error) {
+      console.error('Error creating checkout:', error);
+      setCheckoutLoading(null);
+    }
   };
   
   return (
@@ -209,11 +253,10 @@ export default function PricingPage() {
                     className="w-full" 
                     size="lg"
                     variant={tier.is_popular ? 'default' : 'outline'}
-                    onClick={() => {
-                      router.push(`/subscription/checkout?tier=${tier.id}&period=${billingPeriod}`);
-                    }}
+                    onClick={() => handleStartTrial(tier)}
+                    disabled={checkoutLoading === tier.id}
                   >
-                    Start 14-Day Free Trial
+                    {checkoutLoading === tier.id ? 'Loading...' : 'Start 14-Day Free Trial'}
                   </Button>
                 </CardFooter>
               </Card>
