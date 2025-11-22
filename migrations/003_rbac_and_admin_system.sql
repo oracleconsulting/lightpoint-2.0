@@ -111,11 +111,17 @@ CREATE POLICY "Super admins can manage tiers"
 -- Enable RLS on user_subscriptions
 ALTER TABLE user_subscriptions ENABLE ROW LEVEL SECURITY;
 
--- Users can view their own subscription
-CREATE POLICY "Users can view their own subscription"
+-- Users can view their organization's subscription
+CREATE POLICY "Users can view their org subscription"
   ON user_subscriptions
   FOR SELECT
-  USING (auth.uid() = user_id);
+  USING (
+    organization_id IN (
+      SELECT organization_id 
+      FROM organization_members 
+      WHERE user_id = auth.uid()
+    )
+  );
 
 -- Admins can view all subscriptions
 CREATE POLICY "Admins can view all subscriptions"
@@ -362,12 +368,13 @@ BEGIN
     st.name,
     st.id,
     (COALESCE((st.features->>'complaints'->>'max_per_month')::INTEGER, 0) - 
-     COALESCE(us.complaints_this_month, 0)) as complaints_remaining,
-    us.is_trial
+     COALESCE(us.complaints_used_this_period, 0)) as complaints_remaining,
+    (us.trial_ends_at IS NOT NULL AND us.trial_ends_at > NOW()) as is_trial
   FROM user_subscriptions us
   JOIN subscription_tiers st ON us.tier_id = st.id
-  WHERE us.user_id = user_uuid
-  AND us.status = 'active'
+  JOIN organization_members om ON us.organization_id = om.organization_id
+  WHERE om.user_id = user_uuid
+  AND us.status IN ('trial', 'active')
   LIMIT 1;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -385,8 +392,9 @@ BEGIN
   SELECT st.features INTO tier_features
   FROM user_subscriptions us
   JOIN subscription_tiers st ON us.tier_id = st.id
-  WHERE us.user_id = user_uuid
-  AND us.status = 'active'
+  JOIN organization_members om ON us.organization_id = om.organization_id
+  WHERE om.user_id = user_uuid
+  AND us.status IN ('trial', 'active')
   LIMIT 1;
   
   IF tier_features IS NULL THEN
