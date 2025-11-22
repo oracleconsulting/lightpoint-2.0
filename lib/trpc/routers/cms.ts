@@ -6,7 +6,7 @@ import { TRPCError } from '@trpc/server';
 
 export const cmsRouter = router({
   /**
-   * Get all page sections for a page
+   * Get all page sections for a page (PUBLIC - only visible)
    */
   getPageSections: publicProcedure
     .input(z.object({ pageName: z.string() }))
@@ -17,6 +17,34 @@ export const cmsRouter = router({
         .eq('page_name', input.pageName)
         .eq('is_visible', true)
         .order('display_order', { ascending: true });
+      
+      if (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch page sections',
+        });
+      }
+      
+      return data;
+    }),
+  
+  /**
+   * Get ALL page sections (ADMIN - includes hidden)
+   */
+  getAllPageSections: protectedProcedure
+    .input(z.object({ pageName: z.string().optional() }).optional())
+    .query(async ({ input }) => {
+      let query = supabaseAdmin
+        .from('page_sections')
+        .select('*')
+        .order('page_name', { ascending: true })
+        .order('display_order', { ascending: true });
+      
+      if (input?.pageName) {
+        query = query.eq('page_name', input.pageName);
+      }
+      
+      const { data, error } = await query;
       
       if (error) {
         throw new TRPCError({
