@@ -5,6 +5,12 @@ import { createBrowserClient } from '@supabase/ssr';
 
 export default function LogoutPage() {
   useEffect(() => {
+    // Force redirect after 1 second no matter what
+    const forceRedirectTimeout = setTimeout(() => {
+      console.log('⏰ LOGOUT: Force redirect timeout - redirecting NOW');
+      window.location.replace('/');
+    }, 1000);
+
     const performLogout = async () => {
       console.log('🔴 LOGOUT: Starting complete logout process');
       
@@ -15,43 +21,56 @@ export default function LogoutPage() {
           process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
         );
         
-        // 1. Sign out from Supabase first
+        // 1. Sign out from Supabase first (with timeout)
         console.log('🔐 LOGOUT: Calling Supabase signOut...');
-        const { error } = await supabase.auth.signOut();
         
-        if (error) {
-          console.error('❌ LOGOUT: Supabase signOut error:', error);
-        } else {
-          console.log('✅ LOGOUT: Supabase signOut successful');
-        }
+        const signOutPromise = supabase.auth.signOut();
+        const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 500));
+        
+        await Promise.race([signOutPromise, timeoutPromise]);
+        console.log('✅ LOGOUT: Supabase signOut complete (or timed out)');
         
         // 2. Clear ALL storage (nuclear option)
         console.log('🧹 LOGOUT: Clearing all storage...');
-        localStorage.clear();
-        sessionStorage.clear();
+        try {
+          localStorage.clear();
+          sessionStorage.clear();
+        } catch (e) {
+          console.log('⚠️ Storage clear failed (might be blocked):', e);
+        }
         
         // 3. Clear ALL cookies
         console.log('🍪 LOGOUT: Clearing all cookies...');
-        document.cookie.split(";").forEach((c) => {
-          document.cookie = c
-            .replace(/^ +/, "")
-            .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-        });
+        try {
+          document.cookie.split(";").forEach((c) => {
+            document.cookie = c
+              .replace(/^ +/, "")
+              .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+          });
+        } catch (e) {
+          console.log('⚠️ Cookie clear failed:', e);
+        }
         
-        console.log('✅ LOGOUT: All storage and cookies cleared');
+        console.log('✅ LOGOUT: All cleared');
         
         // 4. Hard redirect to homepage IMMEDIATELY
         console.log('🚀 LOGOUT: Redirecting to homepage NOW...');
-        window.location.replace('/'); // Use replace instead of href for immediate redirect
+        clearTimeout(forceRedirectTimeout);
+        window.location.replace('/');
         
       } catch (error) {
         console.error('❌ LOGOUT: Fatal error:', error);
         // Force redirect anyway
-        window.location.href = '/';
+        clearTimeout(forceRedirectTimeout);
+        window.location.replace('/');
       }
     };
     
     performLogout();
+
+    return () => {
+      clearTimeout(forceRedirectTimeout);
+    };
   }, []);
 
   return (
@@ -64,4 +83,3 @@ export default function LogoutPage() {
     </div>
   );
 }
-
