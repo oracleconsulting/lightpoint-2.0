@@ -6,50 +6,38 @@ import { Plus, Search, Edit, Trash2, Eye, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-
-// Placeholder data - will be replaced with tRPC
-const dummyPosts = [
-  {
-    id: '1',
-    title: 'Introducing Lightpoint: Revolutionizing HMRC Complaint Management',
-    slug: 'introducing-lightpoint-platform',
-    excerpt: 'Today we launch Lightpoint, the first AI-powered platform...',
-    author: 'James Howard',
-    status: 'published',
-    publishedAt: '2024-11-22',
-    views: 1250,
-  },
-  {
-    id: '2',
-    title: 'Case Study: How One Firm Recovered £50,000',
-    slug: 'case-study-50k-recovery',
-    excerpt: 'A detailed look at how a mid-sized practice...',
-    author: 'James Howard',
-    status: 'published',
-    publishedAt: '2024-11-15',
-    views: 856,
-  },
-  {
-    id: '3',
-    title: '5 Quick Tips for Faster Complaint Resolution',
-    slug: '5-tips-faster-resolution',
-    excerpt: 'Speed up your HMRC complaints with these proven tactics...',
-    author: 'Lightpoint Team',
-    status: 'draft',
-    publishedAt: null,
-    views: 0,
-  },
-];
+import { trpc } from '@/lib/trpc/Provider';
 
 export default function AdminBlogPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState<'all' | 'published' | 'draft'>('all');
 
-  const filteredPosts = dummyPosts.filter(post => {
-    const matchesSearch = post.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = filter === 'all' || post.status === filter;
-    return matchesSearch && matchesFilter;
+  // Fetch blog posts
+  const { data: postsData, isLoading, refetch } = trpc.blog.list.useQuery({
+    status: filter,
+    searchTerm: searchTerm || undefined,
+    limit: 50,
+    offset: 0,
   });
+
+  const posts = postsData?.posts || [];
+  const total = postsData?.total || 0;
+
+  // Delete mutation
+  const deletePost = trpc.blog.delete.useMutation({
+    onSuccess: () => {
+      alert('Post deleted successfully');
+      void refetch();
+    },
+    onError: (error) => {
+      alert(`Failed to delete post: ${error.message}`);
+    },
+  });
+
+  const handleDelete = async (id: string, title: string) => {
+    if (!confirm(`Delete "${title}"? This action cannot be undone.`)) return;
+    await deletePost.mutateAsync({ id });
+  };
 
   return (
     <div className="space-y-6">
@@ -81,39 +69,44 @@ export default function AdminBlogPage() {
             />
           </div>
           <div className="flex gap-2">
-            <Button
-              variant={filter === 'all' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilter('all')}
-            >
-              All ({dummyPosts.length})
-            </Button>
-            <Button
-              variant={filter === 'published' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilter('published')}
-            >
-              Published ({dummyPosts.filter(p => p.status === 'published').length})
-            </Button>
-            <Button
-              variant={filter === 'draft' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilter('draft')}
-            >
-              Drafts ({dummyPosts.filter(p => p.status === 'draft').length})
-            </Button>
+              <Button
+                variant={filter === 'all' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFilter('all')}
+              >
+                All ({total})
+              </Button>
+              <Button
+                variant={filter === 'published' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFilter('published')}
+              >
+                Published ({posts.filter((p: any) => p.status === 'published').length})
+              </Button>
+              <Button
+                variant={filter === 'draft' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFilter('draft')}
+              >
+                Drafts ({posts.filter((p: any) => p.status === 'draft').length})
+              </Button>
           </div>
         </div>
       </Card>
 
       {/* Posts List */}
       <div className="space-y-4">
-        {filteredPosts.length === 0 ? (
+        {isLoading ? (
+          <Card className="p-12 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="text-gray-500 mt-4">Loading posts...</p>
+          </Card>
+        ) : posts.length === 0 ? (
           <Card className="p-12 text-center">
             <p className="text-gray-500">No posts found</p>
           </Card>
         ) : (
-          filteredPosts.map((post) => (
+          posts.map((post: any) => (
             <Card key={post.id} className="p-6 hover:shadow-lg transition">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
@@ -131,24 +124,24 @@ export default function AdminBlogPage() {
                       {post.status}
                     </span>
                   </div>
-                  <p className="text-gray-600 mb-3">{post.excerpt}</p>
+                  <p className="text-gray-600 mb-3">{post.excerpt || 'No excerpt'}</p>
                   <div className="flex items-center gap-4 text-sm text-gray-500">
-                    <span>By {post.author}</span>
-                    {post.publishedAt && (
+                    <span>By Admin</span>
+                    {post.published_at && (
                       <>
                         <span>•</span>
                         <span className="flex items-center gap-1">
                           <Calendar className="h-4 w-4" />
-                          {new Date(post.publishedAt).toLocaleDateString()}
+                          {new Date(post.published_at).toLocaleDateString()}
                         </span>
                       </>
                     )}
-                    {post.views > 0 && (
+                    {post.view_count > 0 && (
                       <>
                         <span>•</span>
                         <span className="flex items-center gap-1">
                           <Eye className="h-4 w-4" />
-                          {post.views} views
+                          {post.view_count} views
                         </span>
                       </>
                     )}
@@ -167,7 +160,12 @@ export default function AdminBlogPage() {
                       <Edit className="h-4 w-4" />
                     </Button>
                   </Link>
-                  <Button variant="outline" size="sm" className="text-red-600 hover:bg-red-50">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="text-red-600 hover:bg-red-50"
+                    onClick={() => handleDelete(post.id, post.title)}
+                  >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>

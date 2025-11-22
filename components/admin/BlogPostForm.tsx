@@ -33,6 +33,35 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
   const [metaDescription, setMetaDescription] = useState('');
   const [isPublished, setIsPublished] = useState(false);
 
+  // tRPC mutations
+  const createPost = trpc.blog.create.useMutation();
+  const updatePost = trpc.blog.update.useMutation();
+  const deletePost = trpc.blog.delete.useMutation();
+
+  // Load existing post if editing
+  const { data: existingPost, isLoading: isLoadingPost } = trpc.blog.getById.useQuery(
+    { id: postId! },
+    { enabled: !!postId }
+  );
+
+  // Populate form when editing
+  React.useEffect(() => {
+    if (existingPost) {
+      setTitle(existingPost.title || '');
+      setSlug(existingPost.slug || '');
+      setExcerpt(existingPost.excerpt || '');
+      setContent(existingPost.content || '');
+      setFeaturedImage(existingPost.featured_image_url || '');
+      setFeaturedImageAlt(existingPost.featured_image_alt || '');
+      setAuthor(''); // Author is managed by backend
+      setCategory(existingPost.category || '');
+      setTags(existingPost.tags?.join(', ') || '');
+      setMetaTitle(existingPost.seo_title || '');
+      setMetaDescription(existingPost.seo_description || '');
+      setIsPublished(existingPost.status === 'published');
+    }
+  }, [existingPost]);
+
   // Auto-generate slug from title
   useEffect(() => {
     if (!postId && title) {
@@ -55,34 +84,74 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
   }, [title, excerpt, metaTitle, metaDescription]);
 
   const handleSave = async () => {
+    if (!title || !slug) {
+      alert('Please fill in required fields (title and slug)');
+      return;
+    }
+
     setSaving(true);
     try {
-      // TODO: Implement tRPC mutation
-      console.log('Saving blog post:', {
+      const postData = {
         title,
         slug,
-        excerpt,
+        excerpt: excerpt || undefined,
         content,
-        featuredImage,
-        featuredImageAlt,
-        author,
-        category,
-        tags: tags.split(',').map(t => t.trim()),
-        metaTitle,
-        metaDescription,
+        featuredImage: featuredImage || undefined,
+        featuredImageAlt: featuredImageAlt || undefined,
+        author: author || 'Admin',
+        category: category || undefined,
+        tags: tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : undefined,
+        metaTitle: metaTitle || undefined,
+        metaDescription: metaDescription || undefined,
         isPublished,
-      });
+      };
+
+      if (postId) {
+        // Update existing post
+        await updatePost.mutateAsync({
+          id: postId,
+          data: postData,
+        });
+        alert('Blog post updated successfully!');
+      } else {
+        // Create new post
+        await createPost.mutateAsync(postData);
+        alert('Blog post created successfully!');
+      }
       
-      // Show success message
-      alert('Blog post saved successfully!');
       router.push('/admin/blog');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving blog post:', error);
-      alert('Failed to save blog post');
+      alert(`Failed to save blog post: ${error?.message || 'Unknown error'}`);
     } finally {
       setSaving(false);
     }
   };
+
+  const handleDelete = async () => {
+    if (!postId) return;
+    if (!confirm('Are you sure you want to delete this blog post? This action cannot be undone.')) return;
+
+    try {
+      await deletePost.mutateAsync({ id: postId });
+      alert('Blog post deleted successfully!');
+      router.push('/admin/blog');
+    } catch (error: any) {
+      console.error('Error deleting blog post:', error);
+      alert(`Failed to delete blog post: ${error?.message || 'Unknown error'}`);
+    }
+  };
+
+  if (isLoadingPost) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading post...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -335,7 +404,11 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
         </Button>
         <div className="flex items-center gap-2">
           {postId && (
-            <Button variant="outline" className="text-red-600 hover:bg-red-50">
+            <Button 
+              variant="outline" 
+              className="text-red-600 hover:bg-red-50"
+              onClick={handleDelete}
+            >
               <Trash2 className="h-4 w-4 mr-2" />
               Delete
             </Button>
