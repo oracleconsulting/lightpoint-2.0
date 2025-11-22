@@ -21,22 +21,25 @@ const config: Config = {
         heading: ['DM Sans', 'Inter', 'system-ui', 'sans-serif'],
       },
       colors: {
-        // Modern Fintech/LegalTech Color Scheme
+        // Modern Fintech/LegalTech Color Scheme - FINAL LOGO COLORS
         brand: {
-          primary: '#1E40AF',      // Deep blue for trust
+          primary: '#1E40AF',      // Deep blue (from logo dot 1)
           'primary-dark': '#1E3A8A',
           'primary-light': '#3B82F6',
-          blurple: '#6366F1',       // Modern purple-blue accent
+          blurple: '#6366F1',       // Purple-blue (from logo dot 2)
           'blurple-dark': '#4F46E5',
           'blurple-light': '#818CF8',
+          gold: '#F59E0B',          // GOLD ACCENT (from logo dot 3) ⭐
+          'gold-dark': '#D97706',
+          'gold-light': '#FBBF24',
         },
         success: {
-          DEFAULT: '#10B981',       // Emerald green
-          light: '#34D399',
-          dark: '#059669',
+          DEFAULT: '#F59E0B',       // GOLD for success states! ⭐
+          light: '#FBBF24',
+          dark: '#D97706',
         },
         warning: {
-          DEFAULT: '#F59E0B',       // Amber
+          DEFAULT: '#F59E0B',       // Gold for warnings
           light: '#FBBF24',
           dark: '#D97706',
         },

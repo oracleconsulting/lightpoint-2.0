@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Menu, X, ChevronDown, BookOpen, Video, FileText, Award, LogIn, User, Shield, LogOut, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -176,14 +177,19 @@ export default function Navigation() {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-lg shadow-sm border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
           <div className="flex items-center justify-between">
-            {/* Logo with online status */}
+            {/* Logo with three ascending dots (blue→gold) */}
             <Link href="/" className="flex items-center gap-2 group">
               <div className="relative">
-                <div className="p-2 rounded-xl bg-gradient-to-br from-brand-primary to-brand-blurple transition-all transform group-hover:scale-105 group-hover:shadow-lg">
-                  <Award className="h-6 w-6 text-white" />
-                </div>
+                <Image 
+                  src="/logo-icon.svg" 
+                  alt="Lightpoint Logo" 
+                  width={60} 
+                  height={40}
+                  className="transform group-hover:scale-105 transition-transform"
+                  priority
+                />
                 {isLoggedIn && (
-                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-success rounded-full border-2 border-white animate-pulse" 
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-brand-gold rounded-full border-2 border-white animate-pulse" 
                        title="Online"
                   />
                 )}

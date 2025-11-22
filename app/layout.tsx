@@ -12,6 +12,13 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'Lightpoint - HMRC Complaint Management',
   description: 'Privacy-first HMRC complaint management system for accountants',
+  icons: {
+    icon: [
+      { url: '/logo-icon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: 'any' },
+    ],
+    apple: '/logo-icon.svg',
+  },
 };
 
 export default function RootLayout({
