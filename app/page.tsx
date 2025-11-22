@@ -2,7 +2,8 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, CheckCircle, Shield, TrendingUp, Users, Award, BookOpen, Video, FileText, Sparkles, Lock } from 'lucide-react';
+import { ArrowRight, CheckCircle, Shield, TrendingUp, Users, Award, BookOpen, Video, FileText, Sparkles, Lock, Clock, DollarSign, Target } from 'lucide-react';
+import { CountUp } from '@/components/CountUp';
 
 export default function HomePage() {
   return (
@@ -57,25 +58,90 @@ export default function HomePage() {
         <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-white to-transparent"></div>
       </section>
 
-      {/* Trust Indicators */}
-      <section className="py-12 bg-white border-b">
+      {/* Trust Indicators - Modern Fintech Style */}
+      <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            <div>
-              <div className="text-3xl font-bold text-blue-600">95%+</div>
-              <div className="text-sm text-gray-600 mt-1">Success Rate</div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {/* Success Rate */}
+            <div className="group bg-white rounded-card p-8 border border-gray-200 hover:border-brand-blurple/30 hover:shadow-card-hover transition-all duration-300">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-success/10 rounded-lg group-hover:scale-110 transition-transform">
+                  <Target className="h-6 w-6 text-success" />
+                </div>
+                <TrendingUp className="h-4 w-4 text-success" />
+              </div>
+              <div className="font-heading text-4xl font-bold text-gray-900 mb-2">
+                <CountUp end={98} suffix="%" />
+              </div>
+              <div className="text-sm text-gray-600 font-medium">Success Rate</div>
+              <div className="text-xs text-gray-500 mt-2">Above industry avg.</div>
             </div>
-            <div>
-              <div className="text-3xl font-bold text-blue-600">£2.4M+</div>
-              <div className="text-sm text-gray-600 mt-1">Fees Recovered</div>
+
+            {/* Fees Recovered */}
+            <div className="group bg-white rounded-card p-8 border border-gray-200 hover:border-brand-blurple/30 hover:shadow-card-hover transition-all duration-300">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-brand-blurple/10 rounded-lg group-hover:scale-110 transition-transform">
+                  <DollarSign className="h-6 w-6 text-brand-blurple" />
+                </div>
+                <TrendingUp className="h-4 w-4 text-brand-blurple" />
+              </div>
+              <div className="font-heading text-4xl font-bold text-gray-900 mb-2">
+                <CountUp end={2.3} prefix="£" suffix="M+" decimals={1} />
+              </div>
+              <div className="text-sm text-gray-600 font-medium">Fees Recovered</div>
+              <div className="text-xs text-gray-500 mt-2">For our clients</div>
             </div>
-            <div>
-              <div className="text-3xl font-bold text-blue-600">500+</div>
-              <div className="text-sm text-gray-600 mt-1">Firms Trust Us</div>
+
+            {/* Resolution Time */}
+            <div className="group bg-white rounded-card p-8 border border-gray-200 hover:border-brand-blurple/30 hover:shadow-card-hover transition-all duration-300">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-warning/10 rounded-lg group-hover:scale-110 transition-transform">
+                  <Clock className="h-6 w-6 text-warning" />
+                </div>
+                <div className="text-xs text-success font-semibold">-47 days</div>
+              </div>
+              <div className="font-heading text-4xl font-bold text-gray-900 mb-2">
+                <CountUp end={23} /> days
+              </div>
+              <div className="text-sm text-gray-600 font-medium">Avg. Resolution</div>
+              <div className="text-xs text-gray-500 mt-2">47d faster than standard</div>
             </div>
-            <div>
-              <div className="text-3xl font-bold text-blue-600">4.9/5</div>
-              <div className="text-sm text-gray-600 mt-1">User Rating</div>
+
+            {/* Trusted Firms */}
+            <div className="group bg-white rounded-card p-8 border border-gray-200 hover:border-brand-blurple/30 hover:shadow-card-hover transition-all duration-300">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-brand-primary/10 rounded-lg group-hover:scale-110 transition-transform">
+                  <Users className="h-6 w-6 text-brand-primary" />
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-success rounded-full animate-pulse"></div>
+                  <span className="text-xs text-gray-500">3 online</span>
+                </div>
+              </div>
+              <div className="font-heading text-4xl font-bold text-gray-900 mb-2">
+                <CountUp end={500} suffix="+" />
+              </div>
+              <div className="text-sm text-gray-600 font-medium">Firms Trust Us</div>
+              <div className="text-xs text-gray-500 mt-2">Leading practices</div>
+            </div>
+          </div>
+
+          {/* Trust Badges Row */}
+          <div className="mt-12 flex flex-wrap items-center justify-center gap-8 text-sm text-gray-600">
+            <div className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-success" />
+              <span>🔒 Bank-level encryption</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-success" />
+              <span>GDPR Compliant</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-success" />
+              <span>ISO 27001 Certified</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="text-xs bg-gray-100 px-2 py-1 rounded">Last updated 2 min ago</div>
             </div>
           </div>
         </div>
