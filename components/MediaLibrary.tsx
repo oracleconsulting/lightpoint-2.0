@@ -90,7 +90,11 @@ export function MediaLibrary({
     for (const file of acceptedFiles) {
       try {
         const fileExt = file.name.split('.').pop();
-        const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+        // Use crypto.randomUUID() for secure random filenames
+        const randomId = typeof crypto !== 'undefined' && crypto.randomUUID 
+          ? crypto.randomUUID() 
+          : `${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
+        const fileName = `${randomId}.${fileExt}`;
 
         const { error } = await supabase.storage
           .from(bucket)
@@ -224,8 +228,16 @@ export function MediaLibrary({
           {filteredFiles.map((file) => (
             <div
               key={file.id}
+              role="button"
+              tabIndex={0}
               className="group relative aspect-square bg-gray-100 rounded-lg overflow-hidden hover:ring-2 hover:ring-blue-500 transition cursor-pointer"
               onClick={() => onSelectFile?.(file)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onSelectFile?.(file);
+                }
+              }}
             >
               {/* File Preview */}
               {file.type === 'image' ? (

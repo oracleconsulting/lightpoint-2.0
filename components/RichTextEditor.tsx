@@ -96,7 +96,11 @@ export function RichTextEditor({
         );
 
         const fileExt = file.name.split('.').pop();
-        const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+        // Use crypto.randomUUID() for secure random filenames
+        const randomId = typeof crypto !== 'undefined' && crypto.randomUUID 
+          ? crypto.randomUUID() 
+          : `${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
+        const fileName = `${randomId}.${fileExt}`;
         const filePath = `${bucket}/${fileName}`;
 
         const { data, error } = await supabase.storage
