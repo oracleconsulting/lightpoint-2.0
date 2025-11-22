@@ -12,6 +12,7 @@ import { generateEmbedding } from '@/lib/embeddings';
 import { logger } from '../logger';
 import { subscriptionRouter } from './routers/subscription';
 import { cmsRouter } from './routers/cms';
+import { blogRouter } from './routers/blog';
 
 
 export const appRouter = router({
@@ -20,6 +21,9 @@ export const appRouter = router({
   
   // CMS & Content management
   cms: cmsRouter,
+  
+  // Blog management
+  blog: blogRouter,
   
   // Existing routes
   // Complaints
