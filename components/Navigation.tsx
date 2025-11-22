@@ -138,17 +138,29 @@ export default function Navigation() {
             {/* CTA Buttons */}
             <div className="hidden md:flex items-center gap-4">
               {isLoggedIn ? (
-                <Link
-                  href="/user/dashboard"
-                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all ${
-                    isScrolled
-                      ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg hover:shadow-xl'
-                      : 'bg-white text-blue-600 hover:bg-white/90 shadow-lg'
-                  }`}
-                >
-                  <User className="h-4 w-4" />
-                  Dashboard
-                </Link>
+                <>
+                  <Link
+                    href="/admin-check"
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all ${
+                      isScrolled
+                        ? 'text-gray-700 hover:text-blue-600 border-2 border-gray-200 hover:border-blue-600'
+                        : 'text-white/90 hover:text-white border-2 border-white/20 hover:border-white/40'
+                    }`}
+                  >
+                    🔐 Admin
+                  </Link>
+                  <Link
+                    href="/user/dashboard"
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all ${
+                      isScrolled
+                        ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg hover:shadow-xl'
+                        : 'bg-white text-blue-600 hover:bg-white/90 shadow-lg'
+                    }`}
+                  >
+                    <User className="h-4 w-4" />
+                    Dashboard
+                  </Link>
+                </>
               ) : (
                 <>
                   <Link
@@ -258,14 +270,23 @@ export default function Navigation() {
               {/* CTA Buttons */}
               <div className="pt-4 border-t border-gray-200 space-y-3">
                 {isLoggedIn ? (
-                  <Link
-                    href="/user/dashboard"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="flex items-center justify-center gap-2 w-full px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors"
-                  >
-                    <User className="h-5 w-5" />
-                    Dashboard
-                  </Link>
+                  <>
+                    <Link
+                      href="/admin-check"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="flex items-center justify-center gap-2 w-full px-6 py-3 border-2 border-blue-200 text-blue-600 rounded-xl font-semibold hover:bg-blue-50 transition-colors"
+                    >
+                      🔐 Admin Check
+                    </Link>
+                    <Link
+                      href="/user/dashboard"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="flex items-center justify-center gap-2 w-full px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors"
+                    >
+                      <User className="h-5 w-5" />
+                      Dashboard
+                    </Link>
+                  </>
                 ) : (
                   <>
                     <Link
