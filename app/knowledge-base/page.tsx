@@ -264,7 +264,7 @@ export default function KnowledgeBasePage() {
                 <div className="flex items-center justify-between">
                   <h2 className="text-xl font-semibold">AI Comparison Results</h2>
                   <Badge variant="outline">
-                    {comparisonResults.length} document{comparisonResults.length !== 1 ? 's' : ''} analyzed
+                    {comparisonResults.length} document{comparisonResults.length !== 1 ? 's' : ''} analysed
                   </Badge>
                 </div>
                 {comparisonResults.map((result, index) => (
@@ -394,7 +394,7 @@ export default function KnowledgeBasePage() {
                       <div className="text-sm space-y-2">
                         <p className="font-medium text-blue-900">What happens when you upload?</p>
                         <ul className="list-disc list-inside space-y-1 text-blue-800">
-                          <li>Documents are extracted and analyzed with AI</li>
+                          <li>Documents are extracted and analysed with AI</li>
                           <li>Content is compared against existing knowledge base</li>
                           <li>AI detects: duplicates, overlaps, new information, and gaps</li>
                           <li>You'll see a detailed comparison report for each document</li>

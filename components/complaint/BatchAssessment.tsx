@@ -171,7 +171,7 @@ export function BatchAssessment({ organizationId, userId }: BatchAssessmentProps
             <h2 className="text-xl font-semibold">Uploaded Documents ({documents.length})</h2>
             <div className="flex gap-2">
               <Badge variant="outline">
-                {documents.filter(d => d.status === 'complete').length} analyzed
+                {documents.filter(d => d.status === 'complete').length} analysed
               </Badge>
               <Badge variant="outline">
                 {documents.filter(d => d.status === 'complete' && d.analysis?.hasComplaintGrounds).length} with grounds

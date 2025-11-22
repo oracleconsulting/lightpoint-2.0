@@ -172,7 +172,7 @@ export default function HomePage() {
                 'HMRC complaints take 20+ hours per case',
                 'Fee recovery requires detailed time tracking',
                 'Charter breaches are easy to miss',
-                'No standardized complaint structure',
+                'No standardised complaint structure',
                 'Clients balk at upfront fees',
                 'Inconsistent outcomes and unpredictable timelines'
               ].map((problem, idx) => (

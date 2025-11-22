@@ -231,7 +231,7 @@ ${JSON.stringify(analysisData.analysis, null, 2)}
 User Notes:
 ${notes}
 
-This precedent was manually added because it represents a novel complaint type not initially recognized by the system.
+This precedent was manually added because it represents a novel complaint type not initially recognised by the system.
     `.trim();
     
     addToPrecedents.mutate({
@@ -509,7 +509,7 @@ This precedent was manually added because it represents a novel complaint type n
                       <CardHeader>
                         <CardTitle className="text-lg">Generate Complaint Letter</CardTitle>
                         <p className="text-sm text-muted-foreground">
-                          Optionally add specific instructions or context to customize the letter generation.
+                          Optionally add specific instructions or context to customise the letter generation.
                         </p>
                       </CardHeader>
                       <CardContent className="space-y-4">
