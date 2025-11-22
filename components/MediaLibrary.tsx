@@ -84,34 +84,38 @@ export function MediaLibrary({
   }, [loadFiles]);
 
   // Handle file upload
-  const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    setUploading(true);
-    
-    for (const file of acceptedFiles) {
-      try {
-        const fileExt = file.name.split('.').pop();
-        // Use crypto.randomUUID() for secure random filenames
-        const randomId = typeof crypto !== 'undefined' && crypto.randomUUID 
-          ? crypto.randomUUID() 
-          : `${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
-        const fileName = `${randomId}.${fileExt}`;
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    const uploadFiles = async () => {
+      setUploading(true);
+      
+      for (const file of acceptedFiles) {
+        try {
+          const fileExt = file.name.split('.').pop();
+          // Use crypto.randomUUID() for secure random filenames
+          const randomId = typeof crypto !== 'undefined' && crypto.randomUUID 
+            ? crypto.randomUUID() 
+            : `${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
+          const fileName = `${randomId}.${fileExt}`;
 
-        const { error } = await supabase.storage
-          .from(bucket)
-          .upload(fileName, file, {
-            cacheControl: '3600',
-            upsert: false
-          });
+          const { error } = await supabase.storage
+            .from(bucket)
+            .upload(fileName, file, {
+              cacheControl: '3600',
+              upsert: false
+            });
 
-        if (error) throw error;
-      } catch (error) {
-        console.error('Error uploading file:', error);
-        alert(`Failed to upload ${file.name}`);
+          if (error) throw error;
+        } catch (error) {
+          console.error('Error uploading file:', error);
+          alert(`Failed to upload ${file.name}`);
+        }
       }
-    }
 
-    setUploading(false);
-    loadFiles(); // Reload files
+      setUploading(false);
+      loadFiles(); // Reload files
+    };
+
+    void uploadFiles(); // Fire and forget
   }, [bucket, supabase, loadFiles]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
