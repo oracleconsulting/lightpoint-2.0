@@ -43,10 +43,21 @@ export default function Navigation() {
 
       try {
         console.log('📡 Starting user_roles query for user_id:', user.id);
-        const { data: roles, error } = await supabase
+        
+        // Add 3-second timeout to prevent hanging
+        const queryPromise = supabase
           .from('user_roles')
           .select('role')
           .eq('user_id', user.id);
+        
+        const timeoutPromise = new Promise<{ data: null; error: any }>((resolve) => 
+          setTimeout(() => {
+            console.log('⏰ Query timeout after 3 seconds');
+            resolve({ data: null, error: { message: 'Query timeout' } });
+          }, 3000)
+        );
+        
+        const { data: roles, error } = await Promise.race([queryPromise, timeoutPromise]);
 
         console.log('✅ Query completed!');
         console.log('📋 User roles query result:', { roles, error });
