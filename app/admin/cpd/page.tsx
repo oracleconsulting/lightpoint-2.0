@@ -1,259 +1,191 @@
 'use client';
 
-import { useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
+import React, { useState } from 'react';
+import Link from 'next/link';
+import { Plus, Search, Edit, Trash2, Eye, Calendar, Award } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Save, Plus, Trash2, Eye, EyeOff, Award, Clock } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
+import { trpc } from '@/lib/trpc/Provider';
 
-interface CPDArticle {
-  id: string;
-  title: string;
-  category: string;
-  content: string;
-  duration: number; // minutes
-  tier: string;
-  isPublished: boolean;
-  createdAt: string;
-}
+export default function AdminCPDPage() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filter, setFilter] = useState<'all' | 'published' | 'draft'>('all');
 
-export default function CPDManagement() {
-  const [articles, setArticles] = useState<CPDArticle[]>([
-    {
-      id: '1',
-      title: 'Understanding HMRC Charter Rights',
-      category: 'Fundamentals',
-      content: 'A comprehensive guide to taxpayer rights under the HMRC Charter...',
-      duration: 15,
-      tier: 'Professional',
-      isPublished: true,
-      createdAt: '2024-11-01',
+  // Fetch CPD articles
+  const { data: articlesData, isLoading, refetch } = trpc.cpd.list.useQuery({
+    status: filter,
+    searchTerm: searchTerm || undefined,
+    limit: 50,
+    offset: 0,
+  });
+
+  const articles = articlesData?.articles || [];
+  const total = articlesData?.total || 0;
+
+  // Delete mutation
+  const deleteArticle = trpc.cpd.delete.useMutation({
+    onSuccess: () => {
+      alert('Article deleted successfully');
+      void refetch();
     },
-    {
-      id: '2',
-      title: 'Advanced Complaint Resolution Techniques',
-      category: 'Advanced',
-      content: 'Learn advanced strategies for complex HMRC complaints...',
-      duration: 30,
-      tier: 'Enterprise',
-      isPublished: true,
-      createdAt: '2024-11-10',
+    onError: (error) => {
+      alert(`Failed to delete article: ${error.message}`);
     },
-  ]);
+  });
 
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState<Partial<CPDArticle>>({});
-
-  const categories = ['Fundamentals', 'Intermediate', 'Advanced', 'Case Studies', 'Updates'];
-  const tiers = ['Free', 'Professional', 'Enterprise'];
-
-  const handleEdit = (article: CPDArticle) => {
-    setEditingId(article.id);
-    setFormData(article);
-  };
-
-  const handleSave = () => {
-    if (editingId && editingId !== 'new') {
-      setArticles(articles.map(a => a.id === editingId ? { ...a, ...formData } as CPDArticle : a));
-      setEditingId(null);
-      setFormData({});
-    }
-  };
-
-  const handleAdd = () => {
-    const newArticle: CPDArticle = {
-      id: Date.now().toString(),
-      title: formData.title || 'Untitled Article',
-      category: formData.category || 'Fundamentals',
-      content: formData.content || '',
-      duration: formData.duration || 10,
-      tier: formData.tier || 'Professional',
-      isPublished: false,
-      createdAt: new Date().toISOString().split('T')[0],
-    };
-    setArticles([newArticle, ...articles]);
-    setFormData({});
-    setEditingId(null);
-  };
-
-  const handleDelete = (id: string) => {
-    if (confirm('Delete this CPD article?')) {
-      setArticles(articles.filter(a => a.id !== id));
-    }
-  };
-
-  const togglePublish = (id: string) => {
-    setArticles(articles.map(a => 
-      a.id === id ? { ...a, isPublished: !a.isPublished } : a
-    ));
+  const handleDelete = async (id: string, title: string) => {
+    if (!confirm(`Delete "${title}"? This action cannot be undone.`)) return;
+    await deleteArticle.mutateAsync({ id });
   };
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-heading text-3xl font-bold text-gray-900">CPD Articles</h1>
-          <p className="text-gray-600 mt-2">Continuing Professional Development content for subscribers</p>
+          <h1 className="text-3xl font-heading font-bold">CPD Articles</h1>
+          <p className="text-gray-600 mt-1">Manage CPD content and learning materials</p>
         </div>
-        <Button onClick={() => setEditingId('new')} className="gap-2">
-          <Plus className="h-4 w-4" />
-          New Article
-        </Button>
+        <Link href="/admin/cpd/new">
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />
+            New Article
+          </Button>
+        </Link>
       </div>
 
-      {/* Editor */}
-      {(editingId === 'new' || editingId) && (
-        <Card className="border-brand-gold/30 shadow-lg">
-          <CardHeader>
-            <CardTitle>{editingId === 'new' ? 'Create CPD Article' : 'Edit Article'}</CardTitle>
-            <CardDescription>Professional development content</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Title *</label>
-              <input
-                type="text"
-                className="w-full px-3 py-2 border border-gray-200 rounded-button focus:outline-none focus:ring-2 focus:ring-brand-gold"
-                placeholder="Article title..."
-                value={formData.title || ''}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              />
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                <select
-                  className="w-full px-3 py-2 border border-gray-200 rounded-button focus:outline-none focus:ring-2 focus:ring-brand-gold"
-                  value={formData.category || ''}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                >
-                  {categories.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Duration (minutes)</label>
-                <input
-                  type="number"
-                  className="w-full px-3 py-2 border border-gray-200 rounded-button focus:outline-none focus:ring-2 focus:ring-brand-gold"
-                  value={formData.duration || ''}
-                  onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) })}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Required Tier</label>
-                <select
-                  className="w-full px-3 py-2 border border-gray-200 rounded-button focus:outline-none focus:ring-2 focus:ring-brand-gold"
-                  value={formData.tier || ''}
-                  onChange={(e) => setFormData({ ...formData, tier: e.target.value })}
-                >
-                  {tiers.map(tier => (
-                    <option key={tier} value={tier}>{tier}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Content</label>
-              <textarea
-                rows={12}
-                className="w-full px-3 py-2 border border-gray-200 rounded-button focus:outline-none focus:ring-2 focus:ring-brand-gold font-mono text-sm"
-                placeholder="Article content (markdown supported)..."
-                value={formData.content || ''}
-                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-              />
-            </div>
-
-            <div className="flex gap-2 justify-end pt-4">
-              <Button variant="outline" onClick={() => { setEditingId(null); setFormData({}); }}>
-                Cancel
-              </Button>
-              <Button onClick={editingId === 'new' ? handleAdd : handleSave}>
-                <Save className="h-4 w-4 mr-2" />
-                {editingId === 'new' ? 'Create' : 'Save'}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Articles Grid */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {articles.map((article) => (
-          <Card key={article.id} className={`${!article.isPublished ? 'opacity-60' : ''} hover:shadow-lg transition-shadow`}>
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  {article.isPublished ? (
-                    <Eye className="h-4 w-4 text-brand-gold" aria-label="Published" />
-                  ) : (
-                    <EyeOff className="h-4 w-4 text-gray-400" aria-label="Draft" />
-                  )}
-                  <span className="text-xs px-2 py-1 rounded-button bg-brand-blurple/10 text-brand-blurple">
-                    {article.category}
-                  </span>
-                </div>
-                <Award className="h-5 w-5 text-brand-gold" />
-              </div>
-
-              <h3 className="font-heading text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
-                {article.title}
-              </h3>
-
-              <div className="flex items-center gap-4 text-xs text-gray-500 mb-4">
-                <div className="flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  {article.duration} min
-                </div>
-                <div className="px-2 py-0.5 rounded-button bg-brand-gold/10 text-brand-gold font-medium">
-                  {article.tier}
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => togglePublish(article.id)}
-                  className="flex-1"
-                >
-                  {article.isPublished ? 'Unpublish' : 'Publish'}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleEdit(article)}
-                >
-                  Edit
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleDelete(article.id)}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {articles.length === 0 && (
-        <Card>
-          <CardContent className="p-12 text-center">
-            <Award className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500 mb-4">No CPD articles yet</p>
-            <Button onClick={() => setEditingId('new')}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create First Article
+      {/* Filters & Search */}
+      <Card className="p-4">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              type="text"
+              placeholder="Search articles..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant={filter === 'all' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilter('all')}
+            >
+              All ({total})
             </Button>
-          </CardContent>
-        </Card>
-      )}
+            <Button
+              variant={filter === 'published' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilter('published')}
+            >
+              Published ({articles.filter((a: any) => a.status === 'published').length})
+            </Button>
+            <Button
+              variant={filter === 'draft' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilter('draft')}
+            >
+              Drafts ({articles.filter((a: any) => a.status === 'draft').length})
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      {/* Articles List */}
+      <div className="space-y-4">
+        {isLoading ? (
+          <Card className="p-12 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="text-gray-500 mt-4">Loading articles...</p>
+          </Card>
+        ) : articles.length === 0 ? (
+          <Card className="p-12 text-center">
+            <p className="text-gray-500">No articles found</p>
+          </Card>
+        ) : (
+          articles.map((article: any) => (
+            <Card key={article.id} className="p-6 hover:shadow-lg transition">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h3 className="text-xl font-heading font-semibold">
+                      {article.title}
+                    </h3>
+                    <span
+                      className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        article.status === 'published'
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-yellow-100 text-yellow-700'
+                      }`}
+                    >
+                      {article.status}
+                    </span>
+                    {article.difficulty_level && (
+                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700">
+                        {article.difficulty_level}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-gray-600 mb-3">{article.excerpt || 'No excerpt'}</p>
+                  <div className="flex items-center gap-4 text-sm text-gray-500">
+                    {article.cpd_hours && (
+                      <>
+                        <span className="flex items-center gap-1">
+                          <Award className="h-4 w-4" />
+                          {article.cpd_hours} CPD hours
+                        </span>
+                        <span>•</span>
+                      </>
+                    )}
+                    {article.published_at && (
+                      <>
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-4 w-4" />
+                          {new Date(article.published_at).toLocaleDateString()}
+                        </span>
+                      </>
+                    )}
+                    {article.view_count > 0 && (
+                      <>
+                        <span>•</span>
+                        <span className="flex items-center gap-1">
+                          <Eye className="h-4 w-4" />
+                          {article.view_count} views
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 ml-4">
+                  {article.status === 'published' && (
+                    <Link href={`/cpd/${article.slug}`} target="_blank">
+                      <Button variant="outline" size="sm">
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </Link>
+                  )}
+                  <Link href={`/admin/cpd/edit/${article.id}`}>
+                    <Button variant="outline" size="sm">
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="text-red-600 hover:bg-red-50"
+                    onClick={() => handleDelete(article.id, article.title)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
     </div>
   );
 }
