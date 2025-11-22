@@ -173,7 +173,8 @@ export default function HomePage() {
                 'Fee recovery requires detailed time tracking',
                 'Charter breaches are easy to miss',
                 'No standardized complaint structure',
-                'Clients balk at upfront fees'
+                'Clients balk at upfront fees',
+                'Inconsistent outcomes and unpredictable timelines'
               ].map((problem, idx) => (
                 <div key={idx} className="bg-red-50 border border-red-100 rounded-card p-4 text-center">
                   <div className="flex items-center justify-center mb-2">
@@ -191,7 +192,7 @@ export default function HomePage() {
           <div>
             <div className="text-center mb-8">
               <h3 className="text-2xl font-heading font-bold text-gray-900 inline-flex items-center gap-2">
-                <CheckCircle className="h-6 w-6 text-success" /> The Solution
+                <CheckCircle className="h-6 w-6 text-green-600" /> The Solution
               </h3>
             </div>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-5xl mx-auto">
@@ -200,11 +201,12 @@ export default function HomePage() {
                 'Automatic fee calculation & HMRC-compliant invoicing',
                 'Charter breach detection with precedent matching',
                 'Proven templates for every complaint stage',
-                'No-win, no-fee structure with ROI prediction'
+                'No-win, no-fee structure with ROI prediction',
+                'Predictable timelines with 98% success rate'
               ].map((solution, idx) => (
-                <div key={idx} className="bg-success/5 border border-success/20 rounded-card p-4 text-center hover:shadow-md transition-shadow">
+                <div key={idx} className="bg-green-50 border border-green-200 rounded-card p-4 text-center hover:shadow-md hover:border-green-300 transition-all">
                   <div className="flex items-center justify-center mb-2">
-                    <CheckCircle className="h-8 w-8 text-success" />
+                    <CheckCircle className="h-8 w-8 text-green-600" />
                   </div>
                   <p className="text-gray-700 text-sm font-medium">{solution}</p>
                 </div>
