@@ -61,6 +61,7 @@ export async function middleware(req: NextRequest) {
     '/cpd',                       // CPD resources (or make subscription-only later)
     '/webinars',                  // Webinars (or make subscription-only later)
     '/examples',                  // Worked examples (or make subscription-only later)
+    '/admin-debug',               // Debug page for admin access
   ];
   const isPublicRoute = publicRoutes.some(route => req.nextUrl.pathname.startsWith(route));
 
