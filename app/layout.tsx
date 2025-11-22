@@ -2,6 +2,7 @@ import { TRPCProvider } from '@/lib/trpc/Provider';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { UserProvider } from '@/contexts/UserContext';
 import Navigation from '@/components/Navigation';
+import CommandPalette from '@/components/CommandPalette';
 import './globals.css';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
@@ -25,6 +26,7 @@ export default function RootLayout({
           <AuthProvider>
             <UserProvider>
               <Navigation />
+              <CommandPalette />
               {children}
             </UserProvider>
           </AuthProvider>
