@@ -189,7 +189,8 @@ export default function Navigation() {
 
                     {/* Dropdown Menu */}
                     {isUserMenuOpen && (
-                      <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 p-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="absolute top-full right-0 pt-2 w-64">
+                        <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-2 animate-in fade-in slide-in-from-top-2 duration-200">
                         <div className="px-4 py-3 border-b border-gray-100">
                           <p className="text-sm font-semibold text-gray-900">{user?.email}</p>
                           <p className="text-xs text-gray-500 mt-1">
@@ -212,6 +213,7 @@ export default function Navigation() {
                           <LogOut className="h-5 w-5 text-gray-600 group-hover:text-red-600" />
                           <span className="font-medium text-gray-900 group-hover:text-red-600">Logout</span>
                         </button>
+                        </div>
                       </div>
                     )}
                   </div>
