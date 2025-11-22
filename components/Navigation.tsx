@@ -13,6 +13,7 @@ export default function Navigation() {
   const [isResourcesOpen, setIsResourcesOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [isCheckingAdmin, setIsCheckingAdmin] = useState(true); // Add loading state
   const pathname = usePathname();
 
   const { user, signOut } = useAuth();
@@ -20,13 +21,18 @@ export default function Navigation() {
 
   // Check if user is super admin
   useEffect(() => {
+    let isMounted = true;
+    
     const checkSuperAdmin = async () => {
-      if (!user) {
+      if (!user?.id) {
+        console.log('⚠️ No user or user.id, setting super admin to false');
         setIsSuperAdmin(false);
+        setIsCheckingAdmin(false);
         return;
       }
 
-      console.log('🔍 Checking super admin status for:', user.email);
+      console.log('🔍 Checking super admin status for:', user.email, 'ID:', user.id);
+      setIsCheckingAdmin(true);
 
       const supabase = createBrowserClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -39,21 +45,41 @@ export default function Navigation() {
           .select('role')
           .eq('user_id', user.id);
 
-        console.log('📋 User roles:', roles);
-        console.log('❌ Roles error:', error);
+        console.log('📋 User roles query result:', { roles, error });
+
+        // Only update state if component is still mounted
+        if (!isMounted) {
+          console.log('⏭️ Component unmounted, skipping state update');
+          return;
+        }
+
+        if (error) {
+          console.error('❌ Roles query error:', error);
+          setIsSuperAdmin(false);
+          setIsCheckingAdmin(false);
+          return;
+        }
 
         const hasSuper = roles?.some(r => r.role === 'super_admin');
-        console.log('👑 Is super admin?', hasSuper);
+        console.log('👑 Is super admin?', hasSuper, 'Roles:', roles);
         
         setIsSuperAdmin(hasSuper || false);
+        setIsCheckingAdmin(false);
       } catch (error) {
-        console.error('🔴 Error checking super admin:', error);
-        setIsSuperAdmin(false);
+        console.error('🔴 Exception checking super admin:', error);
+        if (isMounted) {
+          setIsSuperAdmin(false);
+          setIsCheckingAdmin(false);
+        }
       }
     };
 
     checkSuperAdmin();
-  }, [user]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id]); // Only depend on user.id, not entire user object
 
   useEffect(() => {
     const handleScroll = () => {
@@ -163,7 +189,7 @@ export default function Navigation() {
             <div className="hidden md:flex items-center gap-4">
               {isLoggedIn ? (
                 <>
-                  {isSuperAdmin && (
+                  {!isCheckingAdmin && isSuperAdmin && (
                     <Link
                       href="/admin/tiers"
                       className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all text-purple-600 hover:text-purple-700 border-2 border-purple-200 hover:border-purple-600 hover:bg-purple-50"
@@ -324,7 +350,7 @@ export default function Navigation() {
                       )}
                     </div>
                     
-                    {isSuperAdmin && (
+                    {!isCheckingAdmin && isSuperAdmin && (
                       <Link
                         href="/admin/tiers"
                         onClick={() => setIsMobileMenuOpen(false)}
