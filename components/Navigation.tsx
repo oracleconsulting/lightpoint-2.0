@@ -3,17 +3,49 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, ChevronDown, BookOpen, Video, FileText, Award, LogIn, User } from 'lucide-react';
+import { Menu, X, ChevronDown, BookOpen, Video, FileText, Award, LogIn, User, Shield } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { createBrowserClient } from '@supabase/ssr';
 
 export default function Navigation() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isResourcesOpen, setIsResourcesOpen] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const pathname = usePathname();
 
   const { user } = useAuth();
   const isLoggedIn = !!user;
+
+  // Check if user is super admin
+  useEffect(() => {
+    const checkSuperAdmin = async () => {
+      if (!user) {
+        setIsSuperAdmin(false);
+        return;
+      }
+
+      const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+
+      try {
+        const { data: roles } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('role', 'super_admin')
+          .single();
+
+        setIsSuperAdmin(!!roles);
+      } catch (error) {
+        setIsSuperAdmin(false);
+      }
+    };
+
+    checkSuperAdmin();
+  }, [user]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -40,42 +72,26 @@ export default function Navigation() {
 
   const getLinkClassName = (href: string) => {
     const active = isActive(href);
-    if (active && isScrolled) return 'text-blue-600';
-    if (active && !isScrolled) return 'text-white font-semibold';
-    if (!active && isScrolled) return 'text-gray-700 hover:text-blue-600';
-    return 'text-white/90 hover:text-white';
+    if (active) return 'text-blue-600 font-semibold';
+    return 'text-gray-700 hover:text-blue-600';
   };
 
   const getResourcesClassName = () => {
-    return isScrolled
-      ? 'text-gray-700 hover:text-blue-600'
-      : 'text-white/90 hover:text-white';
+    return 'text-gray-700 hover:text-blue-600';
   };
 
   return (
     <>
       {/* Main Navigation */}
-      <nav
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          isScrolled
-            ? 'bg-white/95 backdrop-blur-lg shadow-lg py-3'
-            : 'bg-transparent py-6'
-        }`}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white shadow-md">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 group">
-              <div className={`p-2 rounded-xl transition-all ${
-                isScrolled
-                  ? 'bg-blue-600'
-                  : 'bg-white/10 backdrop-blur-md group-hover:bg-white/20'
-              }`}>
+              <div className="p-2 rounded-xl bg-blue-600 transition-all">
                 <Award className="h-6 w-6 text-white" />
               </div>
-              <span className={`text-xl font-bold transition-colors ${
-                isScrolled ? 'text-gray-900' : 'text-white'
-              }`}>
+              <span className="text-xl font-bold text-gray-900">
                 Lightpoint
               </span>
             </Link>
@@ -139,23 +155,18 @@ export default function Navigation() {
             <div className="hidden md:flex items-center gap-4">
               {isLoggedIn ? (
                 <>
+                  {isSuperAdmin && (
+                    <Link
+                      href="/admin/tiers"
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all text-purple-600 hover:text-purple-700 border-2 border-purple-200 hover:border-purple-600 hover:bg-purple-50"
+                    >
+                      <Shield className="h-4 w-4" />
+                      Admin
+                    </Link>
+                  )}
                   <Link
-                    href="/admin-check"
-                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all ${
-                      isScrolled
-                        ? 'text-gray-700 hover:text-blue-600 border-2 border-gray-200 hover:border-blue-600'
-                        : 'text-white/90 hover:text-white border-2 border-white/20 hover:border-white/40'
-                    }`}
-                  >
-                    🔐 Admin
-                  </Link>
-                  <Link
-                    href="/user/dashboard"
-                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all ${
-                      isScrolled
-                        ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg hover:shadow-xl'
-                        : 'bg-white text-blue-600 hover:bg-white/90 shadow-lg'
-                    }`}
+                    href="/dashboard"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all bg-blue-600 text-white hover:bg-blue-700 shadow-lg hover:shadow-xl"
                   >
                     <User className="h-4 w-4" />
                     Dashboard
@@ -165,22 +176,14 @@ export default function Navigation() {
                 <>
                   <Link
                     href="/login"
-                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all ${
-                      isScrolled
-                        ? 'text-gray-700 hover:text-blue-600'
-                        : 'text-white/90 hover:text-white'
-                    }`}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all text-gray-700 hover:text-blue-600"
                   >
                     <LogIn className="h-4 w-4" />
                     Login
                   </Link>
                   <Link
                     href="/pricing"
-                    className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl hover:scale-105 ${
-                      isScrolled
-                        ? 'bg-blue-600 text-white hover:bg-blue-700'
-                        : 'bg-white text-blue-600 hover:bg-white/90'
-                    }`}
+                    className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl hover:scale-105 bg-blue-600 text-white hover:bg-blue-700"
                   >
                     Start Free Trial
                   </Link>
@@ -191,11 +194,7 @@ export default function Navigation() {
             {/* Mobile Menu Button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className={`md:hidden p-2 rounded-lg transition-colors ${
-                isScrolled
-                  ? 'text-gray-900 hover:bg-gray-100'
-                  : 'text-white hover:bg-white/10'
-              }`}
+              className="md:hidden p-2 rounded-lg transition-colors text-gray-900 hover:bg-gray-100"
             >
               {isMobileMenuOpen ? (
                 <X className="h-6 w-6" />
@@ -271,15 +270,18 @@ export default function Navigation() {
               <div className="pt-4 border-t border-gray-200 space-y-3">
                 {isLoggedIn ? (
                   <>
+                    {isSuperAdmin && (
+                      <Link
+                        href="/admin/tiers"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="flex items-center justify-center gap-2 w-full px-6 py-3 border-2 border-purple-200 text-purple-600 rounded-xl font-semibold hover:bg-purple-50 transition-colors"
+                      >
+                        <Shield className="h-5 w-5" />
+                        Admin Panel
+                      </Link>
+                    )}
                     <Link
-                      href="/admin-check"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className="flex items-center justify-center gap-2 w-full px-6 py-3 border-2 border-blue-200 text-blue-600 rounded-xl font-semibold hover:bg-blue-50 transition-colors"
-                    >
-                      🔐 Admin Check
-                    </Link>
-                    <Link
-                      href="/user/dashboard"
+                      href="/dashboard"
                       onClick={() => setIsMobileMenuOpen(false)}
                       className="flex items-center justify-center gap-2 w-full px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors"
                     >
