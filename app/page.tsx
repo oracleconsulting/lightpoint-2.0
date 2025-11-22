@@ -2,44 +2,59 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, CheckCircle, Shield, TrendingUp, Users, Award, BookOpen, Video, FileText } from 'lucide-react';
+import { ArrowRight, CheckCircle, Shield, TrendingUp, Users, Award, BookOpen, Video, FileText, Sparkles, Lock } from 'lucide-react';
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white">
-        <div className="absolute inset-0 bg-grid-white/[0.05] bg-[size:20px_20px]" />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32">
-          <div className="text-center">
-            <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight">
-              HMRC Complaint Management
-              <span className="block text-blue-200 mt-2">Made Simple</span>
+    <div className="min-h-screen bg-white">
+      {/* Hero Section - Modern Fintech Style */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-brand-primary via-brand-primary-dark to-brand-blurple-dark text-white">
+        <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:32px_32px]" />
+        <div className="absolute inset-0 bg-gradient-to-t from-brand-primary/20 to-transparent" />
+        
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32 sm:py-40">
+          <div className="text-center max-w-4xl mx-auto">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 mb-8 animate-fade-in">
+              <Sparkles className="h-4 w-4 text-yellow-300" />
+              <span className="text-sm font-medium">AI-Powered HMRC Complaint Management</span>
+            </div>
+            
+            <h1 className="font-heading text-5xl sm:text-7xl font-bold tracking-tight animate-slide-in">
+              Recover Your Fees.
+              <span className="block mt-2 text-blue-200">Deliver Excellence.</span>
             </h1>
-            <p className="mt-6 max-w-2xl mx-auto text-xl sm:text-2xl text-blue-100">
-              AI-powered platform for accountants and tax professionals to manage HMRC complaints, 
-              recover fees, and deliver exceptional client service.
+            
+            <p className="mt-8 text-xl sm:text-2xl text-blue-100 leading-relaxed max-w-3xl mx-auto animate-slide-in" style={{animationDelay: '0.1s'}}>
+              The complete platform for accountants to manage HMRC complaints, 
+              track time, identify charter breaches, and secure fee recovery—automatically.
             </p>
-            <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
+            
+            <div className="mt-12 flex flex-col sm:flex-row gap-4 justify-center animate-slide-in" style={{animationDelay: '0.2s'}}>
               <Link
                 href="/pricing"
-                className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold rounded-lg bg-white text-blue-600 hover:bg-blue-50 transition-all shadow-lg hover:shadow-xl"
+                className="group inline-flex items-center justify-center px-8 py-4 text-lg font-semibold rounded-button bg-white text-brand-primary hover:bg-blue-50 transition-all shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
               >
                 Start Free Trial
-                <ArrowRight className="ml-2 h-5 w-5" />
+                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </Link>
               <Link
-                href="/demo"
-                className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold rounded-lg bg-blue-500 text-white hover:bg-blue-400 transition-all border-2 border-white/20"
+                href="#demo"
+                className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold rounded-button bg-white/10 backdrop-blur text-white hover:bg-white/20 transition-all border-2 border-white/30 hover:border-white/50"
               >
                 Watch Demo
               </Link>
             </div>
-            <p className="mt-4 text-sm text-blue-200">
-              14-day free trial • No credit card required • Cancel anytime
+            
+            <p className="mt-6 text-sm text-blue-200 flex items-center justify-center gap-2">
+              <Lock className="h-4 w-4" />
+              14-day free trial • No credit card • Bank-level encryption
             </p>
           </div>
         </div>
+        
+        {/* Bottom wave */}
+        <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-white to-transparent"></div>
       </section>
 
       {/* Trust Indicators */}
