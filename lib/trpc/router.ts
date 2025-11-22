@@ -11,11 +11,15 @@ import { prepareAnalysisContext, estimateTokens } from '@/lib/contextManager';
 import { generateEmbedding } from '@/lib/embeddings';
 import { logger } from '../logger';
 import { subscriptionRouter } from './routers/subscription';
+import { cmsRouter } from './routers/cms';
 
 
 export const appRouter = router({
   // Subscription management
   subscription: subscriptionRouter,
+  
+  // CMS & Content management
+  cms: cmsRouter,
   
   // Existing routes
   // Complaints
