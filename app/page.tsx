@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, CheckCircle, Shield, TrendingUp, Users, Award, BookOpen, Video, FileText, Sparkles, Lock, Clock, DollarSign, Target } from 'lucide-react';
+import { ArrowRight, CheckCircle, Shield, TrendingUp, Users, Award, BookOpen, Video, FileText, Sparkles, Lock, Clock, DollarSign, PoundSterling, Target } from 'lucide-react';
 import { CountUp } from '@/components/CountUp';
 
 export default function HomePage() {
@@ -49,7 +49,7 @@ export default function HomePage() {
             
             <p className="mt-6 text-sm text-blue-200 flex items-center justify-center gap-2">
               <Lock className="h-4 w-4" />
-              14-day free trial • No credit card • Bank-level encryption
+              14-day free trial • No credit card • Enterprise-grade security
             </p>
           </div>
         </div>
@@ -78,12 +78,12 @@ export default function HomePage() {
             </div>
 
             {/* Fees Recovered */}
-            <div className="group bg-white rounded-card p-8 border border-gray-200 hover:border-brand-blurple/30 hover:shadow-card-hover transition-all duration-300">
+            <div className="group bg-white rounded-card p-8 border border-gray-200 hover:border-brand-gold/30 hover:shadow-card-hover transition-all duration-300">
               <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-brand-blurple/10 rounded-lg group-hover:scale-110 transition-transform">
-                  <DollarSign className="h-6 w-6 text-brand-blurple" />
+                <div className="p-3 bg-brand-gold/10 rounded-lg group-hover:scale-110 transition-transform">
+                  <PoundSterling className="h-6 w-6 text-brand-gold" />
                 </div>
-                <TrendingUp className="h-4 w-4 text-brand-blurple" />
+                <TrendingUp className="h-4 w-4 text-brand-gold" />
               </div>
               <div className="font-heading text-4xl font-bold text-gray-900 mb-2">
                 <CountUp end={2.3} prefix="£" suffix="M+" decimals={1} />
@@ -130,15 +130,15 @@ export default function HomePage() {
           <div className="mt-12 flex flex-wrap items-center justify-center gap-8 text-sm text-gray-600">
             <div className="flex items-center gap-2">
               <Shield className="h-5 w-5 text-success" />
-              <span>🔒 Bank-level encryption</span>
+              <span>🔒 Enterprise-grade encryption</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle className="h-5 w-5 text-success" />
-              <span>GDPR Compliant</span>
+              <span>GDPR-ready infrastructure</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle className="h-5 w-5 text-success" />
-              <span>ISO 27001 Certified</span>
+              <span>SOC 2 compliant hosting</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="text-xs bg-gray-100 px-2 py-1 rounded">Last updated 2 min ago</div>
