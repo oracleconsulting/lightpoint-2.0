@@ -9,15 +9,14 @@ UPDATE page_sections
 SET 
   content = jsonb_set(
     jsonb_set(
-      content,
-      '{cta_primary_link}',
-      '"/subscription/checkout"'
+      jsonb_set(
+        content,
+        '{cta_primary_link}',
+        '"/subscription/checkout"'
+      ),
+      '{cta_secondary_text}',
+      '"Join Waitlist"'
     ),
-    '{cta_secondary_text}',
-    '"Join Waitlist"'
-  ),
-  content = jsonb_set(
-    content,
     '{cta_secondary_link}',
     '"/subscription/checkout"'
   ),
