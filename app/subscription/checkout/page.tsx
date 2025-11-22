@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc/Provider';
 import { CheckCircle, Sparkles, Users, Clock, Shield, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-export default function EarlyAccessPage() {
+function EarlyAccessContent() {
   const searchParams = useSearchParams();
   const tierId = searchParams.get('tier');
   const period = searchParams.get('period');
@@ -308,3 +308,14 @@ export default function EarlyAccessPage() {
   );
 }
 
+export default function EarlyAccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-brand-primary via-brand-primary-dark to-brand-blurple-dark flex items-center justify-center">
+        <div className="animate-pulse text-white text-xl">Loading...</div>
+      </div>
+    }>
+      <EarlyAccessContent />
+    </Suspense>
+  );
+}
