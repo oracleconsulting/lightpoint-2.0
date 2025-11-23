@@ -260,5 +260,86 @@ export const blogRouter = router({
 
       return { success: !error };
     }),
+
+  // Generate SEO metadata using AI
+  generateSEO: protectedProcedure
+    .input(
+      z.object({
+        title: z.string(),
+        content: z.string(),
+        excerpt: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      try {
+        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+            'HTTP-Referer': 'https://lightpoint.uk',
+            'X-Title': 'Lightpoint Blog SEO Generator',
+          },
+          body: JSON.stringify({
+            model: 'anthropic/claude-3.5-sonnet',
+            messages: [
+              {
+                role: 'user',
+                content: `You are an SEO expert for a UK accounting technology platform specializing in HMRC complaints.
+
+Generate SEO-optimized metadata for this blog post:
+
+Title: ${input.title}
+Content: ${input.content.substring(0, 3000)}...
+
+Return ONLY a JSON object with:
+{
+  "metaTitle": "60 characters max, compelling, keyword-rich",
+  "metaDescription": "155 characters max, persuasive, includes call-to-action",
+  "suggestedTags": ["3-5", "relevant", "tags"]
+}
+
+Focus on UK accounting, HMRC, tax, and professional services keywords.`,
+              },
+            ],
+            temperature: 0.7,
+            max_tokens: 500,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`OpenRouter API error: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        const aiResponse = data.choices[0]?.message?.content;
+
+        if (!aiResponse) {
+          throw new Error('No response from AI');
+        }
+
+        // Parse JSON from AI response (strip markdown code fences if present)
+        const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+          throw new Error('Could not parse AI response');
+        }
+
+        const seoData = JSON.parse(jsonMatch[0]);
+
+        return {
+          metaTitle: seoData.metaTitle?.substring(0, 60) || input.title.substring(0, 60),
+          metaDescription: seoData.metaDescription?.substring(0, 160) || input.excerpt?.substring(0, 160) || '',
+          suggestedTags: Array.isArray(seoData.suggestedTags) ? seoData.suggestedTags.slice(0, 5) : [],
+        };
+      } catch (error) {
+        console.error('Error generating SEO:', error);
+        // Fallback to basic generation
+        return {
+          metaTitle: input.title.substring(0, 60),
+          metaDescription: input.excerpt?.substring(0, 160) || input.content.substring(0, 160),
+          suggestedTags: ['HMRC', 'Tax', 'Accounting'],
+        };
+      }
+    }),
 });
 

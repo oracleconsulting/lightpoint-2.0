@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { ArrowLeft, Save, Eye, Trash2, Image } from 'lucide-react';
+import { ArrowLeft, Save, Eye, Trash2, Image, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { trpc } from '@/lib/trpc/Provider';
 
@@ -20,6 +20,7 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [showMediaLibrary, setShowMediaLibrary] = useState(false);
+  const [generatingSEO, setGeneratingSEO] = useState(false);
   
   // Form state
   const [title, setTitle] = useState('');
@@ -41,6 +42,7 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
   const createPost = trpc.blog.create.useMutation();
   const updatePost = trpc.blog.update.useMutation();
   const deletePost = trpc.blog.delete.useMutation();
+  const generateSEO = trpc.blog.generateSEO.useMutation();
 
   // Load existing post if editing
   const { data: existingPost, isLoading: isLoadingPost } = trpc.blog.getById.useQuery(
@@ -155,6 +157,43 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
     }
   };
 
+  const handlePreview = () => {
+    if (!slug) {
+      alert('Please add a URL slug before previewing');
+      return;
+    }
+    // Open preview in new tab
+    window.open(`/blog/${slug}?preview=true`, '_blank');
+  };
+
+  const handleGenerateSEO = async () => {
+    if (!title || !content) {
+      alert('Please add a title and content first');
+      return;
+    }
+
+    setGeneratingSEO(true);
+    try {
+      const result = await generateSEO.mutateAsync({
+        title,
+        content: content.replace(/<[^>]*>/g, '').substring(0, 5000), // Strip HTML and limit length
+        excerpt,
+      });
+
+      // Update SEO fields with AI-generated content
+      if (result.metaTitle) setMetaTitle(result.metaTitle);
+      if (result.metaDescription) setMetaDescription(result.metaDescription);
+      if (result.suggestedTags) setTags(result.suggestedTags.join(', '));
+      
+      alert('SEO fields generated successfully!');
+    } catch (error: any) {
+      console.error('Error generating SEO:', error);
+      alert(`Failed to generate SEO: ${error?.message || 'Unknown error'}`);
+    } finally {
+      setGeneratingSEO(false);
+    }
+  };
+
   if (isLoadingPost) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -182,7 +221,7 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
           </h1>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handlePreview}>
             <Eye className="h-4 w-4 mr-2" />
             Preview
           </Button>
@@ -344,7 +383,30 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
       {/* SEO Settings */}
       <Card>
         <CardHeader>
-          <CardTitle>SEO & Social Sharing</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>SEO & Social Sharing</CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleGenerateSEO}
+              disabled={generatingSEO || !title || !content}
+            >
+              {generatingSEO ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Generate SEO
+                </>
+              )}
+            </Button>
+          </div>
+          <p className="text-sm text-gray-500 mt-2">
+            AI will analyze your content and generate optimized meta fields and tags
+          </p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
