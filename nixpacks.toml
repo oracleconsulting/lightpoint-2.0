@@ -1,3 +1,6 @@
+[variables]
+HUSKY = "0"
+
 [phases.setup]
 nixPkgs = ["nodejs_20"]
 
