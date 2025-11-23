@@ -59,7 +59,7 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
       setContent(existingPost.content || '');
       setFeaturedImage(existingPost.featured_image_url || '');
       setFeaturedImageAlt(existingPost.featured_image_alt || '');
-      setAuthor(''); // Author is managed by backend
+      setAuthor(existingPost.author || 'Admin'); // Populate author from existing post
       setCategory(existingPost.category || '');
       setTags(existingPost.tags?.join(', ') || '');
       setMetaTitle(existingPost.seo_title || '');

@@ -73,6 +73,14 @@ export function RichTextEditor({
     },
   });
 
+  // Update editor content when the content prop changes (for editing existing posts)
+  React.useEffect(() => {
+    if (editor && content !== editor.getHTML()) {
+      // Only update if the content is different to avoid infinite loops
+      editor.commands.setContent(content);
+    }
+  }, [content, editor]);
+
   // Image upload handler
   const handleImageUpload = useCallback(async () => {
     const input = document.createElement('input');
