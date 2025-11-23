@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { ArrowRight, CheckCircle, Shield, TrendingUp, Users, Award, BookOpen, Video, FileText, Sparkles, Lock, Clock, PoundSterling, Target } from 'lucide-react';
 import { CountUp } from '@/components/CountUp';
+import { LivePlatformStats } from '@/components/LivePlatformStats';
 import { trpc } from '@/lib/trpc/Provider';
 
 // Icon mapping
@@ -101,72 +102,27 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* Trust Metrics */}
-      {trustMetrics?.metrics && (
-        <section className="py-16 bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {trustMetrics.metrics.map((metric: any, idx: number) => {
-                const Icon = iconMap[metric.icon] || Target;
-                const colorClass = metric.color === 'gold' ? 'brand-gold' : 
-                                  metric.color === 'success' ? 'success' :
-                                  metric.color === 'warning' ? 'warning' : 'brand-primary';
-                
-                return (
-                  <div key={idx} className={`group bg-white rounded-card p-8 border border-gray-200 hover:border-${colorClass}/30 hover:shadow-card-hover transition-all duration-300`}>
-                    <div className="flex items-center justify-between mb-4">
-                      <div className={`p-3 bg-${colorClass}/10 rounded-lg group-hover:scale-110 transition-transform`}>
-                        <Icon className={`h-6 w-6 text-${colorClass}`} />
-                      </div>
-                      {metric.badge ? (
-                        <div className="text-xs text-success font-semibold">{metric.badge}</div>
-                      ) : metric.live_badge ? (
-                        <div className="flex items-center gap-1">
-                          <div className="w-2 h-2 bg-success rounded-full animate-pulse"></div>
-                          <span className="text-xs text-gray-500">{metric.live_badge}</span>
-                        </div>
-                      ) : (
-                        <TrendingUp className={`h-4 w-4 text-${colorClass}`} />
-                      )}
-                    </div>
-                    <div className="font-heading text-4xl font-bold text-gray-900 mb-2">
-                      <CountUp 
-                        end={metric.value} 
-                        prefix={metric.prefix || ''}
-                        suffix={metric.suffix || ''}
-                        decimals={metric.decimals || 0}
-                      />
-                    </div>
-                    <div className="text-sm text-gray-600 font-medium">{metric.label}</div>
-                    {metric.sublabel && (
-                      <div className="text-xs text-gray-500 mt-2">{metric.sublabel}</div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Trust Badges */}
-            {trustMetrics.trust_badges && (
-              <div className="mt-12 flex flex-wrap items-center justify-center gap-8 text-sm text-gray-600">
-                {trustMetrics.trust_badges.map((badge: string, idx: number) => (
-                  <div key={idx} className="flex items-center gap-2">
-                    {idx < 3 ? (
-                      <>
-                        {idx === 0 && <Shield className="h-5 w-5 text-success" />}
-                        {idx > 0 && <CheckCircle className="h-5 w-5 text-success" />}
-                        <span>{badge}</span>
-                      </>
-                    ) : (
-                      <div className="text-xs bg-gray-100 px-2 py-1 rounded">{badge}</div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+      {/* Trust Metrics - LIVE Platform Stats */}
+      <section className="py-16 bg-gradient-to-b from-white to-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-heading font-bold text-gray-900 mb-4">
+              Real Results, Real Time
+            </h2>
+            <p className="text-xl text-gray-600">
+              Live statistics across our entire platform - updated every minute
+            </p>
           </div>
-        </section>
-      )}
+          
+          <LivePlatformStats />
+          
+          <div className="mt-8 text-center">
+            <p className="text-sm text-gray-500">
+              Join the growing network of firms recovering fees and building better HMRC relationships
+            </p>
+          </div>
+        </div>
+      </section>
 
       {/* Problem/Solution Section */}
       {problemSolution && (
