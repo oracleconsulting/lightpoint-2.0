@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc/Provider';
 import { Button } from '@/components/ui/button';
@@ -39,7 +39,7 @@ import { Skeleton } from '@/components/ui/skeleton';
  * - Track analytics
  */
 
-export default function SocialContentManagerPage() {
+function SocialContentManagerPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const blogPostId = searchParams.get('blogPostId');
@@ -610,6 +610,15 @@ function SocialPostCard({
         </div>
       )}
     </div>
+  );
+}
+
+// Wrap with Suspense boundary for useSearchParams
+export default function SocialContentManagerPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Skeleton className="w-full h-96" /></div>}>
+      <SocialContentManagerPageContent />
+    </Suspense>
   );
 }
 

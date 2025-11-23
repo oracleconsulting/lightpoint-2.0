@@ -8,6 +8,10 @@ import { createBrowserClient } from '@supabase/ssr';
  * Compatible with: Buffer, Zapier, IFTTT, Feedly, RSS readers
  */
 
+// Force dynamic rendering - don't try to generate at build time
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 export async function GET() {
   try {
     const supabase = createBrowserClient(
