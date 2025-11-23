@@ -19,12 +19,15 @@ export const cmsRouter = router({
         .order('display_order', { ascending: true });
       
       if (error) {
+        console.error('❌ [SUPABASE ERROR]', error);
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to fetch page sections',
+          message: `Failed to fetch page sections: ${error.message}`,
+          cause: error,
         });
       }
       
+      console.log(`✅ [CMS] Fetched ${data?.length || 0} sections for page: ${input.pageName}`);
       return data;
     }),
   

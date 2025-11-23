@@ -45,12 +45,21 @@ let _supabaseAdmin: any = null;
 export const supabaseAdmin = new Proxy({} as ReturnType<typeof createClient>, {
   get(target, prop) {
     if (!_supabaseAdmin) {
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+      
       // During build, return a mock that won't cause errors
-      if (!process.env.SUPABASE_SERVICE_KEY && process.env.NODE_ENV !== 'development') {
-        console.warn('supabaseAdmin accessed during build - returning mock');
-        return undefined;
+      if (!serviceKey && process.env.NODE_ENV !== 'development') {
+        console.error('❌ [SUPABASE ADMIN] Missing SUPABASE_SERVICE_KEY in production!');
+        throw new Error('SUPABASE_SERVICE_KEY is required in production');
       }
+      
+      if (!url || !serviceKey) {
+        throw new Error(`Missing Supabase credentials: url=${!!url}, serviceKey=${!!serviceKey}`);
+      }
+      
       _supabaseAdmin = createServerClient();
+      console.log('✅ [SUPABASE ADMIN] Initialized successfully');
     }
     return _supabaseAdmin?.[prop];
   }
