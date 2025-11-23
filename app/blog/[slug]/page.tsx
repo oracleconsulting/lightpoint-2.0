@@ -2,17 +2,22 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc/Provider';
-import { ArrowLeft, Calendar, Clock, Tag, Share2 } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, Tag, Share2, User } from 'lucide-react';
 
 export default function BlogPostPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const slug = params?.slug as string;
+  const isPreview = searchParams?.get('preview') === 'true';
 
-  const { data: post, isLoading, error } = trpc.cms.getContentPost.useQuery(slug, {
-    enabled: !!slug,
-  });
+  const { data: post, isLoading, error } = trpc.blog.getBySlug.useQuery(
+    { slug },
+    {
+      enabled: !!slug,
+    }
+  );
 
   if (isLoading) {
     return (
@@ -51,8 +56,70 @@ export default function BlogPostPage() {
     );
   }
 
+  // Convert TipTap JSON to HTML for rendering
+  const renderContent = () => {
+    if (typeof post.content === 'string') {
+      // If content is already HTML string
+      return <div dangerouslySetInnerHTML={{ __html: post.content }} />;
+    } else {
+      // If content is TipTap JSON, render a basic version
+      // In production, you'd use a proper TipTap renderer
+      const renderNode = (node: any): string => {
+        if (!node) return '';
+        
+        if (node.type === 'text') {
+          let text = node.text || '';
+          if (node.marks) {
+            node.marks.forEach((mark: any) => {
+              if (mark.type === 'bold') text = `<strong>${text}</strong>`;
+              if (mark.type === 'italic') text = `<em>${text}</em>`;
+              if (mark.type === 'underline') text = `<u>${text}</u>`;
+              if (mark.type === 'link') text = `<a href="${mark.attrs.href}" target="_blank" rel="noopener noreferrer">${text}</a>`;
+            });
+          }
+          return text;
+        }
+        
+        const content = node.content?.map(renderNode).join('') || '';
+        
+        switch (node.type) {
+          case 'paragraph':
+            return `<p>${content}</p>`;
+          case 'heading':
+            return `<h${node.attrs?.level || 2}>${content}</h${node.attrs?.level || 2}>`;
+          case 'bulletList':
+            return `<ul>${content}</ul>`;
+          case 'orderedList':
+            return `<ol>${content}</ol>`;
+          case 'listItem':
+            return `<li>${content}</li>`;
+          case 'blockquote':
+            return `<blockquote>${content}</blockquote>`;
+          case 'codeBlock':
+            return `<pre><code>${content}</code></pre>`;
+          case 'hardBreak':
+            return '<br />';
+          case 'image':
+            return `<img src="${node.attrs.src}" alt="${node.attrs.alt || ''}" />`;
+          default:
+            return content;
+        }
+      };
+      
+      const html = post.content?.content?.map(renderNode).join('') || '<p>No content available</p>';
+      return <div dangerouslySetInnerHTML={{ __html: html }} />;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Preview Banner */}
+      {isPreview && (
+        <div className="bg-amber-500 text-white py-3 px-4 text-center font-semibold">
+          📝 Preview Mode - This post is not yet published
+        </div>
+      )}
+
       {/* Hero/Header */}
       <div className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -86,21 +153,30 @@ export default function BlogPostPage() {
 
           {/* Meta */}
           <div className="flex flex-wrap items-center gap-6 text-blue-100">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              <span>
-                {new Date(post.published_at).toLocaleDateString('en-GB', {
-                  day: 'numeric',
-                  month: 'long',
-                  year: 'numeric'
-                })}
-              </span>
-            </div>
+            {post.author && (
+              <div className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                <span>By {post.author}</span>
+              </div>
+            )}
 
-            {post.view_count > 0 && (
+            {post.published_at && (
+              <div className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                <span>
+                  {new Date(post.published_at).toLocaleDateString('en-GB', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                  })}
+                </span>
+              </div>
+            )}
+
+            {post.read_time_minutes && (
               <div className="flex items-center gap-2">
                 <Clock className="h-5 w-5" />
-                <span>{post.view_count} views</span>
+                <span>{post.read_time_minutes} min read</span>
               </div>
             )}
 
@@ -118,10 +194,19 @@ export default function BlogPostPage() {
           <div className="rounded-2xl overflow-hidden shadow-2xl">
             <img
               src={post.featured_image_url}
-              alt={post.title}
+              alt={post.featured_image_alt || post.title}
               className="w-full h-auto"
             />
           </div>
+        </div>
+      )}
+
+      {/* Excerpt */}
+      {post.excerpt && (
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-16">
+          <p className="text-xl text-gray-600 leading-relaxed italic border-l-4 border-blue-600 pl-6 py-2">
+            {post.excerpt}
+          </p>
         </div>
       )}
 
@@ -136,9 +221,11 @@ export default function BlogPostPage() {
             prose-ul:list-disc prose-ol:list-decimal
             prose-li:text-gray-700
             prose-blockquote:border-l-4 prose-blockquote:border-blue-600 prose-blockquote:pl-4 prose-blockquote:italic
-            prose-code:bg-gray-100 prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:text-sm"
-          dangerouslySetInnerHTML={{ __html: post.content }}
-        />
+            prose-code:bg-gray-100 prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:text-sm
+            prose-img:rounded-xl prose-img:shadow-lg"
+        >
+          {renderContent()}
+        </div>
       </article>
 
       {/* Author/CTA Section */}
