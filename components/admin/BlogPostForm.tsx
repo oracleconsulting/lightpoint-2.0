@@ -91,8 +91,8 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
       setMetaDescription(existingPost.seo_description || '');
       setIsPublished(existingPost.status === 'published');
       
-      // Load structured layout if it exists
-      if (existingPost.structured_layout) {
+      // Load structured layout if it exists and is valid
+      if (existingPost.structured_layout && typeof existingPost.structured_layout === 'object') {
         setStructuredLayout(existingPost.structured_layout);
       }
       
