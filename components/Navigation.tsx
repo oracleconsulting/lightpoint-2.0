@@ -261,7 +261,7 @@ export default function Navigation() {
                   {!isCheckingAdmin && isSuperAdmin && (
                     <Link
                       href="/admin"
-                      className="group inline-flex items-center gap-2 px-4 py-2 rounded-button font-medium transition-all text-brand-blurple hover:text-brand-blurple-dark border-2 border-brand-blurple/30 hover:border-brand-blurple hover:bg-brand-blurple/5 hover:scale-105 active:scale-95"
+                      className="group inline-flex items-center gap-2 px-4 py-2 rounded-button font-medium transition-all text-gray-900 hover:text-brand-primary bg-gray-100 hover:bg-gray-200 border-2 border-gray-200 hover:border-gray-300 hover:scale-105 active:scale-95"
                     >
                       <Shield className="h-4 w-4 group-hover:scale-110 transition-transform" />
                       Admin
