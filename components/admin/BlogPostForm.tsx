@@ -6,6 +6,7 @@ import { RichTextEditor } from '@/components/RichTextEditor';
 import { MediaLibraryModal } from '@/components/MediaLibraryModal';
 import { AILayoutGenerator } from '@/components/blog/AILayoutGenerator';
 import { OneClickBlogGenerator } from '@/components/blog/OneClickBlogGenerator';
+import { VisualTransformer } from '@/components/blog/VisualTransformer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -350,6 +351,27 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
           />
         </CardContent>
       </Card>
+
+      {/* Visual Transformer - Transform existing content into stunning layouts */}
+      {title && content && (
+        <Card>
+          <CardHeader>
+            <CardTitle>🎨 Transform to Visual Layout</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <VisualTransformer
+              title={title}
+              content={content}
+              excerpt={excerpt}
+              onTransformed={(layout) => {
+                console.log('Visual layout transformed:', layout);
+                alert('✨ Layout transformed! This will be integrated with the content editor in the next phase.');
+                // Future: Apply the layout to the post
+              }}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* AI Layout Generator */}
       <Card>
