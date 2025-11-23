@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Plus, Search, Edit, Trash2, Eye, Calendar } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Eye, Calendar, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -149,11 +149,18 @@ export default function AdminBlogPage() {
                 </div>
                 <div className="flex items-center gap-2 ml-4">
                   {post.status === 'published' && (
-                    <Link href={`/blog/${post.slug}`} target="_blank">
-                      <Button variant="outline" size="sm">
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </Link>
+                    <>
+                      <Link href={`/blog/${post.slug}`} target="_blank">
+                        <Button variant="outline" size="sm">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </Link>
+                      <Link href={`/admin/social-content?blogPostId=${post.id}`}>
+                        <Button variant="outline" size="sm" className="text-blue-600 hover:bg-blue-50">
+                          <Share2 className="h-4 w-4" />
+                        </Button>
+                      </Link>
+                    </>
                   )}
                   <Link href={`/admin/blog/edit/${post.id}`}>
                     <Button variant="outline" size="sm">
