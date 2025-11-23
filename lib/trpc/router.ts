@@ -18,9 +18,15 @@ import { webinarRouter } from './routers/webinars';
 import { examplesRouter } from './routers/examples';
 
 
+import { analyticsRouter } from './routers/analytics';
+
+
 export const appRouter = router({
   // Subscription management
   subscription: subscriptionRouter,
+  
+  // Analytics & Statistics
+  analytics: analyticsRouter,
   
   // CMS & Content management
   cms: cmsRouter,
