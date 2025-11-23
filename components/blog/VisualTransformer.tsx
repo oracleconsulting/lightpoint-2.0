@@ -206,9 +206,35 @@ export function VisualTransformer({
   );
 }
 
-// Helper function to strip HTML tags
-function stripHtml(html: string): string {
-  if (typeof html !== 'string') return '';
-  return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+// Helper function to strip HTML tags and extract text from TipTap JSON
+function stripHtml(content: any): string {
+  if (!content) return '';
+  
+  // If it's a TipTap JSON object
+  if (typeof content === 'object' && content.type === 'doc') {
+    const extractText = (node: any): string => {
+      if (!node) return '';
+      
+      if (node.type === 'text') {
+        return node.text || '';
+      }
+      
+      if (node.content && Array.isArray(node.content)) {
+        return node.content.map(extractText).join(' ');
+      }
+      
+      return '';
+    };
+    
+    return extractText(content).replace(/\s+/g, ' ').trim();
+  }
+  
+  // If it's an HTML string
+  if (typeof content === 'string') {
+    return content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+  
+  // Otherwise try to stringify it
+  return String(content).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
