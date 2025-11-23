@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { supabaseAdmin } from '@/lib/supabase/client';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -14,6 +13,9 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(req: NextRequest) {
   try {
+    // Dynamic import to avoid build-time evaluation
+    const { supabaseAdmin } = await import('@/lib/supabase/client');
+    
     // Get user from session
     const cookieStore = cookies();
     const supabase = createServerClient(

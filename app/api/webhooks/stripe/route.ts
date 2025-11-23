@@ -1,18 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { supabaseAdmin } from '@/lib/supabase/client';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder', {
   apiVersion: '2025-11-17.clover',
 });
 
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || 'whsec_placeholder';
 
 export async function POST(req: NextRequest) {
+  // Dynamic import to avoid build-time evaluation
+  const { supabaseAdmin } = await import('@/lib/supabase/client');
+  
   const body = await req.text();
   const signature = req.headers.get('stripe-signature');
 
@@ -40,24 +42,24 @@ export async function POST(req: NextRequest) {
   try {
     switch (event.type) {
       case 'checkout.session.completed':
-        await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
+        await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session, supabaseAdmin);
         break;
 
       case 'customer.subscription.created':
       case 'customer.subscription.updated':
-        await handleSubscriptionUpdate(event.data.object as Stripe.Subscription);
+        await handleSubscriptionUpdate(event.data.object as Stripe.Subscription, supabaseAdmin);
         break;
 
       case 'customer.subscription.deleted':
-        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
+        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription, supabaseAdmin);
         break;
 
       case 'invoice.payment_succeeded':
-        await handlePaymentSucceeded(event.data.object as Stripe.Invoice);
+        await handlePaymentSucceeded(event.data.object as Stripe.Invoice, supabaseAdmin);
         break;
 
       case 'invoice.payment_failed':
-        await handlePaymentFailed(event.data.object as Stripe.Invoice);
+        await handlePaymentFailed(event.data.object as Stripe.Invoice, supabaseAdmin);
         break;
 
       default:
@@ -84,7 +86,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
+async function handleCheckoutCompleted(session: Stripe.Checkout.Session, supabaseAdmin: any) {
   console.log('✅ Checkout completed:', session.id);
 
   const { customer, subscription, client_reference_id } = session;
@@ -139,7 +141,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   }
 }
 
-async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
+async function handleSubscriptionUpdate(subscription: Stripe.Subscription, supabaseAdmin: any) {
   console.log('🔄 Subscription updated:', subscription.id);
 
   const priceId = subscription.items.data[0].price.id;
@@ -178,10 +180,10 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
   }
 }
 
-async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
+async function handleSubscriptionDeleted(subscription: Stripe.Subscription, supabaseAdmin: any) {
   console.log('❌ Subscription deleted:', subscription.id);
 
-  const { error } = await (supabaseAdmin as any)
+  const { error} = await (supabaseAdmin as any)
     .from('user_subscriptions')
     .update({
       status: 'cancelled',
@@ -196,7 +198,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   }
 }
 
-async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
+async function handlePaymentSucceeded(invoice: Stripe.Invoice, supabaseAdmin: any) {
   console.log('💰 Payment succeeded:', invoice.id);
 
   if (!(invoice as any).subscription) return;
@@ -216,7 +218,7 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
   console.log('✅ Subscription renewed');
 }
 
-async function handlePaymentFailed(invoice: Stripe.Invoice) {
+async function handlePaymentFailed(invoice: Stripe.Invoice, supabaseAdmin: any) {
   console.error('❌ Payment failed:', invoice.id);
 
   if (!(invoice as any).subscription) return;

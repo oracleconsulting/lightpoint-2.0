@@ -45,9 +45,14 @@ let _supabaseAdmin: any = null;
 export const supabaseAdmin = new Proxy({} as ReturnType<typeof createClient>, {
   get(target, prop) {
     if (!_supabaseAdmin) {
+      // During build, return a mock that won't cause errors
+      if (!process.env.SUPABASE_SERVICE_KEY && process.env.NODE_ENV !== 'development') {
+        console.warn('supabaseAdmin accessed during build - returning mock');
+        return undefined;
+      }
       _supabaseAdmin = createServerClient();
     }
-    return _supabaseAdmin[prop];
+    return _supabaseAdmin?.[prop];
   }
 });
 
