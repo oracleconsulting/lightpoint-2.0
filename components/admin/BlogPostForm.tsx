@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { RichTextEditor } from '@/components/RichTextEditor';
 import { MediaLibraryModal } from '@/components/MediaLibraryModal';
-import { AILayoutGenerator } from '@/components/blog/AILayoutGenerator';
 import { OneClickBlogGenerator } from '@/components/blog/OneClickBlogGenerator';
 import { VisualTransformer } from '@/components/blog/VisualTransformer';
 import { Button } from '@/components/ui/button';
@@ -356,7 +355,7 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
       {title && content && (
         <Card>
           <CardHeader>
-            <CardTitle>🎨 Transform to Visual Layout</CardTitle>
+            <CardTitle>🎨 AI Visual Enhancement</CardTitle>
           </CardHeader>
           <CardContent>
             <VisualTransformer
@@ -372,28 +371,6 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
           </CardContent>
         </Card>
       )}
-
-      {/* AI Layout Generator */}
-      <Card>
-        <CardHeader>
-          <CardTitle>✨ AI-Powered Visual Layout</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <AILayoutGenerator
-            title={title}
-            content={content}
-            excerpt={excerpt}
-            onLayoutGenerated={(layout) => {
-              // Store the AI-generated layout as JSON in the content field
-              // In future, we'll have a dedicated field for structured content
-              console.log('AI Generated Layout:', layout);
-              alert('Layout generated! This will be integrated with the content editor in the next phase.');
-              // For now, we can optionally convert it to HTML and append
-              // setContent(prev => prev + '\n\n<!-- AI Generated Layout -->\n' + JSON.stringify(layout, null, 2));
-            }}
-          />
-        </CardContent>
-      </Card>
 
       {/* Featured Image */}
       <Card>
