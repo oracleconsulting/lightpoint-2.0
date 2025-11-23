@@ -28,12 +28,20 @@ ENV OPENROUTER_API_KEY=placeholder_key
 # Build the application
 RUN npm run build
 
+# Copy necessary files for standalone mode
+RUN cp -r .next/static .next/standalone/.next/static 2>/dev/null || true
+RUN cp -r public .next/standalone/public 2>/dev/null || true
+
 # Expose port
 EXPOSE 3005
 
 # Set Node.js DNS to prefer IPv4 (fixes Railway network issues)
 ENV NODE_OPTIONS="--dns-result-order=ipv4first"
+ENV PORT=3005
 
-# Start the application (runtime env vars will override placeholders)
-CMD ["npm", "start"]
+# Change to standalone directory
+WORKDIR /app/.next/standalone
+
+# Start the application using standalone mode
+CMD ["node", "server.js"]
 
