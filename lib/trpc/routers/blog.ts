@@ -127,7 +127,8 @@ export const blogRouter = router({
           content: input.content,
           featured_image_url: input.featuredImage || null,
           featured_image_alt: input.featuredImageAlt || null,
-          author_id: ctx.user?.id || null,
+          author: input.author || 'Admin', // TEXT field - required
+          author_id: ctx.user?.id || null, // UUID field - optional FK
           status: input.isPublished ? 'published' : 'draft',
           published_at: input.isPublished ? new Date().toISOString() : null,
           category: input.category || null,
