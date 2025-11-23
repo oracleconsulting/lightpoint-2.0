@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { trpc } from '@/lib/trpc/Provider';
-import { Check, Zap, Crown, Building2 } from 'lucide-react';
+import { Check, Zap, Crown, Building2, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -76,24 +77,32 @@ export default function PricingPage() {
   };
   
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
+    <div className="min-h-screen bg-gradient-to-b from-white via-gray-50 to-white">
       <div className="container mx-auto py-16 px-4">
         {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-12"
+        >
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-100 text-blue-700 text-sm font-semibold mb-4">
+            <Sparkles className="h-4 w-4" />
+            Flexible Pricing for Every Practice
+          </div>
+          <h1 className="text-4xl md:text-5xl font-heading font-bold mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             Simple, Transparent Pricing
           </h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
             Choose the perfect plan for your practice. All plans include a 14-day free trial.
           </p>
           
           {/* Billing Toggle */}
-          <div className="inline-flex items-center gap-4 p-1 bg-muted rounded-lg">
+          <div className="inline-flex items-center gap-4 p-1 bg-gray-100 rounded-lg shadow-sm">
             <button
               className={`px-6 py-2 rounded-md transition-all ${
                 billingPeriod === 'monthly'
-                  ? 'bg-background shadow-sm font-medium'
-                  : 'text-muted-foreground'
+                  ? 'bg-white shadow-md font-semibold'
+                  : 'text-gray-600 hover:text-gray-900'
               }`}
               onClick={() => setBillingPeriod('monthly')}
             >
@@ -102,22 +111,22 @@ export default function PricingPage() {
             <button
               className={`px-6 py-2 rounded-md transition-all flex items-center gap-2 ${
                 billingPeriod === 'annual'
-                  ? 'bg-background shadow-sm font-medium'
-                  : 'text-muted-foreground'
+                  ? 'bg-white shadow-md font-semibold'
+                  : 'text-gray-600 hover:text-gray-900'
               }`}
               onClick={() => setBillingPeriod('annual')}
             >
               Annual
-              <Badge variant="secondary" className="text-xs">
+              <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs">
                 Save up to 17%
               </Badge>
             </button>
           </div>
-        </div>
+        </motion.div>
         
         {/* Pricing Cards */}
         <div className="grid gap-8 md:grid-cols-3 max-w-6xl mx-auto">
-          {tiers?.map((tier: any) => {
+          {tiers?.map((tier: any, index: number) => {
             const price = billingPeriod === 'monthly' 
               ? tier.monthly_price 
               : tier.annual_price;
@@ -127,19 +136,26 @@ export default function PricingPage() {
               : displayPrice;
             
             return (
-              <Card 
+              <motion.div
                 key={tier.id}
-                className={`relative ${tier.is_popular ? 'border-primary border-2 shadow-lg' : ''}`}
-                style={{ borderColor: tier.is_popular ? tier.color_theme : undefined }}
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
               >
-                {tier.is_popular && (
-                  <Badge 
-                    className="absolute -top-3 left-1/2 -translate-x-1/2"
-                    style={{ backgroundColor: tier.color_theme }}
-                  >
-                    Most Popular
-                  </Badge>
-                )}
+                <Card 
+                  className={`relative glass hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 ${
+                    tier.is_popular ? 'border-2 shadow-xl scale-105' : 'border border-gray-200'
+                  }`}
+                  style={{ borderColor: tier.is_popular ? tier.color_theme : undefined }}
+                >
+                  {tier.is_popular && (
+                    <Badge 
+                      className="absolute -top-3 left-1/2 -translate-x-1/2 shadow-lg"
+                      style={{ backgroundColor: tier.color_theme }}
+                    >
+                      ⭐ Most Popular
+                    </Badge>
+                  )}
                 
                 <CardHeader>
                   <div className="flex items-center justify-between mb-2">
@@ -250,7 +266,7 @@ export default function PricingPage() {
                 
                 <CardFooter>
                   <Button 
-                    className="w-full" 
+                    className="w-full btn-hover" 
                     size="lg"
                     variant={tier.is_popular ? 'default' : 'outline'}
                     onClick={() => handleStartTrial(tier)}
@@ -260,49 +276,60 @@ export default function PricingPage() {
                   </Button>
                 </CardFooter>
               </Card>
+              </motion.div>
             );
           })}
         </div>
         
         {/* FAQ / Additional Info */}
-        <div className="max-w-4xl mx-auto mt-16 text-center">
-          <h2 className="text-2xl font-bold mb-4">All Plans Include</h2>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="max-w-4xl mx-auto mt-16 text-center"
+        >
+          <h2 className="text-2xl font-heading font-bold mb-8">All Plans Include</h2>
           <div className="grid gap-6 md:grid-cols-3 text-left">
-            <div className="p-6 border rounded-lg">
-              <h3 className="font-semibold mb-2">14-Day Free Trial</h3>
-              <p className="text-sm text-muted-foreground">
+            <div className="p-6 border border-gray-200 rounded-xl glass hover:shadow-lg hover:-translate-y-1 transition-all">
+              <h3 className="font-semibold text-lg mb-2">14-Day Free Trial</h3>
+              <p className="text-sm text-gray-600">
                 Try any plan risk-free. No credit card required.
               </p>
             </div>
-            <div className="p-6 border rounded-lg">
-              <h3 className="font-semibold mb-2">Cancel Anytime</h3>
-              <p className="text-sm text-muted-foreground">
+            <div className="p-6 border border-gray-200 rounded-xl glass hover:shadow-lg hover:-translate-y-1 transition-all">
+              <h3 className="font-semibold text-lg mb-2">Cancel Anytime</h3>
+              <p className="text-sm text-gray-600">
                 No long-term contracts. Cancel your subscription at any time.
               </p>
             </div>
-            <div className="p-6 border rounded-lg">
-              <h3 className="font-semibold mb-2">Easy Upgrades</h3>
-              <p className="text-sm text-muted-foreground">
+            <div className="p-6 border border-gray-200 rounded-xl glass hover:shadow-lg hover:-translate-y-1 transition-all">
+              <h3 className="font-semibold text-lg mb-2">Easy Upgrades</h3>
+              <p className="text-sm text-gray-600">
                 Start small and upgrade as your practice grows.
               </p>
             </div>
           </div>
-        </div>
+        </motion.div>
         
         {/* Enterprise CTA */}
-        <div className="max-w-4xl mx-auto mt-12 p-8 border-2 rounded-lg bg-gradient-to-r from-primary/10 to-primary/5">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="max-w-4xl mx-auto mt-12 p-8 border-2 border-blue-200 rounded-2xl bg-gradient-to-r from-blue-50 to-purple-50 hover:shadow-xl transition-shadow"
+        >
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div>
               <h3 className="text-2xl font-bold mb-2">Need a Custom Solution?</h3>
-              <p className="text-muted-foreground">
+              <p className="text-gray-600">
                 Contact our team for enterprise pricing, custom integrations, and dedicated support.
               </p>
             </div>
-            <Button size="lg" onClick={() => router.push('/contact')}>
+            <Button size="lg" className="btn-hover" onClick={() => router.push('/contact')}>
               Contact Sales
             </Button>
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   );
