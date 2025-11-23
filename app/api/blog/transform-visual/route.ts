@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * Visual Transformation API
  * Takes existing blog content and transforms it into a visually powerful layout

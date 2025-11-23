@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * AI Layout Generator API Route
  * Analyzes blog post content and automatically generates optimal visual layout

@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * ONE-CLICK BLOG GENERATOR
  * Full Gamma-style blog generation from a simple topic/prompt

@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * AI Image Analysis API Route
  * Uses Claude 3.5 Sonnet (via OpenRouter) with vision capabilities to analyze blog post images
