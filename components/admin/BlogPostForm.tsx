@@ -6,6 +6,7 @@ import { RichTextEditor } from '@/components/RichTextEditor';
 import { MediaLibraryModal } from '@/components/MediaLibraryModal';
 import { OneClickBlogGenerator } from '@/components/blog/OneClickBlogGenerator';
 import { VisualTransformer } from '@/components/blog/VisualTransformer';
+import { VisualLayoutEditor } from '@/components/blog/VisualLayoutEditor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -396,7 +397,37 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
               onTransformed={(layout) => {
                 console.log('✅ Visual layout transformed:', layout);
                 setStructuredLayout(layout);
-                alert('✨ Layout applied! Save the post to keep this visual layout.');
+                alert('✨ Layout applied! You can now fine-tune the placement below, or save the post to keep this visual layout.');
+              }}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Fine-Tune Layout Placement (Option C) */}
+      {structuredLayout && content && (
+        <Card>
+          <CardHeader>
+            <CardTitle>🎨 Fine-Tune Visual Placement</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <VisualLayoutEditor
+              textParagraphs={
+                // Extract paragraphs from content
+                typeof content === 'string' 
+                  ? content.split('\n\n').filter(Boolean)
+                  : (content as any)?.content?.map((node: any) => 
+                      node.content?.map((n: any) => n.text || '').join('') || ''
+                    ).filter(Boolean) || []
+              }
+              visualElements={structuredLayout.layout || []}
+              initialPlacements={structuredLayout.manual_placements || {}}
+              onSave={(placements) => {
+                setStructuredLayout({
+                  ...structuredLayout,
+                  manual_placements: placements,
+                });
+                alert('✅ Layout placements saved! Remember to click "Save" at the top to persist these changes.');
               }}
             />
           </CardContent>
