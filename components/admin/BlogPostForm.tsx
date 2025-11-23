@@ -34,6 +34,8 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
   const [metaTitle, setMetaTitle] = useState('');
   const [metaDescription, setMetaDescription] = useState('');
   const [isPublished, setIsPublished] = useState(false);
+  const [scheduledFor, setScheduledFor] = useState('');
+  const [autoPublish, setAutoPublish] = useState(false);
 
   // tRPC mutations
   const createPost = trpc.blog.create.useMutation();
@@ -61,6 +63,13 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
       setMetaTitle(existingPost.seo_title || '');
       setMetaDescription(existingPost.seo_description || '');
       setIsPublished(existingPost.status === 'published');
+      
+      // Scheduled publishing fields
+      if (existingPost.scheduled_for) {
+        const date = new Date(existingPost.scheduled_for);
+        setScheduledFor(date.toISOString().slice(0, 16)); // Format for datetime-local
+      }
+      setAutoPublish(existingPost.auto_publish || false);
     }
   }, [existingPost]);
 
@@ -106,6 +115,8 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
         metaTitle: metaTitle || undefined,
         metaDescription: metaDescription || undefined,
         isPublished,
+        scheduledFor: scheduledFor ? new Date(scheduledFor).toISOString() : undefined,
+        autoPublish: autoPublish || undefined,
       };
 
       if (postId) {
@@ -389,7 +400,7 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
         <CardHeader>
           <CardTitle>Publishing</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <div className="flex items-center gap-3">
             <input
               type="checkbox"
@@ -402,11 +413,53 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
               Publish immediately
             </Label>
           </div>
-          <p className="text-sm text-gray-500 mt-2">
+          <p className="text-sm text-gray-500">
             {isPublished
               ? 'This post will be visible on your blog.'
               : 'This post will be saved as a draft.'}
           </p>
+
+          {/* Scheduled Publishing */}
+          {!isPublished && (
+            <div className="border-t pt-4 space-y-4">
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="autoPublish"
+                  checked={autoPublish}
+                  onChange={(e) => setAutoPublish(e.target.checked)}
+                  className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <Label htmlFor="autoPublish" className="cursor-pointer">
+                  Schedule for automatic publishing
+                </Label>
+              </div>
+
+              {autoPublish && (
+                <div>
+                  <Label htmlFor="scheduledFor">Publish Date & Time</Label>
+                  <Input
+                    type="datetime-local"
+                    id="scheduledFor"
+                    value={scheduledFor}
+                    onChange={(e) => setScheduledFor(e.target.value)}
+                    min={new Date().toISOString().slice(0, 16)}
+                    className="mt-1"
+                  />
+                  <p className="text-sm text-gray-500 mt-2">
+                    {scheduledFor ? (
+                      <>
+                        📅 This post will automatically publish on{' '}
+                        <strong>{new Date(scheduledFor).toLocaleString()}</strong>
+                      </>
+                    ) : (
+                      'Select when this post should be automatically published'
+                    )}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
