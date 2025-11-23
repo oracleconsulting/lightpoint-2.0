@@ -31,15 +31,37 @@ interface LayoutSection {
 }
 
 interface DynamicLayoutProps {
-  layout: LayoutSection[];
+  layout: LayoutSection[] | { layout: LayoutSection[]; theme?: any };
   theme?: {
     primary_color?: string;
     style?: string;
   };
 }
 
-export function DynamicLayoutRenderer({ layout, theme }: DynamicLayoutProps) {
-  if (!layout || layout.length === 0) {
+export function DynamicLayoutRenderer({ layout: layoutProp, theme: themeProp }: DynamicLayoutProps) {
+  // Handle different data formats
+  let layout: LayoutSection[];
+  let theme: any;
+
+  if (Array.isArray(layoutProp)) {
+    // Direct array format
+    layout = layoutProp;
+    theme = themeProp;
+  } else if (layoutProp && typeof layoutProp === 'object' && 'layout' in layoutProp) {
+    // Wrapped format { layout: [...], theme: {...} }
+    layout = (layoutProp as any).layout;
+    theme = (layoutProp as any).theme || themeProp;
+  } else {
+    // Unknown format
+    console.error('Invalid layout format:', layoutProp);
+    return (
+      <div className="text-center py-12 text-red-500">
+        Invalid layout data format
+      </div>
+    );
+  }
+
+  if (!layout || !Array.isArray(layout) || layout.length === 0) {
     return (
       <div className="text-center py-12 text-gray-500">
         No layout data available

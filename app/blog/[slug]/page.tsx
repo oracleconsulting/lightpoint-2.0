@@ -216,7 +216,10 @@ export default function BlogPostPage() {
         {/* Render AI-generated visual layout if it exists, otherwise render normal content */}
         {post.structured_layout ? (
           <div className="space-y-8">
-            <DynamicLayoutRenderer layout={post.structured_layout} />
+            <DynamicLayoutRenderer 
+              layout={post.structured_layout.layout || post.structured_layout} 
+              theme={post.structured_layout.theme}
+            />
           </div>
         ) : (
           <div
