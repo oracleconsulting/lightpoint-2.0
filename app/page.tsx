@@ -98,7 +98,7 @@ export default function HomePage() {
                 {hero.cta_secondary_text && (
                   <Link
                     href={hero.cta_secondary_link || '/subscription/checkout'}
-                    className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold rounded-button glass text-white hover:bg-white/20 transition-all border-2 border-white/30 hover:border-white/50 hover:scale-[1.02]"
+                    className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold rounded-button bg-white text-brand-primary hover:bg-gray-50 transition-all border-2 border-white shadow-lg hover:shadow-xl hover:scale-[1.02]"
                   >
                     {hero.cta_secondary_text}
                   </Link>
