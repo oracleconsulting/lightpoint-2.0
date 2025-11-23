@@ -39,9 +39,6 @@ EXPOSE 3005
 ENV NODE_OPTIONS="--dns-result-order=ipv4first"
 ENV PORT=3005
 
-# Change to standalone directory
-WORKDIR /app/.next/standalone
-
-# Start the application using standalone mode
-CMD ["node", "server.js"]
+# Start the application using standalone mode (stay in /app, reference .next/standalone/server.js)
+CMD ["node", ".next/standalone/server.js"]
 
