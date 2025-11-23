@@ -146,7 +146,7 @@ export default function HomePage() {
       )}
 
       {/* Trust Metrics - LIVE Platform Stats */}
-      <section className="py-16 bg-gradient-to-b from-white to-gray-50">
+      <section className="py-16 bg-textured">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-heading font-bold text-gray-900 mb-4">
@@ -262,7 +262,7 @@ export default function HomePage() {
 
       {/* Features Section */}
       {features?.features && (
-        <section className="py-20 bg-white">
+        <section className="py-20 bg-textured-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
               <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
