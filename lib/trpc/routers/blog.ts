@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { router, protectedProcedure } from '../trpc';
-import { createBrowserClient } from '@supabase/ssr';
+import { createServerClient } from '@/lib/supabase/client';
 
 // Validation schemas
 const blogPostSchema = z.object({
@@ -32,10 +32,7 @@ export const blogRouter = router({
       })
     )
     .query(async ({ input, ctx }) => {
-      const supabase = createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      );
+      const supabase = createServerClient();
 
       let query = supabase
         .from('blog_posts')
@@ -72,10 +69,7 @@ export const blogRouter = router({
   getById: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .query(async ({ input }) => {
-      const supabase = createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      );
+      const supabase = createServerClient();
 
       const { data, error } = await supabase
         .from('blog_posts')
@@ -95,10 +89,7 @@ export const blogRouter = router({
   getBySlug: protectedProcedure
     .input(z.object({ slug: z.string() }))
     .query(async ({ input }) => {
-      const supabase = createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      );
+      const supabase = createServerClient();
 
       const { data, error } = await supabase
         .from('blog_posts')
@@ -121,10 +112,7 @@ export const blogRouter = router({
   create: protectedProcedure
     .input(blogPostSchema)
     .mutation(async ({ input, ctx }) => {
-      const supabase = createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      );
+      const supabase = createServerClient();
 
       // Calculate read time (rough estimate: 200 words per minute)
       const wordCount = JSON.stringify(input.content).split(/\s+/).length;
@@ -170,10 +158,7 @@ export const blogRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const supabase = createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      );
+      const supabase = createServerClient();
 
       const updateData: any = {
         updated_at: new Date().toISOString(),
@@ -223,10 +208,7 @@ export const blogRouter = router({
   delete: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ input }) => {
-      const supabase = createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      );
+      const supabase = createServerClient();
 
       const { error } = await supabase
         .from('blog_posts')
@@ -245,10 +227,7 @@ export const blogRouter = router({
   incrementViews: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ input }) => {
-      const supabase = createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      );
+      const supabase = createServerClient();
 
       const { error } = await supabase.rpc('increment_blog_post_views', {
         post_id: input.id,
