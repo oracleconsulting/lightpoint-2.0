@@ -182,10 +182,10 @@ export function FloatingTrustBadges() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 + i * 0.1 }}
-          className="glass rounded-full px-5 py-2.5 border-2 border-white/40 backdrop-blur-xl flex items-center gap-2 hover:scale-110 transition-all shadow-2xl bg-white/10"
+          className="rounded-full px-5 py-2.5 border-2 border-blue-700/50 backdrop-blur-xl flex items-center gap-2 hover:scale-110 transition-all shadow-2xl bg-blue-900/90"
         >
           <span className="text-xl">{badge.icon}</span>
-          <span className="text-sm text-white font-bold drop-shadow-lg">{badge.text}</span>
+          <span className="text-sm text-white font-bold">{badge.text}</span>
         </motion.div>
       ))}
     </div>
