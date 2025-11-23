@@ -116,7 +116,7 @@ Extract EVERYTHING visual. Turn boring text into engaging components.`,
           },
         ],
         temperature: 0.6,
-        max_tokens: 6000,
+        max_tokens: 8000, // Increased to ensure complete JSON response
       }),
     });
 
@@ -132,24 +132,30 @@ Extract EVERYTHING visual. Turn boring text into engaging components.`,
     const data = await response.json();
     const aiOutput = data.choices[0].message.content;
 
+    console.log('📄 AI Response (first 500 chars):', aiOutput.substring(0, 500));
+
     // Parse the AI response
     let transformedLayout;
     try {
       // Try to extract JSON from markdown code blocks
-      const jsonMatch = aiOutput.match(/```json\n([\s\S]*?)\n```/);
+      const jsonMatch = aiOutput.match(/```json\s*\n([\s\S]*?)\n```/);
       if (jsonMatch) {
+        console.log('✅ Found JSON in markdown code block');
         transformedLayout = JSON.parse(jsonMatch[1]);
       } else {
         // Try parsing directly
+        console.log('⚠️ No code block found, parsing raw response');
         transformedLayout = JSON.parse(aiOutput);
       }
-    } catch (parseError) {
-      console.error('Failed to parse AI response as JSON:', aiOutput);
+    } catch (parseError: any) {
+      console.error('❌ Failed to parse AI response:', parseError.message);
+      console.error('📄 Full AI output:', aiOutput);
       return NextResponse.json(
         {
           success: false,
-          error: 'AI returned invalid JSON structure',
-          raw: aiOutput,
+          error: 'AI returned invalid or incomplete JSON. Please try again.',
+          details: parseError.message,
+          raw: aiOutput.substring(0, 1000), // First 1000 chars for debugging
         },
         { status: 500 }
       );
