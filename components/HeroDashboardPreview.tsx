@@ -83,9 +83,14 @@ export function HeroDashboardPreview() {
           initial={{ opacity: 0, scale: 0 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 1.5, type: 'spring' }}
-          className="absolute -top-4 -right-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg cursor-pointer hover:scale-110 transition-transform"
+          className="absolute -top-4 -right-4"
         >
-          See it in action →
+          <a
+            href="/waitlist"
+            className="block bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg cursor-pointer hover:scale-110 transition-transform"
+          >
+            Join Waitlist →
+          </a>
         </motion.div>
 
         {/* Floating Progress Ring */}
@@ -166,8 +171,7 @@ export function HeroDashboardPreview() {
 export function FloatingTrustBadges() {
   const badges = [
     { text: 'GDPR Compliant', icon: '🔒' },
-    { text: 'ISO 27001', icon: '✓' },
-    { text: 'Bank-level Security', icon: '🛡️' },
+    { text: 'Secure Platform', icon: '🛡️' },
   ];
 
   return (

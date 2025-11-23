@@ -23,49 +23,21 @@ interface CaseStudy {
 export function SocialProofSection() {
   const testimonials: Testimonial[] = [
     {
-      quote: "Lightpoint transformed how we handle HMRC complaints. We've recovered £47k in just 3 months.",
-      author: "Sarah Mitchell",
-      role: "Senior Partner",
-      company: "Mitchell & Associates",
-      rating: 5,
-    },
-    {
-      quote: "The AI-powered analysis saves us hours of research. Success rate improved from 67% to 94%.",
-      author: "David Chen",
-      role: "Tax Director",
-      company: "Chen Professional Services",
-      rating: 5,
-    },
-    {
-      quote: "Best investment we've made. The templates alone are worth 10x the subscription cost.",
-      author: "Emma Thompson",
-      role: "Managing Director",
-      company: "Thompson Accounting Ltd",
+      quote: "Coming soon - we're gathering feedback from our beta users.",
+      author: "Beta Programme",
+      role: "Active Development",
+      company: "Lightpoint Platform",
       rating: 5,
     },
   ];
 
   const caseStudies: CaseStudy[] = [
     {
-      title: "PWC Regional Office",
-      metric: "Recovered",
-      value: "£47k",
-      description: "In 3 months across 12 cases",
-      color: "green",
-    },
-    {
-      title: "Grant Thornton",
-      metric: "Success Rate",
-      value: "96%",
-      description: "From 68% before Lightpoint",
+      title: "Platform Launch",
+      metric: "Coming Soon",
+      value: "Q1 2025",
+      description: "Real results from real firms",
       color: "blue",
-    },
-    {
-      title: "BDO Practice",
-      metric: "Time Saved",
-      value: "140hrs",
-      description: "Per quarter on complaints",
-      color: "purple",
     },
   ];
 
@@ -81,7 +53,7 @@ export function SocialProofSection() {
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-100 text-blue-700 text-sm font-semibold mb-4"
           >
             <Star className="h-4 w-4 fill-current" />
-            Trusted by Leading Firms
+            Building with Leading Firms
           </motion.div>
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
@@ -90,7 +62,7 @@ export function SocialProofSection() {
             transition={{ delay: 0.1 }}
             className="text-3xl sm:text-4xl font-heading font-bold text-gray-900 mb-4"
           >
-            Join 150+ Firms Winning with Lightpoint
+            Launching Q1 2025
           </motion.h2>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
@@ -99,12 +71,12 @@ export function SocialProofSection() {
             transition={{ delay: 0.2 }}
             className="text-xl text-gray-600 max-w-3xl mx-auto"
           >
-            See how top accounting firms are transforming their HMRC complaint success rates
+            Join the waitlist to be among the first accounting firms using Lightpoint
           </motion.p>
         </div>
 
-        {/* Case Studies - Quick Wins */}
-        <div className="grid md:grid-cols-3 gap-6 mb-16">
+        {/* Case Studies - Platform Launch Info */}
+        <div className="grid md:grid-cols-1 gap-6 mb-16 max-w-2xl mx-auto">
           {caseStudies.map((study, idx) => {
             const colorClasses = {
               green: 'from-green-500 to-emerald-500',
@@ -141,7 +113,7 @@ export function SocialProofSection() {
         </div>
 
         {/* Testimonials */}
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-1 gap-6 max-w-2xl mx-auto">
           {testimonials.map((testimonial, idx) => (
             <motion.div
               key={testimonial.author}
@@ -191,10 +163,10 @@ export function SocialProofSection() {
           transition={{ delay: 0.5 }}
           className="mt-16 text-center"
         >
-          <p className="text-sm text-gray-500 mb-6">Trusted by firms including:</p>
-          <div className="flex flex-wrap items-center justify-center gap-8 opacity-40">
-            {['PWC', 'BDO', 'Grant Thornton', 'RSM', 'Mazars', 'Crowe'].map((firm) => (
-              <div key={firm} className="text-2xl font-bold text-gray-400">
+          <p className="text-sm text-gray-500 mb-6">In development for professionals at firms like:</p>
+          <div className="flex flex-wrap items-center justify-center gap-8 opacity-30">
+            {['Accounting Firms', 'Tax Advisors', 'Bookkeepers', 'Financial Consultants'].map((firm) => (
+              <div key={firm} className="text-lg font-semibold text-gray-400">
                 {firm}
               </div>
             ))}
