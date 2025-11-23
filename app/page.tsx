@@ -199,7 +199,7 @@ export default function HomePage() {
                   {problemSolution.problems.map((problem: string, idx: number) => (
                     <div 
                       key={idx} 
-                      className="group relative bg-gradient-to-br from-red-50 to-red-100/50 border border-red-200/50 rounded-card p-6 text-center transition-all duration-300 hover:shadow-lg hover:-translate-y-1 overflow-hidden"
+                      className="group relative bg-gradient-to-br from-red-50 to-red-100/50 border-2 border-red-200 rounded-card p-6 text-center transition-all duration-300 shadow-lg hover:shadow-2xl hover:-translate-y-1 hover:border-red-300 overflow-hidden"
                     >
                       {/* Number Badge */}
                       <div className="absolute top-3 right-3 w-8 h-8 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center text-red-600 font-bold text-sm group-hover:scale-110 transition-transform">
@@ -235,7 +235,7 @@ export default function HomePage() {
                   {problemSolution.solutions.map((solution: string, idx: number) => (
                     <div 
                       key={idx} 
-                      className="group relative glass bg-gradient-to-br from-green-50 to-green-100/50 border border-green-300/50 rounded-card p-6 text-center transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-green-400 overflow-hidden"
+                      className="group relative bg-gradient-to-br from-green-50 to-green-100/50 border-2 border-green-300 rounded-card p-6 text-center transition-all duration-300 shadow-lg hover:shadow-2xl hover:-translate-y-1 hover:border-green-400 overflow-hidden"
                     >
                       {/* Number Badge */}
                       <div className="absolute top-3 right-3 w-8 h-8 rounded-full bg-green-500/20 border border-green-500/30 flex items-center justify-center text-green-600 font-bold text-sm group-hover:scale-110 transition-transform">
@@ -298,7 +298,7 @@ export default function HomePage() {
                 return (
                   <div 
                     key={idx} 
-                    className="group relative glass rounded-card p-8 border border-gray-200/50 hover:border-gray-300 transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 overflow-hidden"
+                    className="group relative bg-white rounded-card p-8 border-2 border-gray-200 shadow-xl hover:border-gray-300 transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 overflow-hidden"
                   >
                     {/* Dynamic glow based on feature color */}
                     <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity blur-2xl ${

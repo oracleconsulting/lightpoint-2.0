@@ -190,11 +190,11 @@
   
   /* Glassmorphism effect */
   .glass {
-    @apply bg-white/80 backdrop-blur-lg border border-white/20;
+    @apply bg-white/95 backdrop-blur-xl border-2 border-white/30 shadow-xl;
   }
   
   .glass-dark {
-    @apply bg-gray-900/80 backdrop-blur-lg border border-gray-800/20;
+    @apply bg-gray-900/90 backdrop-blur-xl border-2 border-gray-800/30 shadow-2xl;
   }
   
   /* Gradient text */

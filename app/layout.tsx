@@ -23,6 +23,11 @@ export const metadata: Metadata = {
     ],
     apple: '/logo-icon.svg',
   },
+  other: {
+    'cache-control': 'no-cache, no-store, must-revalidate',
+    'pragma': 'no-cache',
+    'expires': '0',
+  },
 };
 
 export default function RootLayout({
@@ -32,7 +37,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={inter.className} data-version="2.0.1-depth-fix">
         <TRPCProvider>
           <AuthProvider>
             <UserProvider>
