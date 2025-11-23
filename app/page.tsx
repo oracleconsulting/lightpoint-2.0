@@ -137,11 +137,11 @@ export default function HomePage() {
             </div>
           </div>
           
-          {/* Floating Trust Badges */}
-          <FloatingTrustBadges />
-          
           {/* Smooth transition to next section */}
-          <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white to-transparent"></div>
+          <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white to-transparent z-10"></div>
+          
+          {/* Floating Trust Badges - MUST BE AFTER gradient to be on top */}
+          <FloatingTrustBadges />
         </section>
       )}
 

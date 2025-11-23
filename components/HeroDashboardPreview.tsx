@@ -166,7 +166,7 @@ export function HeroDashboardPreview() {
 }
 
 /**
- * Floating trust badges - positioned above the gradient transition
+ * Floating trust badges - positioned above the gradient transition with high z-index
  */
 export function FloatingTrustBadges() {
   const badges = [
@@ -175,7 +175,7 @@ export function FloatingTrustBadges() {
   ];
 
   return (
-    <div className="absolute bottom-36 left-1/2 -translate-x-1/2 flex gap-4 z-20">
+    <div className="absolute bottom-36 left-1/2 -translate-x-1/2 flex gap-4 z-30">
       {badges.map((badge, i) => (
         <motion.div
           key={badge.text}
