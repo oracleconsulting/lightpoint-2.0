@@ -2,8 +2,10 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import { trpc } from '@/lib/trpc/Provider';
-import { ArrowRight, Calendar, Clock, Tag } from 'lucide-react';
+import { ArrowRight, Calendar, Clock, Tag, Sparkles, BookOpen } from 'lucide-react';
+import { Skeleton, SkeletonCard } from '@/components/ui/skeleton';
 
 export default function BlogPage() {
   const { data: posts, isLoading } = trpc.cms.listContentPosts.useQuery({
@@ -14,12 +16,15 @@ export default function BlogPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gradient-to-b from-white via-gray-50 to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="animate-pulse space-y-8">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white rounded-xl p-6 h-48" />
-            ))}
+          <div className="space-y-8">
+            <Skeleton className="h-12 w-64" />
+            <div className="grid gap-8">
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </div>
           </div>
         </div>
       </div>
@@ -27,16 +32,29 @@ export default function BlogPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-b from-white via-gray-50 to-white">
       {/* Header */}
-      <div className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-          <h1 className="text-4xl md:text-5xl font-extrabold mb-4">
-            Lightpoint Blog
-          </h1>
-          <p className="text-xl text-blue-100 max-w-3xl">
-            Expert insights on HMRC complaints, tax compliance, and fee recovery for UK accountants
-          </p>
+      <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 text-white">
+        <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:32px_32px]" />
+        <div className="absolute inset-0 bg-gradient-to-t from-blue-600/20 to-transparent" />
+        
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center"
+          >
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass border border-white/30 mb-6 bg-white/10">
+              <BookOpen className="h-4 w-4" />
+              <span className="text-sm font-semibold">Expert Insights</span>
+            </div>
+            <h1 className="text-4xl md:text-6xl font-heading font-bold mb-4">
+              Lightpoint Blog
+            </h1>
+            <p className="text-xl text-blue-100 max-w-3xl mx-auto">
+              Expert insights on HMRC complaints, tax compliance, and fee recovery for UK accountants
+            </p>
+          </motion.div>
         </div>
       </div>
 
@@ -48,14 +66,19 @@ export default function BlogPage() {
           </div>
         ) : (
           <div className="space-y-8">
-            {posts.posts.map((post: any) => (
-              <Link
+            {posts.posts.map((post: any, index: number) => (
+              <motion.div
                 key={post.id}
-                href={`/blog/${post.slug}`}
-                className="block group"
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
               >
-                <article className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 hover:border-blue-200 hover:-translate-y-1">
-                  <div className="md:flex">
+                <Link
+                  href={`/blog/${post.slug}`}
+                  className="block group"
+                >
+                  <article className="glass rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-200 hover:border-blue-300 hover:-translate-y-2">
+                    <div className="md:flex">
                     {/* Featured Image */}
                     {post.featured_image_url && (
                       <div className="md:w-1/3 h-64 md:h-auto relative overflow-hidden">
@@ -122,9 +145,10 @@ export default function BlogPage() {
                         </div>
                       </div>
                     </div>
-                  </div>
-                </article>
-              </Link>
+                    </div>
+                  </article>
+                </Link>
+              </motion.div>
             ))}
           </div>
         )}
@@ -151,23 +175,32 @@ export default function BlogPage() {
       </div>
 
       {/* CTA Section */}
-      <div className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        className="bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 text-white"
+      >
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
-          <h2 className="text-3xl font-bold mb-4">
-            Ready to Transform Your HMRC Complaints?
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass border border-white/30 mb-6 bg-white/10">
+            <Sparkles className="h-4 w-4" />
+            <span className="text-sm font-semibold">Ready to get started?</span>
+          </div>
+          <h2 className="text-3xl font-heading font-bold mb-4">
+            Transform Your HMRC Complaints Today
           </h2>
           <p className="text-xl text-blue-100 mb-8">
-            Join 500+ UK accountancy firms using Lightpoint
+            Join the waitlist to be among the first firms using Lightpoint
           </p>
           <Link
-            href="/pricing"
-            className="inline-flex items-center px-8 py-4 bg-white text-blue-600 font-semibold rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all"
+            href="/waitlist"
+            className="inline-flex items-center px-8 py-4 bg-white text-blue-600 font-semibold rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all btn-hover"
           >
-            Start Free Trial
+            Join Waitlist
             <ArrowRight className="ml-2 h-5 w-5" />
           </Link>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
