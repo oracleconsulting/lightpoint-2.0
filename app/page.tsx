@@ -166,13 +166,21 @@ export default function HomePage() {
                 </div>
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-5xl mx-auto">
                   {problemSolution.problems.map((problem: string, idx: number) => (
-                    <div key={idx} className="bg-red-50 border border-red-100 rounded-card p-4 text-center">
-                      <div className="flex items-center justify-center mb-2">
-                        <div className="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center font-bold text-lg">
-                          ✕
+                    <div 
+                      key={idx} 
+                      className="group relative bg-gradient-to-br from-red-50 to-red-100/50 border border-red-200/50 rounded-card p-6 text-center transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
+                    >
+                      {/* Glow effect on hover */}
+                      <div className="absolute inset-0 rounded-card bg-red-500/5 opacity-0 group-hover:opacity-100 transition-opacity blur-xl" />
+                      
+                      <div className="relative z-10">
+                        <div className="flex items-center justify-center mb-3">
+                          <div className="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center font-bold text-lg shadow-sm">
+                            ✕
+                          </div>
                         </div>
+                        <p className="text-gray-700 text-sm leading-relaxed">{problem}</p>
                       </div>
-                      <p className="text-gray-700 text-sm">{problem}</p>
                     </div>
                   ))}
                 </div>
@@ -189,11 +197,19 @@ export default function HomePage() {
                 </div>
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-5xl mx-auto">
                   {problemSolution.solutions.map((solution: string, idx: number) => (
-                    <div key={idx} className="bg-green-50 border border-green-200 rounded-card p-4 text-center hover:shadow-md hover:border-green-300 transition-all">
-                      <div className="flex items-center justify-center mb-2">
-                        <CheckCircle className="h-8 w-8 text-green-600" />
+                    <div 
+                      key={idx} 
+                      className="group relative glass bg-gradient-to-br from-green-50 to-green-100/50 border border-green-300/50 rounded-card p-6 text-center transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-green-400"
+                    >
+                      {/* Glow effect on hover */}
+                      <div className="absolute inset-0 rounded-card bg-green-500/10 opacity-0 group-hover:opacity-100 transition-opacity blur-xl" />
+                      
+                      <div className="relative z-10">
+                        <div className="flex items-center justify-center mb-3">
+                          <CheckCircle className="h-10 w-10 text-green-600 drop-shadow-sm" />
+                        </div>
+                        <p className="text-gray-800 text-sm font-medium leading-relaxed">{solution}</p>
                       </div>
-                      <p className="text-gray-700 text-sm font-medium">{solution}</p>
                     </div>
                   ))}
                 </div>
@@ -239,16 +255,31 @@ export default function HomePage() {
                 };
                 
                 return (
-                  <div key={idx} className="bg-white rounded-card p-8 border border-gray-200 hover:shadow-card-hover transition-all group">
-                    <div className={`inline-flex p-4 rounded-lg ${bgColors[feature.color] || 'bg-gray-100'} mb-6 group-hover:scale-110 transition-transform`}>
-                      <Icon className={`h-8 w-8 ${iconColors[feature.color] || 'text-gray-600'}`} />
+                  <div 
+                    key={idx} 
+                    className="group relative glass rounded-card p-8 border border-gray-200/50 hover:border-gray-300 transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 overflow-hidden"
+                  >
+                    {/* Dynamic glow based on feature color */}
+                    <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity blur-2xl ${
+                      feature.color === 'blue' ? 'bg-blue-500/10' :
+                      feature.color === 'green' ? 'bg-green-500/10' :
+                      feature.color === 'purple' ? 'bg-purple-500/10' :
+                      feature.color === 'indigo' ? 'bg-indigo-500/10' :
+                      feature.color === 'pink' ? 'bg-pink-500/10' :
+                      'bg-yellow-500/10'
+                    }`} />
+                    
+                    <div className="relative z-10">
+                      <div className={`inline-flex p-4 rounded-xl ${bgColors[feature.color] || 'bg-gray-100'} mb-6 shadow-sm group-hover:scale-110 group-hover:shadow-md transition-all duration-300`}>
+                        <Icon className={`h-8 w-8 ${iconColors[feature.color] || 'text-gray-600'}`} />
+                      </div>
+                      <h3 className="font-heading text-xl font-bold text-gray-900 mb-3 group-hover:text-gray-950 transition-colors">
+                        {feature.title}
+                      </h3>
+                      <p className="text-gray-600 leading-relaxed">
+                        {feature.description}
+                      </p>
                     </div>
-                    <h3 className="font-heading text-xl font-bold text-gray-900 mb-3">
-                      {feature.title}
-                    </h3>
-                    <p className="text-gray-600 leading-relaxed">
-                      {feature.description}
-                    </p>
                   </div>
                 );
               })}
