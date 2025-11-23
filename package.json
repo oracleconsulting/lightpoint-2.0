@@ -60,6 +60,7 @@
     "react-markdown": "^9.0.1",
     "recharts": "^3.5.0",
     "redis": "^4.7.0",
+    "replicate": "^1.4.0",
     "stripe": "^20.0.0",
     "superjson": "^2.2.2",
     "tailwind-merge": "^2.6.0",

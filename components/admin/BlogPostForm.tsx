@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { RichTextEditor } from '@/components/RichTextEditor';
 import { MediaLibraryModal } from '@/components/MediaLibraryModal';
 import { AILayoutGenerator } from '@/components/blog/AILayoutGenerator';
+import { OneClickBlogGenerator } from '@/components/blog/OneClickBlogGenerator';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -232,6 +233,27 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
           </Button>
         </div>
       </div>
+
+      {/* ONE-CLICK AI GENERATOR (Only show for new posts) */}
+      {!postId && !title && (
+        <OneClickBlogGenerator
+          onGenerated={(blogPost) => {
+            // Populate all form fields with AI-generated content
+            setTitle(blogPost.title || '');
+            setSlug(blogPost.slug || '');
+            setExcerpt(blogPost.excerpt || '');
+            // Convert structured content to HTML for now
+            setContent(JSON.stringify(blogPost.content, null, 2));
+            setFeaturedImage(blogPost.featuredImage || '');
+            setCategory(blogPost.category || '');
+            setTags(blogPost.tags?.join(', ') || '');
+            setMetaTitle(blogPost.seoTitle || '');
+            setMetaDescription(blogPost.seoDescription || '');
+            
+            alert('✅ Blog post generated! Review and customize the content below, then click Save.');
+          }}
+        />
+      )}
 
       {/* Basic Info */}
       <Card>
