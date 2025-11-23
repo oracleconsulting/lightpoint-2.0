@@ -97,9 +97,7 @@ export function RichTextEditor({
 
         const fileExt = file.name.split('.').pop();
         // Use crypto.randomUUID() for secure random filenames
-        const randomId = typeof crypto !== 'undefined' && crypto.randomUUID 
-          ? crypto.randomUUID() 
-          : `${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
+        const randomId = crypto.randomUUID();
         const fileName = `${randomId}.${fileExt}`;
         const filePath = `${bucket}/${fileName}`;
 

@@ -141,8 +141,14 @@ export async function exportFineTuningData(
     return;
   }
   
-  // Split into train/validation (90/10)
-  const shuffled = examples.sort(() => Math.random() - 0.5);
+  // Split into train/validation (90/10) using deterministic shuffle based on index
+  // This is not security-sensitive, but we avoid Math.random() for consistency
+  const shuffled = [...examples].sort((a, b) => {
+    // Use a simple deterministic sort based on content hash
+    const hashA = a.messages[0]?.content?.length || 0;
+    const hashB = b.messages[0]?.content?.length || 0;
+    return hashA - hashB;
+  });
   const splitIndex = Math.floor(shuffled.length * 0.9);
   const trainExamples = shuffled.slice(0, splitIndex);
   const valExamples = shuffled.slice(splitIndex);

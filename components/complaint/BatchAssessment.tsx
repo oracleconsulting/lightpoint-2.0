@@ -69,10 +69,10 @@ export function BatchAssessment({ organizationId, userId }: BatchAssessmentProps
       
       // Mock analysis result
       const mockAnalysis = {
-        hasComplaintGrounds: Math.random() > 0.4,
+        hasComplaintGrounds: true,
         summary: 'AI detected potential unreasonable delay in VAT repayment processing. HMRC Charter commitment 1.2 may have been breached.',
         violations: ['Unreasonable delay', 'Failure to respond within timeframe'],
-        confidence: Math.random() * 0.3 + 0.7,
+        confidence: 0.85,
       };
       
       setDocuments(prev => prev.map(d => 
@@ -91,10 +91,10 @@ export function BatchAssessment({ organizationId, userId }: BatchAssessmentProps
     await new Promise(resolve => setTimeout(resolve, 2000));
     
     const mockAnalysis = {
-      hasComplaintGrounds: Math.random() > 0.4,
+      hasComplaintGrounds: true,
       summary: 'AI detected potential unreasonable delay in VAT repayment processing. HMRC Charter commitment 1.2 may have been breached.',
       violations: ['Unreasonable delay', 'Failure to respond within timeframe'],
-      confidence: Math.random() * 0.3 + 0.7,
+      confidence: 0.85,
     };
     
     setDocuments(prev => prev.map(d => 
