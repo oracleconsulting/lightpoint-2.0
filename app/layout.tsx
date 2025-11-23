@@ -9,6 +9,10 @@ import { Inter } from 'next/font/google';
 
 const inter = Inter({ subsets: ['latin'] });
 
+// Force dynamic rendering - no static generation at build time
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export const metadata: Metadata = {
   title: 'Lightpoint - HMRC Complaint Management',
   description: 'Privacy-first HMRC complaint management system for accountants',

@@ -16,8 +16,18 @@ RUN npm ci --ignore-scripts
 # Copy application code
 COPY . .
 
-# Build the application
-# Railway will inject environment variables at runtime, not build time
+# Accept build-time arguments from Railway
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+ARG SUPABASE_SERVICE_KEY
+ARG STRIPE_SECRET_KEY
+ARG OPENROUTER_API_KEY
+
+# Make them available to the build process
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+# Build the application with environment variables available
 RUN npm run build
 
 # Copy necessary files for standalone mode
