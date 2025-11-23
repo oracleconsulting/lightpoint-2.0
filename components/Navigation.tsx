@@ -1,3 +1,9 @@
+/**
+ * Navigation Component
+ * Main site navigation with responsive design, dropdown menus, and user authentication
+ * Updated: 2025-11-23 - Fixed Admin button contrast (dark text on grey bg)
+ */
+
 'use client';
 
 import React, { useState, useEffect } from 'react';

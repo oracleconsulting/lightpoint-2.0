@@ -12,7 +12,14 @@ export function LivePlatformStats() {
     staleTime: 30000, // Consider stale after 30 seconds
   });
 
-  if (isLoading || !stats) {
+  // Check if we actually have real data or just empty response
+  const hasRealData = stats && (
+    (stats.success_rate?.value && stats.success_rate.value > 0) ||
+    (stats.total_fees_recovered?.value && stats.total_fees_recovered.value > 0) ||
+    (stats.total_complaints?.value && stats.total_complaints.value > 0)
+  );
+
+  if (isLoading) {
     return (
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
         {[...Array(4)].map((_, i) => (
@@ -24,10 +31,32 @@ export function LivePlatformStats() {
     );
   }
 
+  // If no real data, show "Coming Soon" message
+  if (!hasRealData) {
+    return (
+      <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-12 text-center border-2 border-dashed border-blue-200">
+        <div className="max-w-2xl mx-auto">
+          <div className="text-5xl mb-4">📊</div>
+          <h3 className="text-2xl font-heading font-bold text-gray-900 mb-3">
+            Live Statistics Coming Soon
+          </h3>
+          <p className="text-lg text-gray-600 mb-6">
+            We're gathering real data from our platform. Check back soon to see live success rates, 
+            fee recoveries, and case statistics from accountants using Lightpoint.
+          </p>
+          <div className="inline-flex items-center gap-2 px-6 py-3 bg-white rounded-full shadow-lg border border-blue-100">
+            <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+            <span className="text-sm font-medium text-gray-700">Platform launching Q1 2025</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const metrics = [
     {
       label: 'Success Rate',
-      value: stats.success_rate?.value || 94.6,
+      value: stats.success_rate?.value || 0,
       suffix: '%',
       decimals: 1,
       icon: Award,
@@ -36,7 +65,7 @@ export function LivePlatformStats() {
     },
     {
       label: 'Total Recovered',
-      value: (stats.total_fees_recovered?.value || 2400000) / 1000,
+      value: (stats.total_fees_recovered?.value || 0) / 1000,
       prefix: '£',
       suffix: 'k+',
       decimals: 0,
@@ -46,7 +75,7 @@ export function LivePlatformStats() {
     },
     {
       label: 'Cases Managed',
-      value: stats.total_complaints?.value || 847,
+      value: stats.total_complaints?.value || 0,
       suffix: '+',
       decimals: 0,
       icon: Users,
@@ -55,7 +84,7 @@ export function LivePlatformStats() {
     },
     {
       label: 'Avg Recovery',
-      value: stats.avg_fee_recovery?.value || 2997,
+      value: stats.avg_fee_recovery?.value || 0,
       prefix: '£',
       decimals: 0,
       icon: TrendingUp,
