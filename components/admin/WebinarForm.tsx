@@ -3,11 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { RichTextEditor } from '@/components/RichTextEditor';
+import { MediaLibraryModal } from '@/components/MediaLibraryModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
-import { ArrowLeft, Save, Eye, Trash2 } from 'lucide-react';
+import { ArrowLeft, Save, Eye, Trash2, Image } from 'lucide-react';
 import Link from 'next/link';
 import { trpc } from '@/lib/trpc/Provider';
 
@@ -18,6 +19,8 @@ interface WebinarFormProps {
 export function WebinarForm({ webinarId }: WebinarFormProps) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const [showMediaLibrary, setShowMediaLibrary] = useState(false);
+  const [mediaLibraryTarget, setMediaLibraryTarget] = useState<'thumbnail' | 'speaker'>('thumbnail');
   
   // Form state
   const [title, setTitle] = useState('');
@@ -385,13 +388,27 @@ export function WebinarForm({ webinarId }: WebinarFormProps) {
           </div>
 
           <div>
-            <Label htmlFor="thumbnailUrl">Thumbnail URL</Label>
-            <Input
-              id="thumbnailUrl"
-              value={thumbnailUrl}
-              onChange={(e) => setThumbnailUrl(e.target.value)}
-              placeholder="https://..."
-            />
+            <Label htmlFor="thumbnailUrl">Thumbnail</Label>
+            <div className="flex gap-2">
+              <Input
+                id="thumbnailUrl"
+                value={thumbnailUrl}
+                onChange={(e) => setThumbnailUrl(e.target.value)}
+                placeholder="https://..."
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setMediaLibraryTarget('thumbnail');
+                  setShowMediaLibrary(true);
+                }}
+              >
+                <Image className="h-4 w-4 mr-2" />
+                Browse
+              </Button>
+            </div>
           </div>
 
           {thumbnailUrl && (
@@ -447,13 +464,27 @@ export function WebinarForm({ webinarId }: WebinarFormProps) {
           </div>
 
           <div>
-            <Label htmlFor="speakerAvatar">Speaker Avatar URL</Label>
-            <Input
-              id="speakerAvatar"
-              value={speakerAvatar}
-              onChange={(e) => setSpeakerAvatar(e.target.value)}
-              placeholder="https://..."
-            />
+            <Label htmlFor="speakerAvatar">Speaker Avatar</Label>
+            <div className="flex gap-2">
+              <Input
+                id="speakerAvatar"
+                value={speakerAvatar}
+                onChange={(e) => setSpeakerAvatar(e.target.value)}
+                placeholder="https://..."
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setMediaLibraryTarget('speaker');
+                  setShowMediaLibrary(true);
+                }}
+              >
+                <Image className="h-4 w-4 mr-2" />
+                Browse
+              </Button>
+            </div>
           </div>
 
           {speakerAvatar && (
@@ -554,6 +585,21 @@ export function WebinarForm({ webinarId }: WebinarFormProps) {
           </Button>
         </div>
       </div>
+
+      {/* Media Library Modal */}
+      <MediaLibraryModal
+        isOpen={showMediaLibrary}
+        onClose={() => setShowMediaLibrary(false)}
+        onSelect={(url) => {
+          if (mediaLibraryTarget === 'thumbnail') {
+            setThumbnailUrl(url);
+          } else {
+            setSpeakerAvatar(url);
+          }
+          setShowMediaLibrary(false);
+        }}
+        bucket="webinar-videos"
+      />
     </div>
   );
 }

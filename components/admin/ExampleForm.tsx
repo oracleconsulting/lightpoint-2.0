@@ -3,11 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { RichTextEditor } from '@/components/RichTextEditor';
+import { MediaLibraryModal } from '@/components/MediaLibraryModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
-import { ArrowLeft, Save, Eye, Trash2 } from 'lucide-react';
+import { ArrowLeft, Save, Eye, Trash2, Image } from 'lucide-react';
 import Link from 'next/link';
 import { trpc } from '@/lib/trpc/Provider';
 
@@ -18,6 +19,8 @@ interface ExampleFormProps {
 export function ExampleForm({ exampleId }: ExampleFormProps) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const [showMediaLibrary, setShowMediaLibrary] = useState(false);
+  const [featuredImage, setFeaturedImage] = useState('');
   
   // Form state
   const [title, setTitle] = useState('');
@@ -297,6 +300,46 @@ export function ExampleForm({ exampleId }: ExampleFormProps) {
         </CardContent>
       </Card>
 
+      {/* Featured Image (Optional) */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Featured Image</CardTitle>
+          <CardDescription>Optional image for case study preview</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div>
+            <Label htmlFor="featuredImage">Image</Label>
+            <div className="flex gap-2">
+              <Input
+                id="featuredImage"
+                value={featuredImage}
+                onChange={(e) => setFeaturedImage(e.target.value)}
+                placeholder="https://..."
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowMediaLibrary(true)}
+              >
+                <Image className="h-4 w-4 mr-2" />
+                Browse
+              </Button>
+            </div>
+          </div>
+
+          {featuredImage && (
+            <div className="mt-4">
+              <img
+                src={featuredImage}
+                alt="Featured image preview"
+                className="max-w-md rounded-lg border"
+              />
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Background Section */}
       <Card>
         <CardHeader>
@@ -447,6 +490,17 @@ export function ExampleForm({ exampleId }: ExampleFormProps) {
           </Button>
         </div>
       </div>
+
+      {/* Media Library Modal */}
+      <MediaLibraryModal
+        isOpen={showMediaLibrary}
+        onClose={() => setShowMediaLibrary(false)}
+        onSelect={(url) => {
+          setFeaturedImage(url);
+          setShowMediaLibrary(false);
+        }}
+        bucket="documents"
+      />
     </div>
   );
 }
