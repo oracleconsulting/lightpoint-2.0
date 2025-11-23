@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { trpc } from '@/lib/trpc/Provider';
 import { BookOpen, Clock, Award, Lock, Search, Filter } from 'lucide-react';
+import { ResourcePageHeader } from '@/components/ResourcePageComponents';
+import { Skeleton, SkeletonCard } from '@/components/ui/skeleton';
 
 export default function CPDPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -41,12 +43,15 @@ export default function CPDPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gradient-to-b from-white via-gray-50 to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="animate-pulse space-y-8">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white rounded-xl p-6 h-32" />
-            ))}
+          <div className="space-y-8">
+            <Skeleton className="h-12 w-64" />
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </div>
           </div>
         </div>
       </div>
@@ -54,28 +59,14 @@ export default function CPDPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-b from-white via-gray-50 to-white">
       {/* Header */}
-      <div className="bg-gradient-to-br from-indigo-600 to-purple-700 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 bg-white/20 rounded-xl">
-              <BookOpen className="h-8 w-8" />
-            </div>
-            <div>
-              <h1 className="text-4xl md:text-5xl font-extrabold">
-                CPD Library
-              </h1>
-              <p className="text-indigo-100 mt-2">
-                Continuing Professional Development
-              </p>
-            </div>
-          </div>
-          <p className="text-xl text-indigo-100 max-w-3xl">
-            Stay up-to-date with the latest HMRC procedures, complaint strategies, and industry best practices
-          </p>
-        </div>
-      </div>
+      <ResourcePageHeader
+        badge={{ icon: BookOpen, text: "Professional Development" }}
+        title="CPD Library"
+        description="Stay up-to-date with the latest HMRC procedures, complaint strategies, and industry best practices"
+        gradient="from-purple-600 via-indigo-600 to-blue-600"
+      />
 
       {/* Access Check */}
       {!hasAccess ? (

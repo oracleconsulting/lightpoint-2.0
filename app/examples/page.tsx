@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { trpc } from '@/lib/trpc/Provider';
 import { FileText, Search, Filter, Award, TrendingUp, Clock, Lock, CheckCircle, XCircle } from 'lucide-react';
+import { ResourcePageHeader } from '@/components/ResourcePageComponents';
+import { Skeleton, SkeletonCard } from '@/components/ui/skeleton';
 
 export default function WorkedExamplesPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -38,12 +40,15 @@ export default function WorkedExamplesPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gradient-to-b from-white via-gray-50 to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="animate-pulse space-y-8">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white rounded-xl p-6 h-40" />
-            ))}
+          <div className="space-y-8">
+            <Skeleton className="h-12 w-64" />
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </div>
           </div>
         </div>
       </div>
@@ -51,24 +56,14 @@ export default function WorkedExamplesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-b from-white via-gray-50 to-white">
       {/* Header */}
-      <div className="bg-gradient-to-br from-emerald-600 to-teal-700 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 bg-white/20 rounded-xl">
-              <FileText className="h-8 w-8" />
-            </div>
-            <h1 className="text-4xl md:text-5xl font-extrabold">
-              Worked Examples
-            </h1>
-          </div>
-          <p className="text-xl text-emerald-100 max-w-3xl">
-            Real complaint case studies with full timelines, correspondence, and outcomes. 
-            Learn from successful (and unsuccessful) complaints to improve your success rate.
-          </p>
-        </div>
-      </div>
+      <ResourcePageHeader
+        badge={{ icon: FileText, text: "Real Case Studies" }}
+        title="Worked Examples"
+        description="Real complaint case studies with full timelines, correspondence, and outcomes. Learn from successful (and unsuccessful) complaints to improve your success rate."
+        gradient="from-emerald-600 via-teal-600 to-cyan-600"
+      />
 
       {/* Access Check */}
       {!hasAccess ? (

@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { trpc } from '@/lib/trpc/Provider';
 import { Video, Calendar, Clock, Users, Lock, Play, Download } from 'lucide-react';
+import { ResourcePageHeader } from '@/components/ResourcePageComponents';
+import { Skeleton, SkeletonCard } from '@/components/ui/skeleton';
 
 export default function WebinarsPage() {
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'recorded'>('all');
@@ -19,12 +21,15 @@ export default function WebinarsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gradient-to-b from-white via-gray-50 to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="animate-pulse space-y-8">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white rounded-xl p-6 h-48" />
-            ))}
+          <div className="space-y-8">
+            <Skeleton className="h-12 w-64" />
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </div>
           </div>
         </div>
       </div>
@@ -32,24 +37,14 @@ export default function WebinarsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-b from-white via-gray-50 to-white">
       {/* Header */}
-      <div className="bg-gradient-to-br from-pink-600 to-rose-700 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 bg-white/20 rounded-xl">
-              <Video className="h-8 w-8" />
-            </div>
-            <h1 className="text-4xl md:text-5xl font-extrabold">
-              Expert Webinars
-            </h1>
-          </div>
-          <p className="text-xl text-pink-100 max-w-3xl">
-            Live and on-demand training from HMRC complaint resolution specialists. 
-            Interactive Q&A, real case studies, and actionable strategies.
-          </p>
-        </div>
-      </div>
+      <ResourcePageHeader
+        badge={{ icon: Video, text: "Live & On-Demand Training" }}
+        title="Expert Webinars"
+        description="Live and on-demand training from HMRC complaint resolution specialists. Interactive Q&A, real case studies, and actionable strategies."
+        gradient="from-pink-600 via-rose-600 to-red-600"
+      />
 
       {/* Access Check */}
       {!hasAccess ? (
