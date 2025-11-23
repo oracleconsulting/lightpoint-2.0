@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowRight, CheckCircle, Shield, TrendingUp, Users, Award, BookOpen, Video, FileText, Sparkles, Lock, Clock, PoundSterling, Target } from 'lucide-react';
 import { CountUp } from '@/components/CountUp';
 import { LivePlatformStats } from '@/components/LivePlatformStats';
+import { AnimatedGradientBackground, FloatingElements } from '@/components/HeroEffects';
 import { trpc } from '@/lib/trpc/Provider';
 
 // Icon mapping
@@ -43,15 +44,18 @@ export default function HomePage() {
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
       {hero && (
-        <section className="relative overflow-hidden bg-gradient-to-br from-brand-primary via-brand-primary-dark to-brand-blurple-dark text-white">
-          <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:32px_32px]" />
-          <div className="absolute inset-0 bg-gradient-to-t from-brand-primary/20 to-transparent" />
+        <section className="relative overflow-hidden bg-gradient-to-br from-brand-primary via-brand-primary-dark to-brand-blurple-dark text-white min-h-screen flex items-center">
+          {/* Animated Background */}
+          <AnimatedGradientBackground />
           
-          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32 sm:py-40">
+          {/* Floating Elements */}
+          <FloatingElements />
+          
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32 sm:py-40 w-full">
             <div className="text-center max-w-4xl mx-auto">
               {hero.badge_text && (
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 mb-8 animate-fade-in">
-                  <Sparkles className="h-4 w-4 text-yellow-300" />
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass border border-white/20 mb-8 animate-fade-in hover-glow">
+                  <Sparkles className="h-4 w-4 text-yellow-300 animate-pulse" />
                   <span className="text-sm font-medium">{hero.badge_text}</span>
                 </div>
               )}
@@ -59,7 +63,9 @@ export default function HomePage() {
               <h1 className="font-heading text-5xl sm:text-7xl font-bold tracking-tight animate-slide-in">
                 {hero.heading_line1}
                 {hero.heading_line2 && (
-                  <span className="block mt-2 text-blue-200">{hero.heading_line2}</span>
+                  <span className="block mt-2 bg-clip-text text-transparent bg-gradient-to-r from-blue-200 via-blue-100 to-white">
+                    {hero.heading_line2}
+                  </span>
                 )}
               </h1>
               
@@ -73,16 +79,20 @@ export default function HomePage() {
                 {hero.cta_primary_text && (
                   <Link
                     href={hero.cta_primary_link || '/subscription/checkout'}
-                    className="group inline-flex items-center justify-center px-8 py-4 text-lg font-semibold rounded-button bg-gradient-to-r from-brand-gold to-amber-500 text-white hover:from-brand-gold-dark hover:to-amber-600 transition-all shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+                    className="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-semibold rounded-button bg-gradient-to-r from-brand-gold to-amber-500 text-white transition-all shadow-lg hover:shadow-2xl hover:scale-[1.05] active:scale-[0.98] overflow-hidden"
                   >
-                    {hero.cta_primary_text}
-                    <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                    {/* Glow effect on hover */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-brand-gold-dark to-amber-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <span className="relative z-10 flex items-center">
+                      {hero.cta_primary_text}
+                      <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                    </span>
                   </Link>
                 )}
                 {hero.cta_secondary_text && (
                   <Link
                     href={hero.cta_secondary_link || '/subscription/checkout'}
-                    className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold rounded-button bg-white/10 backdrop-blur text-white hover:bg-white/20 transition-all border-2 border-white/30 hover:border-white/50"
+                    className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold rounded-button glass text-white hover:bg-white/20 transition-all border-2 border-white/30 hover:border-white/50 hover:scale-[1.02]"
                   >
                     {hero.cta_secondary_text}
                   </Link>
@@ -90,7 +100,7 @@ export default function HomePage() {
               </div>
               
               {hero.trust_line && (
-                <p className="mt-6 text-sm text-blue-200 flex items-center justify-center gap-2">
+                <p className="mt-6 text-sm text-blue-200 flex items-center justify-center gap-2 animate-fade-in" style={{animationDelay: '0.3s'}}>
                   <Lock className="h-4 w-4" />
                   {hero.trust_line}
                 </p>
@@ -98,7 +108,8 @@ export default function HomePage() {
             </div>
           </div>
           
-          <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-white to-transparent"></div>
+          {/* Smooth transition to next section */}
+          <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white to-transparent"></div>
         </section>
       )}
 
