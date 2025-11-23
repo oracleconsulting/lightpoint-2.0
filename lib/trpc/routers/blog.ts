@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { router, protectedProcedure } from '../trpc';
 import { createServerClient } from '@/lib/supabase/client';
+import { TRPCError } from '@trpc/server';
 
 // Validation schemas
 const blogPostSchema = z.object({
@@ -145,8 +146,18 @@ export const blogRouter = router({
         .single();
 
       if (error) {
-        console.error('Error creating blog post:', error);
-        throw new Error('Failed to create blog post');
+        console.error('❌ Error creating blog post:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+          fullError: error,
+        });
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to create blog post: ${error.message || 'Unknown error'}`,
+          cause: error,
+        });
       }
 
       return data as any;
@@ -201,8 +212,18 @@ export const blogRouter = router({
         .single();
 
       if (error) {
-        console.error('Error updating blog post:', error);
-        throw new Error('Failed to update blog post');
+        console.error('❌ Error updating blog post:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+          fullError: error,
+        });
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to update blog post: ${error.message || 'Unknown error'}`,
+          cause: error,
+        });
       }
 
       return data as any;
