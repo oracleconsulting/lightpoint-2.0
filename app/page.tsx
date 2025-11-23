@@ -18,7 +18,7 @@ const iconMap: Record<string, any> = {
 
 export default function HomePage() {
   // Fetch all homepage sections from CMS
-  const { data: sections } = trpc.cms.getPageSections.useQuery({ pageName: 'homepage' });
+  const { data: sections, isLoading, error } = trpc.cms.getPageSections.useQuery({ pageName: 'homepage' });
 
   // Helper to get section by key
   const getSection = (key: string): any => {
@@ -26,10 +26,33 @@ export default function HomePage() {
   };
 
   // Loading state
-  if (!sections) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="animate-pulse text-gray-400">Loading...</div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary mx-auto mb-4"></div>
+          <div className="text-gray-400">Loading...</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state - show message
+  if (error || !sections) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center max-w-md px-4">
+          <div className="text-red-500 mb-4">⚠️ Unable to load content</div>
+          <div className="text-gray-600 mb-4">
+            {error?.message || 'Failed to fetch page data. Please check your database connection.'}
+          </div>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary-dark"
+          >
+            Retry
+          </button>
+        </div>
       </div>
     );
   }
