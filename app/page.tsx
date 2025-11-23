@@ -6,6 +6,7 @@ import { ArrowRight, CheckCircle, Shield, TrendingUp, Users, Award, BookOpen, Vi
 import { CountUp } from '@/components/CountUp';
 import { LivePlatformStats } from '@/components/LivePlatformStats';
 import { AnimatedGradientBackground, FloatingElements } from '@/components/HeroEffects';
+import { LiveActivityFeed, AnimatedIllustration } from '@/components/AnimatedElements';
 import { trpc } from '@/lib/trpc/Provider';
 
 // Icon mapping
@@ -126,6 +127,11 @@ export default function HomePage() {
           </div>
           
           <LivePlatformStats />
+          
+          {/* Live Activity Feed */}
+          <div className="mt-12 max-w-2xl mx-auto">
+            <LiveActivityFeed />
+          </div>
           
           <div className="mt-8 text-center">
             <p className="text-sm text-gray-500">
