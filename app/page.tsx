@@ -8,6 +8,7 @@ import { LivePlatformStats } from '@/components/LivePlatformStats';
 import { AnimatedGradientBackground, FloatingElements } from '@/components/HeroEffects';
 import { HeroDashboardPreview, FloatingTrustBadges } from '@/components/HeroDashboardPreview';
 import { LiveActivityFeed, AnimatedIllustration } from '@/components/AnimatedElements';
+import { SocialProofSection } from '@/components/SocialProofSection';
 import { trpc } from '@/lib/trpc/Provider';
 
 // Icon mapping
@@ -305,6 +306,9 @@ export default function HomePage() {
         </section>
       )}
 
+      {/* Social Proof Section - Testimonials & Case Studies */}
+      <SocialProofSection />
+
       {/* ROI Calculator Section */}
       {roi && (
         <section className="py-20 bg-gradient-to-br from-gray-50 via-blue-50 to-gray-50">
@@ -373,27 +377,75 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* How It Works Section */}
+      {/* How It Works Section - Flowing Timeline */}
       {howItWorks?.steps && (
-        <section className="py-20 bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <section className="py-20 bg-gradient-to-b from-white via-blue-50/30 to-white relative overflow-hidden">
+          {/* Background decoration */}
+          <div className="absolute inset-0 bg-grid-gray-100 opacity-30" />
+          
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             <div className="text-center mb-16">
-              <h2 className="text-3xl font-bold text-gray-900">{howItWorks.section_title}</h2>
+              <h2 className="text-3xl font-heading font-bold text-gray-900 mb-4">{howItWorks.section_title}</h2>
               {howItWorks.section_subtitle && (
-                <p className="mt-4 text-xl text-gray-600">{howItWorks.section_subtitle}</p>
+                <p className="text-xl text-gray-600 max-w-2xl mx-auto">{howItWorks.section_subtitle}</p>
               )}
             </div>
 
-            <div className="grid md:grid-cols-4 gap-8">
-              {howItWorks.steps.map((step: any, idx: number) => (
-                <div key={idx} className="text-center">
-                  <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-blue-600 text-white text-3xl font-bold mb-4 shadow-lg">
-                    {step.number}
+            {/* Vertical Timeline with Zigzag Layout */}
+            <div className="space-y-12">
+              {howItWorks.steps.map((step: any, idx: number) => {
+                const isEven = idx % 2 === 0;
+                
+                return (
+                  <div key={idx} className={`flex flex-col md:flex-row items-center gap-8 ${isEven ? '' : 'md:flex-row-reverse'}`}>
+                    {/* Content Side */}
+                    <div className={`flex-1 ${isEven ? 'md:text-right' : 'md:text-left'} text-center`}>
+                      <h3 className="text-2xl font-heading font-bold text-gray-900 mb-3">{step.title}</h3>
+                      <p className="text-gray-600 leading-relaxed">{step.description}</p>
+                    </div>
+
+                    {/* Center Circle with connecting line */}
+                    <div className="relative flex flex-col items-center">
+                      {/* Connecting line to next step */}
+                      {idx < howItWorks.steps.length - 1 && (
+                        <div className="absolute top-24 left-1/2 -translate-x-1/2 w-0.5 h-12 bg-gradient-to-b from-blue-500 to-purple-500" />
+                      )}
+                      
+                      {/* Number Circle */}
+                      <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white text-3xl font-bold flex items-center justify-center shadow-lg z-10 group hover:scale-110 transition-transform">
+                        {step.number}
+                        
+                        {/* Glow effect */}
+                        <div className="absolute inset-0 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 opacity-0 group-hover:opacity-50 blur-xl transition-opacity" />
+                      </div>
+                    </div>
+
+                    {/* Visual/Icon Side */}
+                    <div className="flex-1 flex justify-center">
+                      <div className="w-32 h-32 rounded-2xl glass border border-gray-200 flex items-center justify-center group hover:scale-105 hover:shadow-xl transition-all">
+                        {/* Simple icon representation */}
+                        <div className="text-5xl">
+                          {idx === 0 && '📤'}
+                          {idx === 1 && '🤖'}
+                          {idx === 2 && '📝'}
+                          {idx === 3 && '✅'}
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-3">{step.title}</h3>
-                  <p className="text-gray-600">{step.description}</p>
-                </div>
-              ))}
+                );
+              })}
+            </div>
+
+            {/* CTA at bottom of timeline */}
+            <div className="mt-16 text-center">
+              <Link
+                href="/subscription/checkout"
+                className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all"
+              >
+                Start Your First Case
+                <ArrowRight className="h-5 w-5" />
+              </Link>
             </div>
           </div>
         </section>
