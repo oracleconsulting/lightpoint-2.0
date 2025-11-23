@@ -185,7 +185,7 @@ export function VisualTransformer({
           </div>
 
           {/* What Changed */}
-          {transformedLayout.enhancements && (
+          {transformedLayout.enhancements && Array.isArray(transformedLayout.enhancements) && transformedLayout.enhancements.length > 0 && (
             <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
               <div className="flex items-start gap-3">
                 <Sparkles className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
