@@ -16,16 +16,8 @@ RUN npm ci --ignore-scripts
 # Copy application code
 COPY . .
 
-# Set build-time environment variables for Next.js
-# These allow the build to proceed without actual credentials
-ENV NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co
-ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder_key
-ENV SUPABASE_SERVICE_KEY=placeholder_service_key
-ENV STRIPE_SECRET_KEY=sk_test_placeholder
-ENV STRIPE_WEBHOOK_SECRET=whsec_placeholder
-ENV OPENROUTER_API_KEY=placeholder_key
-
 # Build the application
+# Railway will inject environment variables at runtime, not build time
 RUN npm run build
 
 # Copy necessary files for standalone mode
