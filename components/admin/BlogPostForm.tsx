@@ -39,6 +39,7 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
   const [isPublished, setIsPublished] = useState(false);
   const [scheduledFor, setScheduledFor] = useState('');
   const [autoPublish, setAutoPublish] = useState(false);
+  const [structuredLayout, setStructuredLayout] = useState<any>(null); // AI-generated layout
 
   // tRPC mutations
   const createPost = trpc.blog.create.useMutation();
@@ -67,6 +68,11 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
       setMetaTitle(existingPost.seo_title || '');
       setMetaDescription(existingPost.seo_description || '');
       setIsPublished(existingPost.status === 'published');
+      
+      // Load structured layout if it exists
+      if (existingPost.structured_layout) {
+        setStructuredLayout(existingPost.structured_layout);
+      }
       
       // Scheduled publishing fields
       if (existingPost.scheduled_for) {
@@ -121,6 +127,7 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
         isPublished,
         scheduledFor: scheduledFor ? new Date(scheduledFor).toISOString() : undefined,
         autoPublish: autoPublish || undefined,
+        structuredLayout: structuredLayout || undefined, // Include AI-generated layout
       };
 
       if (postId) {
@@ -363,9 +370,9 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
               content={content}
               excerpt={excerpt}
               onTransformed={(layout) => {
-                console.log('Visual layout transformed:', layout);
-                alert('✨ Layout transformed! This will be integrated with the content editor in the next phase.');
-                // Future: Apply the layout to the post
+                console.log('✅ Visual layout transformed:', layout);
+                setStructuredLayout(layout);
+                alert('✨ Layout applied! Save the post to keep this visual layout.');
               }}
             />
           </CardContent>

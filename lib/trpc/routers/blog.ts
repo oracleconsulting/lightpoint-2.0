@@ -18,6 +18,7 @@ const blogPostSchema = z.object({
   isPublished: z.boolean().default(false),
   scheduledFor: z.string().optional(), // ISO datetime string
   autoPublish: z.boolean().optional(),
+  structuredLayout: z.any().optional(), // AI-generated visual layout
 });
 
 export const blogRouter = router({
@@ -138,6 +139,7 @@ export const blogRouter = router({
           read_time_minutes: readTime,
           scheduled_for: input.scheduledFor || null,
           auto_publish: input.autoPublish || false,
+          structured_layout: input.structuredLayout || null, // AI-generated layout
         } as any)
         .select()
         .single();
@@ -189,6 +191,7 @@ export const blogRouter = router({
       }
       if (input.data.scheduledFor !== undefined) updateData.scheduled_for = input.data.scheduledFor;
       if (input.data.autoPublish !== undefined) updateData.auto_publish = input.data.autoPublish;
+      if (input.data.structuredLayout !== undefined) updateData.structured_layout = input.data.structuredLayout;
 
       const { data, error } = await supabase
         .from('blog_posts')
