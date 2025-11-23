@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { ArrowLeft, Save, Eye, Trash2, Image, Sparkles } from 'lucide-react';
+import { ArrowLeft, Save, Eye, Trash2, Image, Sparkles, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { trpc } from '@/lib/trpc/Provider';
 
@@ -48,10 +48,32 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
   const generateSEO = trpc.blog.generateSEO.useMutation();
 
   // Load existing post if editing
-  const { data: existingPost, isLoading: isLoadingPost } = trpc.blog.getById.useQuery(
+  const { data: existingPost, isLoading: isLoadingPost, error: loadError } = trpc.blog.getById.useQuery(
     { id: postId! },
-    { enabled: !!postId }
+    { 
+      enabled: !!postId,
+      retry: false, // Don't retry on error
+    }
   );
+
+  // Show error if post fails to load
+  if (loadError) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center max-w-md">
+          <XCircle className="h-12 w-12 text-red-600 mx-auto mb-4" />
+          <h2 className="text-xl font-bold mb-2">Failed to Load Post</h2>
+          <p className="text-gray-600 mb-4">{loadError.message || 'Unknown error'}</p>
+          <Link href="/admin/blog">
+            <Button variant="outline">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Blog Posts
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   // Populate form when editing
   React.useEffect(() => {
@@ -192,7 +214,9 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
       // Update SEO fields with AI-generated content
       if (result.metaTitle) setMetaTitle(result.metaTitle);
       if (result.metaDescription) setMetaDescription(result.metaDescription);
-      if (result.suggestedTags) setTags(result.suggestedTags.join(', '));
+      if (result.suggestedTags && Array.isArray(result.suggestedTags)) {
+        setTags(result.suggestedTags.join(', '));
+      }
       
       alert('SEO fields generated successfully!');
     } catch (error: any) {
