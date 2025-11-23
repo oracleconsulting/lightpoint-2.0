@@ -3,6 +3,10 @@ import Stripe from 'stripe';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-11-17.clover',
 });
