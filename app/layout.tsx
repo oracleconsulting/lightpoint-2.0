@@ -37,7 +37,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className} data-version="2.0.1-depth-fix">
+      <head>
+        <meta httpEquiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+        <meta httpEquiv="Pragma" content="no-cache" />
+        <meta httpEquiv="Expires" content="0" />
+      </head>
+      <body className={inter.className} data-version="2.0.2">
         <TRPCProvider>
           <AuthProvider>
             <UserProvider>
