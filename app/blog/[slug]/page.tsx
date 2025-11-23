@@ -213,13 +213,35 @@ export default function BlogPostPage() {
 
       {/* Content */}
       <article className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        {/* Render AI-generated visual layout if it exists, otherwise render normal content */}
+        {/* If we have both structured layout AND content, show both */}
         {post.structured_layout ? (
-          <div className="space-y-8">
-            <DynamicLayoutRenderer 
-              layout={post.structured_layout.layout || post.structured_layout} 
-              theme={post.structured_layout.theme}
-            />
+          <div className="space-y-12">
+            {/* First render the visual layout (stats, charts, etc.) */}
+            <div className="space-y-8">
+              <DynamicLayoutRenderer 
+                layout={post.structured_layout.layout || post.structured_layout} 
+                theme={post.structured_layout.theme}
+              />
+            </div>
+
+            {/* Then render the full written content below */}
+            <div className="border-t pt-12">
+              <h2 className="text-3xl font-bold text-gray-900 mb-8">Full Article</h2>
+              <div
+                className="prose prose-lg prose-blue max-w-none
+                  prose-headings:font-bold prose-headings:text-gray-900
+                  prose-p:text-gray-700 prose-p:leading-relaxed
+                  prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline
+                  prose-strong:text-gray-900 prose-strong:font-semibold
+                  prose-ul:list-disc prose-ol:list-decimal
+                  prose-li:text-gray-700
+                  prose-blockquote:border-l-4 prose-blockquote:border-blue-600 prose-blockquote:pl-4 prose-blockquote:italic
+                  prose-code:bg-gray-100 prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:text-sm
+                  prose-img:rounded-xl prose-img:shadow-lg"
+              >
+                {renderContent()}
+              </div>
+            </div>
           </div>
         ) : (
           <div
