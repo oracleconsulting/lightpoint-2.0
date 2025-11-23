@@ -16,6 +16,7 @@ import { blogRouter } from './routers/blog';
 import { cpdRouter } from './routers/cpd';
 import { webinarRouter } from './routers/webinars';
 import { examplesRouter } from './routers/examples';
+import { socialContentRouter } from './routers/socialContent';
 
 
 import { analyticsRouter } from './routers/analytics';
@@ -42,6 +43,9 @@ export const appRouter = router({
   
   // Worked examples management
   examples: examplesRouter,
+  
+  // Social media content generation & automation
+  socialContent: socialContentRouter,
   
   // Existing routes
   // Complaints
