@@ -6,6 +6,7 @@ import { ArrowRight, CheckCircle, Shield, TrendingUp, Users, Award, BookOpen, Vi
 import { CountUp } from '@/components/CountUp';
 import { LivePlatformStats } from '@/components/LivePlatformStats';
 import { AnimatedGradientBackground, FloatingElements } from '@/components/HeroEffects';
+import { HeroDashboardPreview, FloatingTrustBadges } from '@/components/HeroDashboardPreview';
 import { LiveActivityFeed, AnimatedIllustration } from '@/components/AnimatedElements';
 import { trpc } from '@/lib/trpc/Provider';
 
@@ -52,8 +53,11 @@ export default function HomePage() {
           {/* Floating Elements */}
           <FloatingElements />
           
+          {/* Hero Dashboard Preview (Desktop Only) */}
+          <HeroDashboardPreview />
+          
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32 sm:py-40 w-full">
-            <div className="text-center max-w-4xl mx-auto">
+            <div className="text-center lg:text-left max-w-2xl lg:max-w-xl">
               {hero.badge_text && (
                 <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass border border-white/20 mb-8 animate-fade-in hover-glow">
                   <Sparkles className="h-4 w-4 text-yellow-300 animate-pulse" />
@@ -61,7 +65,7 @@ export default function HomePage() {
                 </div>
               )}
               
-              <h1 className="font-heading text-5xl sm:text-7xl font-bold tracking-tight animate-slide-in">
+              <h1 className="font-heading text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight animate-slide-in">
                 {hero.heading_line1}
                 {hero.heading_line2 && (
                   <span className="block mt-2 bg-clip-text text-transparent bg-gradient-to-r from-blue-200 via-blue-100 to-white">
@@ -71,12 +75,12 @@ export default function HomePage() {
               </h1>
               
               {hero.subheading && (
-                <p className="mt-8 text-xl sm:text-2xl text-blue-100 leading-relaxed max-w-3xl mx-auto animate-slide-in" style={{animationDelay: '0.1s'}}>
+                <p className="mt-8 text-xl sm:text-2xl text-blue-100 leading-relaxed animate-slide-in" style={{animationDelay: '0.1s'}}>
                   {hero.subheading}
                 </p>
               )}
               
-              <div className="mt-12 flex flex-col sm:flex-row gap-4 justify-center animate-slide-in" style={{animationDelay: '0.2s'}}>
+              <div className="mt-12 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start animate-slide-in" style={{animationDelay: '0.2s'}}>
                 {hero.cta_primary_text && (
                   <Link
                     href={hero.cta_primary_link || '/subscription/checkout'}
@@ -101,13 +105,16 @@ export default function HomePage() {
               </div>
               
               {hero.trust_line && (
-                <p className="mt-6 text-sm text-blue-200 flex items-center justify-center gap-2 animate-fade-in" style={{animationDelay: '0.3s'}}>
+                <p className="mt-6 text-sm text-blue-200 flex items-center justify-center lg:justify-start gap-2 animate-fade-in" style={{animationDelay: '0.3s'}}>
                   <Lock className="h-4 w-4" />
                   {hero.trust_line}
                 </p>
               )}
             </div>
           </div>
+          
+          {/* Floating Trust Badges */}
+          <FloatingTrustBadges />
           
           {/* Smooth transition to next section */}
           <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white to-transparent"></div>
@@ -168,18 +175,23 @@ export default function HomePage() {
                   {problemSolution.problems.map((problem: string, idx: number) => (
                     <div 
                       key={idx} 
-                      className="group relative bg-gradient-to-br from-red-50 to-red-100/50 border border-red-200/50 rounded-card p-6 text-center transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
+                      className="group relative bg-gradient-to-br from-red-50 to-red-100/50 border border-red-200/50 rounded-card p-6 text-center transition-all duration-300 hover:shadow-lg hover:-translate-y-1 overflow-hidden"
                     >
+                      {/* Number Badge */}
+                      <div className="absolute top-3 right-3 w-8 h-8 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center text-red-600 font-bold text-sm group-hover:scale-110 transition-transform">
+                        {idx + 1}
+                      </div>
+                      
                       {/* Glow effect on hover */}
                       <div className="absolute inset-0 rounded-card bg-red-500/5 opacity-0 group-hover:opacity-100 transition-opacity blur-xl" />
                       
                       <div className="relative z-10">
                         <div className="flex items-center justify-center mb-3">
-                          <div className="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center font-bold text-lg shadow-sm">
+                          <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center font-bold text-xl shadow-sm group-hover:scale-110 group-hover:rotate-180 transition-all duration-300">
                             ✕
                           </div>
                         </div>
-                        <p className="text-gray-700 text-sm leading-relaxed">{problem}</p>
+                        <p className="text-gray-700 text-sm leading-relaxed font-medium">{problem}</p>
                       </div>
                     </div>
                   ))}
@@ -199,14 +211,19 @@ export default function HomePage() {
                   {problemSolution.solutions.map((solution: string, idx: number) => (
                     <div 
                       key={idx} 
-                      className="group relative glass bg-gradient-to-br from-green-50 to-green-100/50 border border-green-300/50 rounded-card p-6 text-center transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-green-400"
+                      className="group relative glass bg-gradient-to-br from-green-50 to-green-100/50 border border-green-300/50 rounded-card p-6 text-center transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-green-400 overflow-hidden"
                     >
+                      {/* Number Badge */}
+                      <div className="absolute top-3 right-3 w-8 h-8 rounded-full bg-green-500/20 border border-green-500/30 flex items-center justify-center text-green-600 font-bold text-sm group-hover:scale-110 transition-transform">
+                        {idx + 1}
+                      </div>
+                      
                       {/* Glow effect on hover */}
                       <div className="absolute inset-0 rounded-card bg-green-500/10 opacity-0 group-hover:opacity-100 transition-opacity blur-xl" />
                       
                       <div className="relative z-10">
                         <div className="flex items-center justify-center mb-3">
-                          <CheckCircle className="h-10 w-10 text-green-600 drop-shadow-sm" />
+                          <CheckCircle className="h-12 w-12 text-green-600 drop-shadow-sm group-hover:scale-110 transition-transform" />
                         </div>
                         <p className="text-gray-800 text-sm font-medium leading-relaxed">{solution}</p>
                       </div>

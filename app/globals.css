@@ -223,6 +223,19 @@
     @apply opacity-100;
   }
   
+  /* 3D Perspective */
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+  
+  .rotate-y-6 {
+    transform: rotateY(6deg);
+  }
+  
+  .rotate-y-0 {
+    transform: rotateY(0deg);
+  }
+  
   /* Smooth scroll */
   .smooth-scroll {
     scroll-behavior: smooth;
