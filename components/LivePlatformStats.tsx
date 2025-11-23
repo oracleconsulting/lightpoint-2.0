@@ -106,19 +106,19 @@ export function LivePlatformStats() {
             transition={{ delay: index * 0.1 }}
             className="group relative"
           >
-            <div className="relative overflow-hidden rounded-2xl bg-white p-6 shadow-lg transition-all duration-300 hover:shadow-2xl hover:scale-105 border border-gray-100">
+            <div className="relative overflow-hidden rounded-2xl bg-white p-6 shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-105 border-2 border-gray-100 hover:border-gray-200">
               {/* Background Icon */}
-              <div className={`absolute -right-4 -top-4 opacity-10 ${metric.color}`}>
+              <div className={`absolute -right-4 -top-4 opacity-5 ${metric.color}`}>
                 <Icon className="h-32 w-32" />
               </div>
 
               {/* Content */}
               <div className="relative z-10">
-                <div className={`inline-flex items-center justify-center p-3 rounded-xl ${metric.bgColor} mb-3`}>
+                <div className={`inline-flex items-center justify-center p-3 rounded-xl ${metric.bgColor} mb-3 shadow-md`}>
                   <Icon className={`h-6 w-6 ${metric.color}`} />
                 </div>
 
-                <div className={`text-3xl font-bold ${metric.color} mb-1`}>
+                <div className={`text-3xl font-bold ${metric.color} mb-1 drop-shadow-sm`}>
                   <AnimatedCounter
                     end={metric.value}
                     prefix={metric.prefix}
@@ -128,11 +128,11 @@ export function LivePlatformStats() {
                   />
                 </div>
 
-                <p className="text-sm text-gray-600 font-medium">{metric.label}</p>
+                <p className="text-sm text-gray-700 font-semibold">{metric.label}</p>
 
-                {/* Live Indicator */}
+                {/* Live Indicator with stronger contrast */}
                 <div className="absolute top-4 right-4">
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1.5 bg-white/80 backdrop-blur-sm px-2 py-1 rounded-full shadow-sm">
                     <motion.div
                       animate={{
                         scale: [1, 1.2, 1],
@@ -143,16 +143,16 @@ export function LivePlatformStats() {
                         repeat: Infinity,
                         ease: "easeInOut",
                       }}
-                      className="h-2 w-2 rounded-full bg-green-500"
+                      className="h-2 w-2 rounded-full bg-green-500 shadow-sm"
                     />
-                    <span className="text-xs text-gray-500">Live</span>
+                    <span className="text-xs font-semibold text-gray-700">Live</span>
                   </div>
                 </div>
               </div>
 
-              {/* Hover Glow Effect */}
+              {/* Stronger Hover Glow Effect */}
               <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-                <div className={`absolute inset-0 bg-gradient-to-br ${metric.bgColor} opacity-20 blur-xl`}></div>
+                <div className={`absolute inset-0 bg-gradient-to-br ${metric.bgColor} opacity-30 blur-xl`}></div>
               </div>
             </div>
           </motion.div>

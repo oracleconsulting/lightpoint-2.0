@@ -164,9 +164,9 @@ export function SocialProofSection() {
           className="mt-16 text-center"
         >
           <p className="text-sm text-gray-500 mb-6">In development for professionals at firms like:</p>
-          <div className="flex flex-wrap items-center justify-center gap-8 opacity-30">
+          <div className="flex flex-wrap items-center justify-center gap-8">
             {['Accounting Firms', 'Tax Advisors', 'Bookkeepers', 'Financial Consultants'].map((firm) => (
-              <div key={firm} className="text-lg font-semibold text-gray-400">
+              <div key={firm} className="text-base font-bold text-gray-700 px-4 py-2 bg-gray-50 rounded-lg border border-gray-200">
                 {firm}
               </div>
             ))}
