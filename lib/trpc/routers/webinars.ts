@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { router, protectedProcedure } from '../trpc';
+import { router, protectedProcedure, publicProcedure } from '../trpc';
 import { createBrowserClient } from '@supabase/ssr';
 
 // Validation schema for webinars
@@ -93,6 +93,30 @@ export const webinarRouter = router({
 
       if (error) {
         console.error('Error fetching webinar:', error);
+        throw new Error('Webinar not found');
+      }
+
+      return data as any;
+    }),
+
+  // Get webinar by slug (public)
+  getBySlug: publicProcedure
+    .input(z.object({ slug: z.string() }))
+    .query(async ({ input }) => {
+      const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+
+      const { data, error } = await supabase
+        .from('webinars')
+        .select('*')
+        .eq('slug', input.slug)
+        .eq('is_published', true) // Only show published webinars
+        .single();
+
+      if (error) {
+        console.error('Error fetching webinar by slug:', error);
         throw new Error('Webinar not found');
       }
 
