@@ -1,6 +1,9 @@
 # Use official Node.js LTS image
 FROM node:20-alpine
 
+# Fix DNS/network issues in Railway
+RUN apk add --no-cache bind-tools
+
 WORKDIR /app
 
 # Install dependencies first (better layer caching)
@@ -27,6 +30,9 @@ RUN npm run build
 
 # Expose port
 EXPOSE 3005
+
+# Set Node.js DNS to prefer IPv4 (fixes Railway network issues)
+ENV NODE_OPTIONS="--dns-result-order=ipv4first"
 
 # Start the application (runtime env vars will override placeholders)
 CMD ["npm", "start"]

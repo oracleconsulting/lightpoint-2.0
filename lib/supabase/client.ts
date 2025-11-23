@@ -32,10 +32,21 @@ export function createServerClient() {
     throw new Error('Missing Supabase environment variables');
   }
   
+  console.log(`🔗 [SUPABASE] Creating server client to: ${url}`);
+  
   return createClient(url, serviceKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false
+    },
+    global: {
+      fetch: (...args) => {
+        console.log(`📡 [FETCH] Supabase request to: ${args[0]}`);
+        return fetch(...args).catch(err => {
+          console.error(`❌ [FETCH FAILED]`, err.message, err.cause);
+          throw err;
+        });
+      }
     }
   });
 }
