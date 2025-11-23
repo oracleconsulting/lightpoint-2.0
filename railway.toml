@@ -1,0 +1,14 @@
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[build.env]
+# Build-time environment variables (Railway will inject actual values)
+NEXT_PUBLIC_SUPABASE_URL = "${{NEXT_PUBLIC_SUPABASE_URL}}"
+NEXT_PUBLIC_SUPABASE_ANON_KEY = "${{NEXT_PUBLIC_SUPABASE_ANON_KEY}}"
+
+[deploy]
+startCommand = "node .next/standalone/server.js"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+

@@ -13,6 +13,14 @@ const nextConfig = {
   reactStrictMode: true,
   // Skip static page generation - render everything at runtime
   output: 'standalone',
+  // Disable static optimization for all pages (they require runtime data)
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '2mb',
+    },
+  },
+  // Force dynamic rendering for all routes
+  dynamicIO: true,
   // CRITICAL: Ignore ESLint during builds to prevent warnings from blocking deployment
   eslint: {
     ignoreDuringBuilds: true, // Allow build to pass with warnings
@@ -20,6 +28,14 @@ const nextConfig = {
   // Disable TypeScript strict checking during build (warnings only)
   typescript: {
     ignoreBuildErrors: true, // Allow build to pass with TS warnings
+  },
+  // Force all routes to be dynamic (no static generation)
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '2mb',
+    },
+    // Disable ISR and SSG completely
+    isrMemoryCacheSize: 0,
   },
   webpack: (config) => {
     config.resolve.fallback = {
@@ -38,13 +54,7 @@ const nextConfig = {
       },
     ];
   },
-  // Skip static page generation during build
-  experimental: {
-    serverActions: {
-      bodySizeLimit: '2mb',
-    },
-  },
-}
+};
 
 module.exports = nextConfig
 
