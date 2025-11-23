@@ -83,7 +83,7 @@ export default function HomePage() {
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32 sm:py-40 w-full">
             <div className="text-center lg:text-left max-w-2xl lg:max-w-xl">
               {hero.badge_text && (
-                <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full glass border border-white/30 mb-8 animate-fade-in hover-glow bg-white/20">
+                <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border-2 border-blue-700/50 mb-8 animate-fade-in hover-glow bg-blue-900/90 backdrop-blur-xl shadow-2xl">
                   <Sparkles className="h-5 w-5 text-yellow-300 animate-pulse" />
                   <span className="text-sm font-semibold text-white">{hero.badge_text}</span>
                 </div>
