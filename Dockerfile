@@ -1,12 +1,12 @@
-# Use Railway's nixpacks base image
-FROM ghcr.io/railwayapp/nixpacks:ubuntu-1745885067
+# Use official Node.js LTS image
+FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy package files
+# Install dependencies first (better layer caching)
 COPY package*.json ./
 
-# Install dependencies without running scripts
+# Install dependencies without running scripts (skip Husky)
 ENV HUSKY=0
 RUN npm ci --ignore-scripts
 
