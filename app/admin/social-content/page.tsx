@@ -45,7 +45,7 @@ export default function SocialContentManagerPage() {
   const blogPostId = searchParams.get('blogPostId');
 
   const [generating, setGenerating] = useState(false);
-  const [selectedPlatform, setSelectedPlatform] = useState<'all' | 'twitter' | 'linkedin' | 'facebook'>('all');
+  const [selectedPlatform, setSelectedPlatform] = useState<'all' | 'twitter' | 'linkedin' | 'facebook' | 'instagram'>('all');
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'draft' | 'approved' | 'scheduled' | 'published'>('all');
 
   // Fetch blog posts (for selection)
@@ -80,12 +80,12 @@ export default function SocialContentManagerPage() {
     try {
       const result = await generateMultiPlatform.mutateAsync({
         blogPostId,
-        platforms: ['twitter', 'linkedin', 'facebook'],
+        platforms: ['twitter', 'linkedin', 'instagram'],
         variantsPerPlatform: 3,
         useDripCampaign: true,
       });
 
-      alert(`✨ Generated ${result.generated} social posts!\n\nTwitter: ${result.byPlatform.twitter}\nLinkedIn: ${result.byPlatform.linkedin}\nFacebook: ${result.byPlatform.facebook}\n\nCost: £${(result.totalCost * 0.79).toFixed(2)}`);
+      alert(`✨ Generated ${result.generated} social posts!\n\nTwitter: ${result.byPlatform.twitter || 0}\nLinkedIn: ${result.byPlatform.linkedin || 0}\nInstagram: ${result.byPlatform.instagram || 0}\n\nCost: £0 (using OpenRouter)`);
       
       refetchSocialContent();
     } catch (error: any) {
@@ -247,7 +247,7 @@ export default function SocialContentManagerPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-gray-600 mb-4">
-                  Click "Generate AI Content" to create 3 optimized variants for each platform (Twitter, LinkedIn, Facebook) using GPT-4 Turbo.
+                  Click "Generate AI Content" to create 3 optimized variants for each platform (Twitter, LinkedIn, Instagram) using OpenRouter (Claude).
                 </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -267,11 +267,11 @@ export default function SocialContentManagerPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg">
-                    <Facebook className="h-6 w-6 text-blue-600" />
+                  <div className="flex items-center gap-3 p-4 bg-gradient-to-br from-pink-50 to-purple-50 rounded-lg">
+                    <div className="h-6 w-6 rounded bg-gradient-to-br from-pink-500 via-purple-500 to-orange-500" />
                     <div>
-                      <p className="font-semibold text-gray-900">Facebook</p>
-                      <p className="text-sm text-gray-600">Conversational</p>
+                      <p className="font-semibold text-gray-900">Instagram</p>
+                      <p className="text-sm text-gray-600">Visual, inspiring</p>
                     </div>
                   </div>
                 </div>
@@ -299,7 +299,7 @@ export default function SocialContentManagerPage() {
                     <option value="all">All Platforms</option>
                     <option value="twitter">Twitter</option>
                     <option value="linkedin">LinkedIn</option>
-                    <option value="facebook">Facebook</option>
+                    <option value="instagram">Instagram</option>
                   </select>
                 </div>
 
@@ -333,7 +333,7 @@ export default function SocialContentManagerPage() {
               </div>
             ) : socialContent && socialContent.posts && socialContent.posts.length > 0 ? (
               <div className="space-y-4">
-                {['twitter', 'linkedin', 'facebook'].map((platform) => {
+                {['twitter', 'linkedin', 'instagram'].map((platform) => {
                   const platformPosts = socialContent.posts?.filter(
                     (p: any) => p.platform === platform
                   ) || [];
@@ -379,7 +379,7 @@ function PlatformSection({
   posts, 
   onRefresh 
 }: { 
-  platform: 'twitter' | 'linkedin' | 'facebook';
+  platform: 'twitter' | 'linkedin' | 'facebook' | 'instagram';
   posts: any[];
   onRefresh: () => void;
 }) {
@@ -403,6 +403,12 @@ function PlatformSection({
       name: 'Facebook',
       color: 'blue-600',
       bgColor: 'blue-50',
+    },
+    instagram: {
+      icon: () => <div className="h-6 w-6 rounded bg-gradient-to-br from-pink-500 via-purple-500 to-orange-500" />,
+      name: 'Instagram',
+      color: 'pink-500',
+      bgColor: 'gradient-to-br from-pink-50 to-purple-50',
     },
   };
 
@@ -454,7 +460,7 @@ function SocialPostCard({
   onRefresh 
 }: { 
   post: any;
-  platform: 'twitter' | 'linkedin' | 'facebook';
+  platform: 'twitter' | 'linkedin' | 'facebook' | 'instagram';
   onRefresh: () => void;
 }) {
   const [isEditing, setIsEditing] = useState(false);

@@ -1,16 +1,12 @@
-import OpenAI from 'openai';
+import { callOpenRouter } from '@/lib/openrouter/client';
 
 /**
  * AI Social Content Generator
  * 
  * Transforms blog posts into platform-optimized social media content
- * Supports: Twitter, LinkedIn, Facebook
- * Uses: OpenAI GPT-4 Turbo for high-quality generation
+ * Supports: Twitter, LinkedIn, Facebook, Instagram
+ * Uses: OpenRouter (Claude/GPT-4) for high-quality generation
  */
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 export interface BlogPost {
   title: string;
@@ -23,7 +19,7 @@ export interface BlogPost {
 }
 
 export interface GenerationOptions {
-  platform: 'twitter' | 'linkedin' | 'facebook';
+  platform: 'twitter' | 'linkedin' | 'facebook' | 'instagram';
   variants: number; // 1-5
   contentType?: 'announcement' | 'key_quote' | 'detailed_summary' | 'stat_highlight' | 'case_study' | 'evergreen_reshare';
   tone?: 'professional' | 'casual' | 'authoritative';
@@ -70,6 +66,14 @@ const PLATFORM_SPECS = {
     style: 'Conversational, engaging, ask questions to spark discussion. More personal tone.',
     cta: 'Learn more in our latest blog post',
     audience: 'Broader professional audience, community-focused',
+  },
+  instagram: {
+    maxLength: 2200,
+    optimalLength: 300,
+    hashtagCount: 10,
+    style: 'Visual-first, inspiring, use emojis liberally. Line breaks for readability. Story-driven.',
+    cta: 'Link in bio 🔗',
+    audience: 'Visual learners, younger professionals, mobile-first',
   },
 };
 
@@ -167,21 +171,22 @@ No numbering, no labels, no explanations.
 Each post must be complete and ready to publish.`;
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
+    // Use OpenRouter (your existing setup)
+    const response = await callOpenRouter({
+      model: 'anthropic/claude-sonnet-4.5', // Fast, cost-effective
       messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
+        {
+          role: 'system',
+          content: systemPrompt,
+        },
+        {
+          role: 'user',
+          content: userPrompt,
+        },
       ],
-      temperature: 0.8, // Creative but focused
+      temperature: 0.8,
       max_tokens: 1500,
-      presence_penalty: 0.3, // Encourage unique variants
-      frequency_penalty: 0.3, // Reduce repetition
     });
-
-    const response = completion.choices[0]?.message?.content || '';
-    const tokens = completion.usage?.total_tokens || 0;
-    const cost = calculateCost(tokens, 'gpt-4-turbo-preview');
 
     // Parse response into variants
     const variants = response
@@ -198,9 +203,9 @@ Each post must be complete and ready to publish.`;
           variant: index + 1,
           hashtags,
           characterCount: content.length,
-          aiModel: 'gpt-4-turbo-preview',
-          tokens: Math.ceil(tokens / options.variants), // Estimate per variant
-          cost: cost / options.variants,
+          aiModel: 'openrouter-claude-sonnet-4.5', // Using your existing OpenRouter
+          tokens: Math.ceil(response.length / 4), // Rough estimate
+          cost: 0, // OpenRouter costs already tracked elsewhere
         };
       });
 
@@ -327,6 +332,26 @@ Want to see it in action? Read our latest post: [LINK]
 
 #HMRC #TaxAdvice #Accounting`,
     },
+
+    instagram: {
+      announcement: `💡 What if you could predict HMRC complaint outcomes BEFORE submitting?
+
+Our AI does exactly that. 
+
+🔍 Analyzes 10,000+ historical cases
+📊 Scores your chances of success
+✍️ Generates precedent-backed complaints
+⚡ Saves you 8+ hours per case
+
+Accountants are seeing:
+✅ 96%+ success rates
+✅ £650k+ recovered in fees
+✅ 6x faster turnaround
+
+🔗 Link in bio to learn more
+
+#HMRC #TaxCompliance #Accounting #AI #ProfessionalServices #UKAccountants #TaxAdvice #FinTech #Automation #Productivity`,
+    },
   };
 
   const platformExamples = examples[platform];
@@ -345,7 +370,7 @@ Want to see it in action? Read our latest post: [LINK]
  */
 export async function generateMultiPlatformContent(
   blogPost: BlogPost,
-  platforms: ('twitter' | 'linkedin' | 'facebook')[],
+  platforms: ('twitter' | 'linkedin' | 'facebook' | 'instagram')[],
   variantsPerPlatform: number = 3
 ): Promise<Record<string, GeneratedContent[]>> {
   const results: Record<string, GeneratedContent[]> = {};

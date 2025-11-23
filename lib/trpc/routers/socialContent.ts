@@ -9,7 +9,7 @@ import { generateSocialContent, generateMultiPlatformContent } from '@/lib/ai/so
  * Handles AI content generation, approval, scheduling, and analytics
  */
 
-const platformEnum = z.enum(['twitter', 'linkedin', 'facebook']);
+const platformEnum = z.enum(['twitter', 'linkedin', 'facebook', 'instagram']);
 const statusEnum = z.enum(['draft', 'approved', 'scheduled', 'published', 'failed']);
 const contentTypeEnum = z.enum(['announcement', 'key_quote', 'detailed_summary', 'stat_highlight', 'case_study', 'evergreen_reshare']);
 
@@ -237,6 +237,7 @@ export const socialContentRouter = router({
           twitter: savedPosts.filter(p => p.platform === 'twitter').length,
           linkedin: savedPosts.filter(p => p.platform === 'linkedin').length,
           facebook: savedPosts.filter(p => p.platform === 'facebook').length,
+          instagram: savedPosts.filter(p => p.platform === 'instagram').length,
         },
         totalCost: Math.round(totalCost * 100) / 100,
         usedDripCampaign: !!schedule,

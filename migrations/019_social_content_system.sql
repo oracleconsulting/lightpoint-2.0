@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS social_content_posts (
   blog_post_id UUID NOT NULL REFERENCES blog_posts(id) ON DELETE CASCADE,
   
   -- Platform & Status
-  platform TEXT NOT NULL CHECK (platform IN ('twitter', 'linkedin', 'facebook')),
+  platform TEXT NOT NULL CHECK (platform IN ('twitter', 'linkedin', 'facebook', 'instagram')),
   status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'approved', 'scheduled', 'published', 'failed')),
   
   -- Content
@@ -191,6 +191,14 @@ INSERT INTO social_content_templates (name, platform, content_type, prompt_templ
     'Create an engaging Facebook post (300-500 chars) about this blog article. Use a conversational tone, ask a question to spark discussion, and include 2-3 hashtags. End with "Learn more: [LINK]"',
     500,
     3
+  ),
+  (
+    'Instagram - Visual Story',
+    'instagram',
+    'announcement',
+    'Create an Instagram caption (200-300 chars) with visual, inspiring language. Use emojis liberally, line breaks for readability, and 8-10 relevant hashtags. End with "Link in bio 🔗"',
+    300,
+    10
   ),
   (
     'Twitter - Key Quote',
