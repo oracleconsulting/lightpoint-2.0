@@ -49,12 +49,12 @@ export default function DynamicGammaRenderer({ layout }: DynamicGammaRendererPro
     const type = section.type || section.layoutType;
     const props = section.props || {};
     
-    // DEBUG: Log the actual type value
+    // DEBUG: Log the actual type value and props
     console.log(`🔍 Rendering component at index ${index}:`, {
       rawType: section.type,
       rawLayoutType: section.layoutType,
       finalType: type,
-      propsKeys: Object.keys(props)
+      props: props // Show full props to debug color issues
     });
 
     try {

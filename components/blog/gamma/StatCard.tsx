@@ -92,7 +92,9 @@ export default function StatCard({
   suffix,
   animationDelay = 0
 }: StatCardProps) {
-  const colors = colorMap[color];
+  // Fallback to 'blue' if color is invalid
+  const safeColor = (color && colorMap[color as keyof typeof colorMap]) ? color : 'blue';
+  const colors = colorMap[safeColor as keyof typeof colorMap];
   const IconComponent = icon ? iconMap[icon] : null;
   const TrendIcon = trend ? trendMap[trend].icon : null;
 
