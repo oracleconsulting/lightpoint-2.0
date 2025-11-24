@@ -6,7 +6,7 @@ import { useParams, useSearchParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc/Provider';
 import { ArrowLeft, Calendar, Clock, Tag, Share2, User } from 'lucide-react';
 import { DynamicLayoutRenderer } from '@/components/blog/DynamicLayoutRenderer';
-import { IntelligentLayoutWeaver } from '@/components/blog/IntelligentLayoutWeaver';
+import DynamicGammaRenderer from '@/components/blog/DynamicGammaRenderer';
 
 export default function BlogPostPage() {
   const params = useParams();
@@ -213,17 +213,14 @@ export default function BlogPostPage() {
       )}
 
       {/* Content */}
-      <article className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        {/* If we have visual layout, intelligently weave it with the text */}
+      <article className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        {/* If we have Gamma-style visual layout, render it */}
         {post.structured_layout ? (
-          <IntelligentLayoutWeaver
-            textContent={post.content}
-            visualLayout={{
-              layout: post.structured_layout.layout || post.structured_layout,
-              theme: post.structured_layout.theme,
-            }}
-            manualPlacements={post.structured_layout.manual_placements || {}}
-          />
+          <div className="bg-gradient-to-br from-[#1a1a2e] to-[#0f0f1e] rounded-3xl p-8 md:p-12">
+            <DynamicGammaRenderer 
+              layout={post.structured_layout}
+            />
+          </div>
         ) : (
           <div
             className="prose prose-lg prose-blue max-w-none
