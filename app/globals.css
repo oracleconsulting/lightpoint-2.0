@@ -518,5 +518,170 @@
     border-left: 4px solid #8B5CF6;
     background: linear-gradient(90deg, rgba(139, 92, 246, 0.1) 0%, transparent 100%);
   }
+
+  /* ========================================
+     GAMMA-STYLE BLOG COMPONENTS
+     ======================================== */
+
+  /* Animated gradient backgrounds */
+  @keyframes gradient-shift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  .animated-gradient {
+    background: linear-gradient(-45deg, #1a1a2e, #0f0f1e, #4F86F9, #00D4FF);
+    background-size: 400% 400%;
+    animation: gradient-shift 15s ease infinite;
+  }
+
+  /* Neon glow effects */
+  .neon-glow {
+    box-shadow: 
+      0 0 20px rgba(79, 134, 249, 0.5),
+      0 0 40px rgba(0, 212, 255, 0.3),
+      0 0 60px rgba(79, 134, 249, 0.1);
+  }
+
+  .neon-glow-blue {
+    box-shadow: 0 0 20px rgba(79, 134, 249, 0.6);
+  }
+
+  .neon-glow-cyan {
+    box-shadow: 0 0 20px rgba(0, 212, 255, 0.6);
+  }
+
+  .neon-glow-green {
+    box-shadow: 0 0 20px rgba(0, 255, 136, 0.6);
+  }
+
+  .neon-glow-purple {
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.6);
+  }
+
+  /* Glass morphism */
+  .glass {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .glass-card {
+    background: rgba(26, 26, 46, 0.5);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(79, 134, 249, 0.2);
+  }
+
+  /* Text shadows for depth */
+  .text-glow {
+    text-shadow: 0 0 30px rgba(79, 134, 249, 0.5);
+  }
+
+  .text-glow-cyan {
+    text-shadow: 0 0 30px rgba(0, 212, 255, 0.5);
+  }
+
+  .text-glow-green {
+    text-shadow: 0 0 30px rgba(0, 255, 136, 0.5);
+  }
+
+  /* Hover animations */
+  .hover-lift {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px rgba(0, 212, 255, 0.3);
+  }
+
+  /* Stat card specific styles */
+  .stat-card {
+    background: linear-gradient(135deg, rgba(79, 134, 249, 0.1) 0%, rgba(0, 212, 255, 0.05) 100%);
+    border: 1px solid rgba(79, 134, 249, 0.3);
+    border-radius: 16px;
+    padding: 2rem;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 40px rgba(79, 134, 249, 0.3);
+  }
+
+  .stat-metric {
+    font-size: 3rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #4F86F9 0%, #00D4FF 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 1rem 0;
+  }
+
+  /* Blog container dark theme */
+  .blog-gamma-container {
+    background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1e 100%);
+    color: #FFFFFF;
+    min-height: 100vh;
+  }
+
+  /* Timeline connector animations */
+  @keyframes pulse-line {
+    0%, 100% {
+      opacity: 0.5;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+
+  .timeline-connector {
+    animation: pulse-line 2s ease-in-out infinite;
+  }
+
+  /* Chart text visibility fixes */
+  .recharts-text {
+    fill: #FFFFFF !important;
+  }
+
+  .recharts-cartesian-axis-tick-value {
+    fill: #FFFFFF !important;
+  }
+
+  .recharts-label {
+    fill: #FFFFFF !important;
+  }
+
+  /* ProcessFlow grid responsive layout */
+  .process-flow-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+  }
+
+  /* Smooth scroll for blog navigation */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Custom scrollbar for blog content */
+  .blog-content::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .blog-content::-webkit-scrollbar-track {
+    background: rgba(26, 26, 46, 0.5);
+  }
+
+  .blog-content::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #4F86F9, #00D4FF);
+    border-radius: 4px;
+  }
+
+  .blog-content::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #00D4FF, #4F86F9);
+  }
 }
 
