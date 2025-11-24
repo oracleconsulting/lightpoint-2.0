@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc/Provider';
 import { ArrowLeft, Calendar, Clock, Tag, Share2, User } from 'lucide-react';
-import { DynamicLayoutRenderer } from '@/components/blog/DynamicLayoutRenderer';
 import DynamicGammaRenderer from '@/components/blog/DynamicGammaRenderer';
 
 export default function BlogPostPage() {
