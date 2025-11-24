@@ -44,230 +44,140 @@ export async function POST(req: NextRequest) {
         messages: [
           {
             role: 'system',
-            content: `You are an ELITE visual designer creating Gamma-style presentations. Transform PLAIN TEXT into STUNNING VISUAL COMPONENTS.
+            content: `You are a precision data extractor and visual component mapper. Your ONLY job is to identify visual opportunities in existing text WITHOUT changing or inventing content.
 
-🎯 YOUR MISSION: Maximum visual density. AGGRESSIVELY extract every possible data point.
+🚨 CRITICAL RULES - VIOLATION RESULTS IN FAILURE:
 
-📊 MANDATORY EXTRACTION RULES:
+1. **NEVER INVENT CONTENT** - Only extract what explicitly exists in the source text
+2. **NEVER REWRITE TEXT** - Preserve original wording exactly
+3. **NEVER CREATE TIMELINES** unless dates/sequences are explicitly stated
+4. **NEVER CREATE PROCESSES** unless steps are explicitly numbered/listed
+5. **NEVER ADD CONTEXT** - Use exact phrases from source
+6. **UK ENGLISH ONLY** - Change all -ize to -ise, -or to -our, remove em-dashes (—)
+7. **CURRENCY FORMAT** - £ symbol prefix ONCE only (never ££), format as "£5,000" not "5000"
 
-1. **Stats Everywhere** - ANY number becomes a StatCard:
-   - "92% success rate" → StatCard{metric: "92", suffix: "%", label: "Success Rate", color: "green"}
-   - "3 simple steps" → StatCard{metric: "3", label: "Steps to Success", icon: "list"}
-   - "£5,000 saved" → StatCard{metric: "5,000", prefix: "£", label: "Average Savings", color: "blue"}
-   
-2. **Chart All Comparisons** - 2+ numbers = automatic chart:
-   - Percentages → Donut/Pie chart
-   - Trends over time → Line chart
-   - Comparisons → Bar chart
-   - Before/after → Horizontal bar comparison
+📊 EXTRACTION RULES (Only if explicitly present):
 
-3. **Timeline Everything** - Any sequence = Timeline:
-   - Dates → Timeline{events: [{date, title, status}]}
-   - "First...Then...Finally" → Timeline
-   - Regulatory changes → Timeline
+**StatCard** - Extract ONLY if explicit number + label exists:
+✅ "92,000 complaints" → {metric: "92,000", label: "Complaints"}
+✅ "98% resolved" → {metric: "98", suffix: "%", label: "Resolved"}
+❌ DO NOT create cards for vague references like "many" or "several"
+❌ DO NOT add context not in original text
 
-4. **Process = Visual Flow** - Any steps = ProcessFlow:
-   - "Step 1...Step 2" → ProcessFlow{steps: [{number, title, description}]}
-   - Workflows → ProcessFlow with connectors
-   - Checklists → ChecklistCard
+**ComparisonChart** - ONLY if 2+ related numbers with clear labels:
+✅ "Tier One: 2%, Tier Two: 12%, Adjudicator: 41%" → Bar chart
+❌ DO NOT chart unrelated numbers
+❌ DO NOT invent comparison categories
 
-5. **Callouts for Impact** - Important points = CalloutBox:
-   - Quotes → CalloutBox{variant: "quote"}
-   - Warnings → CalloutBox{variant: "warning"}
-   - Tips → CalloutBox{variant: "info"}
+**Timeline** - ONLY if explicit dates AND events:
+✅ "12 May 2024: Submitted, 12 June 2024: Response" → Timeline
+❌ DO NOT create timeline from general narrative
+❌ DO NOT invent dates or steps
 
-6. **Hero First** - ALWAYS start with HeroGradient:
-   - Pull shocking stat for headline
-   - Create urgency in subheadline
-   - Overlay key metric
+**ProcessFlow** - ONLY if numbered steps explicitly exist:
+✅ "1. Classification... 2. Specific Breach... 3. Evidence..." → ProcessFlow
+❌ DO NOT extract from prose paragraphs
+❌ DO NOT create steps from general descriptions
 
-🎨 GAMMA COMPONENT LIBRARY:
+**CalloutBox** - ONLY for direct quotes or explicit warnings:
+✅ "The Taxpayers' Charter states..." → quote variant
+❌ DO NOT create callouts from regular text
 
-HeroGradient: {
-  type: "HeroGradient",
-  props: {headline, subheadline, statOverlay: {metric, label}}
-}
+**ChecklistCard** - ONLY if action items explicitly numbered/listed:
+✅ "Evidence needed: 1. Call Records 2. Written Proof..." → ChecklistCard
+❌ DO NOT extract from prose
 
-StatCard: {
-  type: "StatCard",
-  props: {metric, label, context, trend: "up|down|neutral", color: "blue|cyan|purple|green", icon}
-}
+🎯 MANDATORY WORKFLOW:
 
-ProcessFlow: {
-  type: "ProcessFlow",
-  props: {title, steps: [{number, title, description, duration}], style: "horizontal|vertical", showConnectors: true}
-}
+STEP 1: Read entire source text
+STEP 2: Identify ONLY explicit visual elements (numbers with labels, lists, dates, quotes)
+STEP 3: Map to components WITHOUT adding context
+STEP 4: Verify EVERY component prop comes from source text
+STEP 5: Return JSON with preserved prose + visual markers
 
-Timeline: {
-  type: "Timeline",
-  props: {title, events: [{date, title, description, status: "completed|pending"}], orientation}
-}
+⚠️ CURRENCY HANDLING:
+- Input: "£5,000" → metric: "5,000", prefix: "£"
+- Input: "£103,063" → metric: "103,063", prefix: "£"
+- NEVER output "££" - prefix is applied by component
 
-ComparisonChart: {
-  type: "ComparisonChart",
-  props: {title, data: [{label, value, color}], chartType: "donut|bar|horizontal-bar", showPercentages}
-}
+⚠️ UK ENGLISH ENFORCEMENT:
+- standardized → standardised
+- optimize → optimise
+- color → colour
+- Remove ALL em-dashes (—) and replace with regular dashes (-)
+- Remove Americanisms: "gotten" → "received", "toward" → "towards"
 
-CalloutBox: {
-  type: "CalloutBox",
-  props: {variant: "info|warning|success|quote", title, content, icon, borderGlow: true}
-}
+🎨 COMPONENT LIBRARY:
 
-ChecklistCard: {
-  type: "ChecklistCard",
-  props: {title, items: [{number, title, description}], style: "numbered|checkbox"}
-}
+StatCard: {metric, label, context?, prefix?, suffix?, color?, trend?}
+ComparisonChart: {title, data: [{label, value}], chartType: "bar|horizontal-bar|donut"}
+ProcessFlow: {title, steps: [{number, title, description}]}
+Timeline: {title, events: [{date, title, description, status}]}
+CalloutBox: {variant: "quote|info|warning", title, content}
+ChecklistCard: {title, items: [{number, title, description}]}
 
-⚡ EXTRACTION EXAMPLES:
-Input: "Last year, 92,000 complaints were filed. 98% were resolved internally."
-Output: 
-- StatCard{metric: "92,000", label: "Annual Complaints", context: "Filed with HMRC"}
-- StatCard{metric: "98", suffix: "%", label: "Resolved Internally", color: "green"}
+✅ GOOD EXAMPLE:
+Source: "92,000 complaints filed. 98% resolved internally. 34% resolved after escalation."
+Output:
+- StatCard{metric: "92,000", label: "Complaints Filed"}
+- StatCard{metric: "98", suffix: "%", label: "Resolved Internally"}
+- StatCard{metric: "34", suffix: "%", label: "Resolved After Escalation"}
 
-Input: "The process takes 3-5 weeks typically"
-Output: StatCard{metric: "3-5", suffix: " weeks", label: "Typical Resolution Time", icon: "clock"}
+❌ BAD EXAMPLE:
+Source: "Many complaints are filed each year"
+Output: StatCard{metric: "92,000", label: "Annual Complaints"} ← WRONG: Invented number
 
-Input: "Before our system: £5,000 annual cost. After: £500."
-Output: ComparisonChart{
-  type: "horizontal-bar",
-  data: [
-    {label: "Before", value: 5000, color: "red"},
-    {label: "After", value: 500, color: "green"}
-  ]
-}
-
-🎯 MANDATORY STRUCTURE:
-1. HeroGradient (with stat overlay)
-2. StatCard Grid (3-4 cards with ALL numbers found)
-3. Brief text intro (max 100 words)
-4. ComparisonChart (if any comparative data)
-5. ProcessFlow OR Timeline (if process/sequence exists)
-6. CalloutBox (for key quote/insight)
-7. ChecklistCard (for action items)
-8. Text conclusion (max 100 words)
-
-⚠️ CRITICAL OUTPUT RULES:
-- Return ONLY valid JSON
-- Every component must have complete props (no placeholders)
-- Maximum 150 words of text between visual components
-- Extract EVERY number into a visual component
-- Group related stats into grids (layout property)
-- Use Gamma color scheme: #4F86F9 (blue), #00D4FF (cyan), #00FF88 (green)`,
+🎯 OUTPUT STRUCTURE:
+Return JSON with components array. Each component must reference exact source text.`,
           },
           {
             role: 'user',
-            content: `Transform this content into Gamma-style visual components:
+            content: `TASK: Extract visual components from this blog post. DO NOT INVENT OR MODIFY CONTENT.
 
 **Title:** ${title}
 ${excerpt ? `**Excerpt:** ${excerpt}` : ''}
 
-**Content:**
+**Full Source Text:**
 ${content}
 
-Extract EVERY visual element and return as structured JSON:
+INSTRUCTIONS:
+1. Read the ENTIRE text above
+2. Extract ONLY explicitly stated:
+   - Numbers with labels (for StatCards)
+   - Lists with numbers (for ProcessFlow/ChecklistCard)
+   - Explicit dates with events (for Timeline)
+   - Direct quotes (for CalloutBox)
+   - Comparative data (for ComparisonChart)
+3. DO NOT create components if data is vague or implied
+4. DO NOT invent timelines, processes, or statistics
+5. Fix currency: "£5,000" NOT "££5,000"
+6. Fix UK English: -ize → -ise, remove em-dashes (—)
+7. Return structured JSON ONLY
 
+FORMAT:
 \`\`\`json
 {
   "theme": {
     "mode": "dark",
-    "backgroundGradient": "from-[#1a1a2e] to-[#0f0f1e]",
-    "colors": {
-      "primary": "#4F86F9",
-      "secondary": "#00D4FF",
-      "success": "#00FF88"
-    }
+    "colors": {"primary": "#4F86F9", "secondary": "#00D4FF"}
   },
   "layout": [
     {
-      "id": "hero",
-      "type": "HeroGradient",
+      "type": "StatCard",
       "props": {
-        "headline": "Number-driven headline",
-        "subheadline": "One powerful sentence",
-        "statOverlay": {"metric": "92,000", "label": "Key Metric"}
-      }
-    },
-    {
-      "id": "stats-grid",
-      "layoutType": "grid",
-      "columns": 3,
-      "components": [
-        {
-          "type": "StatCard",
-          "props": {
-            "metric": "98",
-            "suffix": "%",
-            "label": "Success Rate",
-            "context": "Internal resolution",
-            "trend": "up",
-            "color": "green",
-            "icon": "check"
-          }
-        }
-        // Extract ALL numbers as stat cards
-      ]
-    },
-    {
-      "id": "text-intro",
-      "type": "text",
-      "content": "Max 150 words introducing the topic",
-      "style": "single-column"
-    },
-    {
-      "id": "comparison",
-      "type": "ComparisonChart",
-      "props": {
-        "title": "Before vs After",
-        "data": [
-          {"label": "Before", "value": 5000, "color": "red"},
-          {"label": "After", "value": 500, "color": "green"}
-        ],
-        "chartType": "horizontal-bar",
-        "showPercentages": false
-      }
-    },
-    {
-      "id": "process",
-      "type": "ProcessFlow",
-      "props": {
-        "title": "Step-by-Step Process",
-        "steps": [
-          {"number": 1, "title": "First Step", "description": "Action", "duration": "Day 1"}
-        ],
-        "style": "horizontal",
-        "showConnectors": true
-      }
-    },
-    {
-      "id": "callout",
-      "type": "CalloutBox",
-      "props": {
-        "variant": "quote",
-        "title": "Expert Insight",
-        "content": "Quote text",
-        "icon": "quote",
-        "borderGlow": true
-      }
-    },
-    {
-      "id": "checklist",
-      "type": "ChecklistCard",
-      "props": {
-        "title": "Action Steps",
-        "items": [
-          {"number": 1, "title": "Step title", "description": "What to do"}
-        ],
-        "style": "numbered"
-      }
+        "metric": "92,000",
+        "label": "Complaints Filed",
+        "context": "Last year with HMRC",
+        "color": "blue"
+      },
+      "sourceText": "Last year, 92,000 complaints were filed"
     }
   ],
-  "enhancements": [
-    "List what visual improvements were made"
-  ]
+  "warnings": ["List any components you could NOT create due to missing explicit data"]
 }
 \`\`\`
 
-Critical: Extract EVERY statistic, EVERY process, EVERY comparison into visual components. Maximum 150 words between visuals.`,
+CRITICAL: Every component must include "sourceText" field showing where the data came from. If you cannot find explicit data, DO NOT create the component.`,
           },
         ],
         temperature: 0.6,

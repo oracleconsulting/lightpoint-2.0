@@ -25,6 +25,10 @@ export default function ProcessFlow({
 }: ProcessFlowProps) {
   const isHorizontal = style === 'horizontal';
   const isSnake = style === 'snake';
+  
+  // Auto-select optimal layout: 5-6 steps = 2x3 or 3x2 grid for better visual balance
+  const useGridLayout = steps.length >= 5;
+  const gridCols = steps.length === 5 ? 3 : steps.length >= 6 ? 3 : 2;
 
   return (
     <motion.div
@@ -40,11 +44,14 @@ export default function ProcessFlow({
       </h3>
 
       {/* Steps Container */}
-      <div className={`flex ${isHorizontal || isSnake ? 'flex-row flex-wrap' : 'flex-col'} gap-6`}>
+      <div className={useGridLayout 
+        ? `grid grid-cols-1 md:grid-cols-2 lg:grid-cols-${gridCols} gap-6`
+        : `flex ${isHorizontal ? 'flex-row' : 'flex-col'} gap-6`
+      }>
         {steps.map((step, index) => (
           <div
             key={index}
-            className={`relative ${isHorizontal ? 'flex-1 min-w-[200px]' : isSnake ? 'w-[calc(50%-12px)]' : 'w-full'}`}
+            className="relative"
           >
             {/* Step Card */}
             <motion.div
@@ -84,8 +91,8 @@ export default function ProcessFlow({
               </div>
             </motion.div>
 
-            {/* Connector */}
-            {showConnectors && index < steps.length - 1 && (
+            {/* Connector arrow - only show if NOT using grid layout */}
+            {showConnectors && !useGridLayout && index < steps.length - 1 && (
               <div className={`absolute ${
                 isHorizontal 
                   ? 'left-full top-1/2 -translate-y-1/2 w-6 h-0.5 ml-3' 
@@ -108,4 +115,3 @@ export default function ProcessFlow({
     </motion.div>
   );
 }
-

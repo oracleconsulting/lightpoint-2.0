@@ -101,10 +101,21 @@ export default function ComparisonChart({
             <BarChart 
               data={dataWithPercentages} 
               layout="vertical"
-              margin={{ top: 20, right: 30, left: 100, bottom: 20 }}
+              margin={{ top: 20, right: 30, left: 140, bottom: 20 }}
             >
-              <XAxis type="number" stroke="#A0A0B0" />
-              <YAxis type="category" dataKey="name" stroke="#A0A0B0" width={90} />
+              <XAxis 
+                type="number" 
+                stroke="#A0A0B0"
+                tick={{ fill: '#FFFFFF', fontSize: 14 }}
+                tickFormatter={(value) => value.toLocaleString('en-GB')}
+              />
+              <YAxis 
+                type="category" 
+                dataKey="name" 
+                stroke="#A0A0B0" 
+                width={130}
+                tick={{ fill: '#FFFFFF', fontSize: 14 }}
+              />
               <Tooltip 
                 contentStyle={{ 
                   backgroundColor: '#1a1a2e', 
@@ -112,6 +123,7 @@ export default function ComparisonChart({
                   borderRadius: '8px',
                   color: '#fff'
                 }}
+                formatter={(value: any) => [value.toLocaleString('en-GB'), 'Value']}
               />
               <Bar 
                 dataKey="value" 
@@ -130,10 +142,21 @@ export default function ComparisonChart({
           <ResponsiveContainer width="100%" height={400}>
             <BarChart 
               data={dataWithPercentages}
-              margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+              margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
             >
-              <XAxis dataKey="name" stroke="#A0A0B0" />
-              <YAxis stroke="#A0A0B0" />
+              <XAxis 
+                dataKey="name" 
+                stroke="#A0A0B0"
+                angle={-45}
+                textAnchor="end"
+                height={80}
+                tick={{ fill: '#FFFFFF', fontSize: 12 }}
+              />
+              <YAxis 
+                stroke="#A0A0B0"
+                tick={{ fill: '#FFFFFF', fontSize: 14 }}
+                tickFormatter={(value) => value.toLocaleString('en-GB')}
+              />
               <Tooltip 
                 contentStyle={{ 
                   backgroundColor: '#1a1a2e', 
@@ -141,6 +164,7 @@ export default function ComparisonChart({
                   borderRadius: '8px',
                   color: '#fff'
                 }}
+                formatter={(value: any) => [value.toLocaleString('en-GB'), 'Value']}
               />
               <Bar 
                 dataKey="value" 
