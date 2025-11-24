@@ -1,324 +1,660 @@
-## AI Prompts Documentation - Enhanced Version
+# 🤖 AI Visual Tool - Complete Prompts Documentation
 
-### Claude Sonnet 4.5 - Analysis Prompt
+This document contains all AI prompts used in the Lightpoint 2.0 blog visual layout system.
 
-**Model:** `anthropic/claude-sonnet-4.5`  
-**Context Window:** 1,000,000 tokens  
-**Temperature:** 0.3 (lower for consistent analysis)  
-**Purpose:** Comprehensive complaint analysis across ALL tax areas
+---
 
-**Key Enhancements:**
-- ✅ **12 complaint categories** (not just generic)
-- ✅ **Timeline analysis** with gap detection (>3 months)
-- ✅ **System error detection** (inter-departmental failures)
-- ✅ **7 CRG violations** tracked (CRG4025, 5225, 6050-6075, 5100, 3250, 5350, 6150)
-- ✅ **Breakthrough triggers** identification
-- ✅ **Compensation estimates** (professional fees + distress)
-- ✅ **Escalation recommendations** (Tier 1/2/Adjudicator)
+## 📋 Table of Contents
 
-**Complaint Categories:**
-1. Late Filing Penalties
-2. System/Administrative Errors
-3. Delayed Responses
-4. Tax Code/Assessment Errors
-5. Repayment Issues
-6. CIS Scheme Issues
-7. VAT Processing
-8. Corporation Tax
-9. R&D Tax Credits
-10. SEIS/EIS Claims
-11. Inter-departmental Failures
-12. Data Migration Issues
+1. [One-Click Blog Generator](#one-click-blog-generator)
+   - Research Prompt (ChatGPT 5.1)
+   - Content Writing Prompt (Claude Opus 4.1)
+   - Layout Generation Prompt (Claude Opus 4.1)
+   - Image Generation Prompt (Gemini 3 Pro)
+   - Chart Generation Prompt (Gemini 3 Pro)
+   - SEO Generation Prompt (Claude Opus 4.1)
+2. [Visual Transformer](#visual-transformer)
+3. [Layout Generator](#layout-generator)
+4. [Image Analyzer](#image-analyzer)
 
-**Timeline Analysis:**
-- Calculates total duration (flags if >12 months)
-- Identifies gaps >3 months between communications
-- Notes if response times exceed:
-  * 15 working days (general correspondence)
-  * 28 days (complaint response)
-  * 30 days (VAT/repayment claims)
-  * 8 weeks (complaint trigger threshold)
+---
 
-**System Error Detection:**
-- PAYE/SA integration failures
-- Payment allocation errors
-- Automated penalties despite cancellation
-- Data migration issues
-- Contradictory online/written information
+## 1️⃣ One-Click Blog Generator
 
-**Evidence Assessment:**
-- Screenshots of online accounts
-- Fax transmission confirmations
-- Bank statements
-- Mathematical calculation errors
-- Contradictory HMRC correspondence
+### 📊 Research Prompt (ChatGPT 5.1 Deep Search)
 
-**Enhanced Output Format:**
-```json
+**Location:** `app/api/blog/generate-full/route.ts`  
+**Model:** `openai/chatgpt-5.1`  
+**Temperature:** 0.7  
+**Max Tokens:** 3000
+
+#### System Prompt:
+```
+You are a research assistant specializing in UK accounting, tax, and HMRC matters. Research and gather comprehensive information about the given topic.
+
+Provide:
+- Key statistics and data points (with sources)
+- Recent developments and updates
+- Common problems and solutions
+- Industry best practices
+- Relevant regulations and compliance requirements
+- Real-world examples and case studies
+
+Return findings as JSON:
 {
-  "hasGrounds": boolean,
-  "complaintCategory": [string],
-  "violations": [{
-    "type": string,
-    "description": string,
-    "citation": string,
-    "severity": "high|medium|low"
-  }],
-  "timeline": {
-    "totalDuration": "X months",
-    "longestGap": "X months",
-    "missedDeadlines": number
-  },
-  "systemErrors": [{
-    "type": string,
-    "departments": [string]
-  }],
-  "breakthroughTriggers": [string],
-  "actions": [string],
-  "compensationEstimate": {
-    "professionalFees": string,
-    "distressPayment": string
-  },
-  "successRate": number (0-100),
-  "escalationRequired": "Tier1|Tier2|Adjudicator",
-  "reasoning": string
+  "research_summary": "Overview of findings",
+  "key_statistics": [{"stat": "...", "value": "...", "source": "..."}],
+  "problems": ["problem 1", "problem 2"],
+  "solutions": ["solution 1", "solution 2"],
+  "processes": [{"name": "...", "steps": ["...", "..."]}],
+  "keywords": ["keyword1", "keyword2"],
+  "sources": ["source1", "source2"]
 }
 ```
 
-### Claude Opus 4.1 - Letter Generation Prompt
+#### User Prompt:
+```
+Research this topic thoroughly: ${topic}
 
+Audience: ${audience}
+Focus on practical, actionable information.
+```
+
+**Variables:**
+- `topic` - The blog topic to research
+- `audience` - Target audience (default: "UK accountants and tax professionals")
+
+---
+
+### ✍️ Content Writing Prompt (Claude Opus 4.1)
+
+**Location:** `app/api/blog/generate-full/route.ts`  
 **Model:** `anthropic/claude-opus-4.1`  
-**Context Window:** 200,000 tokens  
-**Temperature:** 0.7 (higher for creative professional writing)  
-**Purpose:** Generate Adjudicator-level complaint letters across ALL tax areas
+**Temperature:** 0.8  
+**Max Tokens:** 4000
 
-**Key Enhancements:**
-- ✅ **Complaint type adaptation** (penalties, VAT, CIS, R&D, SEIS, etc.)
-- ✅ **6-10 timeline entries** minimum (increased from 5-8)
-- ✅ **Progressive tone escalation** through timeline
-- ✅ **Delivery method notation** (post, email, fax)
-- ✅ **Inter-departmental failure language**
-- ✅ **Mathematical contradiction highlighting**
-- ✅ **Vulnerable client considerations**
-- ✅ **Evidence enclosure list**
-- ✅ **Fax/helpline references**
-- ✅ **Screenshot references**
-
-**Complaint Type Adaptation:**
-- **Penalties**: Focus on reasonable excuse, HMRC delays causing issue
-- **System Errors**: Emphasize inter-departmental coordination failures
-- **CIS Issues**: Reference specific helpline conversations and dates
-- **VAT**: Cite 30-day service standards explicitly
-- **R&D/SEIS**: Highlight innovation impact and investment delays
-- **Repayments**: Calculate interest from original due date
-
-**Progressive Tone Escalation:**
+#### System Prompt:
 ```
-Month 1-2: "requested", "submitted"
-Month 3-4: "chased", "no response received"
-Month 5-6: "formal complaint", "expressed concern"
-Month 7-8: "strongly objected", "completely unacceptable"
-Month 9+: "comprehensive failure", "systemic breakdown"
-```
+You are an expert content writer specializing in UK accounting, tax, and HMRC matters. Write engaging, informative blog posts that help ${audience}.
 
-**Mandatory Letter Structure:**
-1. Professional Letterhead (practice details or realistic template)
-2. Delivery Method ("By post and email" or "By post and fax: [number]")
-3. Subject Line: "FORMAL COMPLAINT: [Issue] - [Duration] Delay - Ref: [Ref]"
-4. Opening (assertive, comprehensive failure statement)
-5. **Chronological Timeline** (6-10 entries minimum)
-6. **Charter Violations and CRG Breaches** (minimum 4 violations)
-7. **Impact Statement** (financial, professional, client distress)
-8. **Resolution Required** (7-10 specific numbered actions)
-9. **Professional Costs Section** (quantified with increasing burden)
-10. **Response Required** (15 days + escalation warning)
-11. **Closing** (Yours faithfully + evidence list)
+Based on the research findings provided, craft a comprehensive, well-structured article.
 
-**CRG Citations (7 tracked):**
-- CRG4025: Unreasonable delays and remedy
-- CRG5225: Professional fees reimbursement  
-- CRG6050-6075: Compensation for distress
-- CRG5100: Financial redress considerations
-- CRG3250: System failures and lost correspondence
-- CRG5350: Complaint costs
-- CRG6150: Poor complaint handling
+Tone: ${tone}
+Length: ${length === 'short' ? '500-800' : length === 'medium' ? '1200-1800' : '2000-3000'} words
 
-**Breakthrough Triggers (minimum 2-3):**
-- "comprehensively breached"
-- "completely unacceptable"  
-- "significantly below the standards"
-- "which is the only reasonable outcome"
-- "routinely upheld by the Adjudicator"
-- "pattern of systemic failures"
-- "contradicts HMRC's own guidance"
-- "public purse implications"
-- "placing further burden upon the public purse"
-- "exceeds reasonable timeframes by X%"
-- "1,200% beyond reasonable timeframes"
+Include:
+- Compelling title
+- Executive summary/excerpt
+- Key statistics from research (with context)
+- Step-by-step processes where relevant
+- Real-world examples
+- Actionable takeaways
+- SEO-optimized content
 
-**Special Language Additions:**
-
-*For inter-departmental failures:*
-> "This appears to be another case where [Department A] has failed to communicate with [Department B], resulting in contradictory actions that violate 'Making Things Easy'."
-
-*For calculation errors:*
-> "By carrying out simple arithmetic, the figures in your letter dated [date] contradict those shown on our client's online account (screenshot enclosed)."
-
-*For vulnerable clients:*
-> "Our client [is elderly/has health conditions/faces hardship], making these delays particularly distressing per CRG6050."
-
-**Evidence Enclosure List:**
-```
-Enc:
-- Original submission dated [date]
-- Chase correspondence dated [dates]
-- Screenshots showing [specific contradiction]
-- Fax confirmations dated [dates]
-- [Other specific evidence]
-```
-
-**Quality Validation (14 checks):**
-□ No placeholder brackets remain  
-□ Timeline shows 6-10 dated entries  
-□ Minimum 4 specific CRG references  
-□ All Charter violations named  
-□ Specific monetary amounts included  
-□ Professional letterhead used  
-□ Strong breakthrough triggers throughout  
-□ Progressive tone escalation evident  
-□ Clear escalation warning (Tier 1→2→Adjudicator)  
-□ Fee recovery quantified  
-□ Evidence list provided  
-□ Delivery method noted  
-□ Mathematical contradictions highlighted (if applicable)  
-□ Inter-departmental failures noted (if applicable)
-
-## How They Work Together
-
-1. **Sonnet 4.5 analyzes** (1M context, $3/M):
-   - Reads ALL documents in full detail (Stage 1 + Stage 2)
-   - Categorizes complaint type (12 categories)
-   - Calculates timeline gaps and missed deadlines
-   - Detects system errors and inter-departmental failures
-   - Searches knowledge base comprehensively (multi-angle)
-   - Identifies Charter violations (minimum 4)
-   - Tracks 7 CRG violations
-   - Identifies breakthrough triggers
-   - Estimates compensation ranges
-   - Provides structured JSON analysis
-   - **Cost-effective for heavy analysis work**
-
-2. **Opus 4.1 generates letter** (200K context, $15/M):
-   - Takes the structured analysis from Sonnet
-   - Adapts approach to complaint type
-   - Crafts 6-10 entry timeline with progressive tone
-   - Includes all mandatory sections
-   - Uses strong breakthrough language
-   - Adds special language for errors/vulnerable clients
-   - Quantifies professional costs
-   - Includes evidence enclosure list
-   - Ready-to-send quality
-   - **Premium writing for final output only**
-
-3. **Practice Settings Integration**:
-   - User configures firm details once
-   - Letterhead auto-populated in every letter
-   - Charge-out rate used for fee calculations
-   - No placeholders ever needed
-
-## Example Analysis Output (Enhanced)
-
-```json
+Format as JSON with this structure:
 {
-  "hasGrounds": true,
-  "complaintCategory": ["SEIS/EIS Claims", "Delayed Responses", "System/Administrative Errors"],
-  "violations": [
-    {
-      "type": "Unreasonable Delay",
-      "description": "14+ month delay exceeds standard 28-30 days for SEIS claims by 1,200%",
-      "citation": "CRG4025 - Unreasonable delays",
-      "severity": "high"
-    },
-    {
-      "type": "Lost Correspondence",
-      "description": "November 2024 letter claimed sent but never received, no copy provided when requested",
-      "citation": "CRG3250 - System failures",
-      "severity": "high"
-    },
-    {
-      "type": "Contradictory Instructions",
-      "description": "March 2025 instructed SEIS3 forms, October 2025 contradicted this instruction",
-      "citation": "Charter: Making Things Easy",
-      "severity": "medium"
-    },
-    {
-      "type": "Failure to Respond",
-      "description": "Multiple chase correspondence from April-September 2025 ignored",
-      "citation": "Charter: Being Responsive",
-      "severity": "high"
-    }
+  "title": "Compelling title",
+  "excerpt": "160-char summary",
+  "sections": [
+    {"type": "paragraph", "content": "..."},
+    {"type": "stat", "label": "Success Rate", "value": 96, "context": "..."},
+    {"type": "process", "steps": ["Step 1", "Step 2"]},
+    {"type": "data_table", "headers": [], "rows": []},
+    {"type": "quote", "text": "...", "source": "..."}
   ],
-  "timeline": {
-    "totalDuration": "14 months",
-    "longestGap": "9 months (February-November 2024)",
-    "missedDeadlines": 6
-  },
-  "systemErrors": [
-    {
-      "type": "Lost correspondence with no copy available",
-      "departments": ["SEIS Processing", "Correspondence Team"]
-    },
-    {
-      "type": "Contradictory instructions between departments",
-      "departments": ["SEIS Processing", "Forms Department"]
-    }
-  ],
-  "breakthroughTriggers": [
-    "14-month delay (1,200% beyond standard timeframe)",
-    "Multiple inter-departmental coordination failures",
-    "Pattern of lost correspondence and contradictory guidance",
-    "Public purse waste due to increasing professional fees"
-  ],
-  "actions": [
-    "File Tier 1 complaint with 15 working day response deadline",
-    "Request immediate processing of February 2024 SEIS claim",
-    "Request written explanation of lost November 2024 letter",
-    "Request clarification of contradictory SEIS3 instructions",
-    "Request compensation per CRG6050-6075 (£500 appropriate)",
-    "Request professional fee reimbursement per CRG5225",
-    "Request interest from February 2024 submission date",
-    "Request system review confirmation to prevent recurrence"
-  ],
-  "compensationEstimate": {
-    "professionalFees": "£2,220 (12 hours at £185/hour, increasing daily)",
-    "distressPayment": "£500 (upper end justified by 14-month duration and multiple failures)"
-  },
-  "successRate": 92,
-  "escalationRequired": "Tier1",
-  "reasoning": "Strong grounds for complaint based on: (1) Unreasonable 14-month delay exceeding standard timeframe by 1,200%, (2) Lost correspondence with no copy available despite requests, (3) Contradictory instructions causing wasted professional time, (4) Pattern of ignored follow-ups. Multiple Charter violations and CRG breaches. Similar cases with this pattern routinely upheld by Adjudicator's Office. Recommend Tier 1 with strong escalation warning given clear evidence of systemic failures."
+  "keywords": ["keyword1", "keyword2"],
+  "category": "HMRC Updates | Tax Planning | Compliance | etc"
 }
 ```
 
-## Cost Optimization Summary
+#### User Prompt:
+```
+Write a comprehensive blog post about: ${topic}
 
-**Before (Opus-only approach):**
-- Analysis: $15/M tokens × 250K = $3.75
-- Letter: $15/M tokens × 50K = $0.75
-- **Total: $4.50 per complaint**
+**Research Findings:**
+${JSON.stringify(researchFindings, null, 2)}
 
-**After (Hybrid Sonnet + Opus):**
-- Analysis: $3/M tokens × 250K = $0.75
-- Letter: $15/M tokens × 50K = $0.75  
-- **Total: $1.50 per complaint**
-- **Savings: 67% ($3.00 per complaint)**
+Use this research to write an authoritative, data-driven article.
+```
 
-**Quality improvements:**
-- More comprehensive analysis (12 categories vs generic)
-- Better timeline tracking (gap detection, missed deadlines)
-- System error identification
-- Breakthrough trigger recognition
-- Compensation estimation
-- Superior letter quality (each model optimized for task)
+**Variables:**
+- `audience` - Target audience
+- `tone` - Writing tone (professional/casual/technical/storytelling)
+- `length` - Post length (short/medium/long)
+- `topic` - Blog topic
+- `researchFindings` - JSON from Step 1
 
-**Result:** Better quality at 1/3 the cost! 🎉
+---
 
+### 🎨 Layout Generation Prompt (Claude Opus 4.1)
+
+**Location:** `app/api/blog/generate-full/route.ts`  
+**Model:** `anthropic/claude-opus-4.1`  
+**Temperature:** 0.5  
+**Max Tokens:** 6000
+
+#### User Prompt (No System Prompt):
+```
+Based on this blog content, create an optimal visual layout using our template components.
+
+**Content:**
+${JSON.stringify(parsedContent, null, 2)}
+
+**Template Style:** ${templateStyle}
+
+Generate a layout with:
+- Hero section with striking design
+- Stat cards for all numerical data
+- Charts for data visualization (bar, pie, line, horizontal-bar)
+- Callout boxes for key insights
+- Numbered steps for processes
+- Timelines for chronological events
+- Comparison tables for before/after
+
+Return ONLY valid JSON:
+{
+  "layout": [
+    {"type": "hero", "content": {...}, "style": {...}},
+    {"type": "stats_grid", "content": {"stats": [...]}, "style": {"columns": 4}},
+    {"type": "text", "content": {"html": "..."}, "style": {}},
+    {"type": "chart", "content": {"type": "bar", "data": [...], "title": "..."}}
+  ],
+  "theme": {"primary_color": "#3b82f6"},
+  "imagePrompts": [
+    "Professional hero image showing...",
+    "Infographic illustrating..."
+  ]
+}
+```
+
+**Variables:**
+- `parsedContent` - Structured content from Step 2
+- `templateStyle` - Layout style (data-story/guide/case-study/classic)
+
+---
+
+### 🖼️ Hero Image Generation Prompt (Gemini 3 Pro)
+
+**Location:** `app/api/blog/generate-full/route.ts`  
+**Model:** `google/gemini-3-pro-image-preview`  
+**Max Tokens:** 1000
+
+#### User Prompt:
+```
+Generate a professional, modern blog hero image: ${generatedLayout.imagePrompts[0]}
+                
+Style: Clean, corporate, suitable for UK accounting/business website
+Aspect Ratio: 16:9
+Format: High quality, web-optimized
+No text overlay.
+```
+
+**Variables:**
+- `generatedLayout.imagePrompts[0]` - Image description from layout generation
+
+---
+
+### 📊 Chart Generation Prompt (Gemini 3 Pro)
+
+**Location:** `app/api/blog/generate-full/route.ts`  
+**Model:** `google/gemini-3-pro-image-preview`  
+**Max Tokens:** 1000
+
+#### User Prompt:
+```
+Generate a professional chart visualization:
+                    
+Type: ${section.content.type}
+Title: ${section.content.title}
+Data: ${JSON.stringify(section.content.data)}
+
+Style: Modern, clean, corporate, matching UK business standards
+Colors: Professional palette (blues, grays, accent colors)
+Format: High quality, web-optimized
+```
+
+**Variables:**
+- `section.content.type` - Chart type (bar/line/pie/etc.)
+- `section.content.title` - Chart title
+- `section.content.data` - Chart data array
+
+---
+
+### 🔍 SEO Generation Prompt (Claude Opus 4.1)
+
+**Location:** `app/api/blog/generate-full/route.ts`  
+**Model:** `anthropic/claude-opus-4.1`  
+**Temperature:** 0.3  
+**Max Tokens:** 500
+
+#### User Prompt (No System Prompt):
+```
+Generate SEO metadata for this blog post:
+
+Title: ${parsedContent.title}
+Excerpt: ${parsedContent.excerpt}
+
+Return JSON:
+{
+  "metaTitle": "SEO title (60 chars max)",
+  "metaDescription": "Meta description (155 chars max)",
+  "tags": ["tag1", "tag2", "tag3"],
+  "slug": "url-friendly-slug"
+}
+```
+
+**Variables:**
+- `parsedContent.title` - Blog title from Step 2
+- `parsedContent.excerpt` - Blog excerpt from Step 2
+
+---
+
+## 2️⃣ Visual Transformer
+
+**Location:** `app/api/blog/transform-visual/route.ts`  
+**Model:** `anthropic/claude-opus-4.1`  
+**Temperature:** 0.6  
+**Max Tokens:** 8000
+
+### System Prompt:
+```
+You are an ELITE visual designer like Gamma.app or Beautiful.ai. Your job is to transform BORING PLAIN TEXT into STUNNING VISUAL PRESENTATIONS.
+
+🎯 YOUR MISSION: Make everything visual. AGGRESSIVELY extract data and create charts/graphics.
+
+📊 MANDATORY RULES:
+1. **Stats Everywhere** - Any number MUST become a stat card. "92% success rate" → stat card. "3 steps" → stat card. "£5,000 saved" → stat card.
+2. **Chart All Data** - 2+ numbers = automatic chart. Show trends, comparisons, distributions.
+3. **Timeline Everything** - Any dates, sequence, or "then X happened" → timeline
+4. **Steps = Visual** - Any process, how-to, workflow → numbered visual steps with icons
+5. **Callouts for Emphasis** - Important points → colorful callout boxes
+6. **Hero at Top** - Every post gets a striking hero with subtitle
+7. **Highlight Takeaways** - Main point → large highlight box
+
+🎨 AVAILABLE COMPONENTS (use ALL of them):
+- `hero` - Striking header (ALWAYS use this first)
+- `stats_grid` - Stat cards (extract EVERY number)
+- `chart` - Bar, line, pie, donut (use liberally for any data)
+- `callout` - Colored boxes for key points (info/warning/success/tip)
+- `timeline` - Visual timeline with dates
+- `numbered_steps` - Process visualization with big numbers
+- `comparison_table` - Before/after, old vs new
+- `highlight_box` - Large standout box for main takeaway
+- `two_column` - Split dense content
+- `text` - Only for prose between visuals
+
+⚡ EXTRACTION EXAMPLES:
+- "92,000 complaints" → stat card {value: 92000, label: "Complaints", suffix: ""}
+- "34% resolved" → stat card {value: 34, suffix: "%", label: "Resolved", color: "red"}
+- "£3,000-£5,000 annually" → stat card {value: 4000, prefix: "£", label: "Average Annual Recovery"}
+- Multiple numbers → bar/line chart showing comparison
+- "First... Then... Finally..." → timeline
+- "Step 1... Step 2..." → numbered_steps
+
+🎯 STRUCTURE PATTERN:
+1. Hero (striking title + subtitle)
+2. Stats Grid (3-6 stat cards with ALL numbers)
+3. Brief text intro
+4. Chart (if any data to visualize)
+5. Numbered Steps or Timeline (if process/sequence)
+6. Callouts (2-3 key insights)
+7. Highlight Box (main takeaway)
+8. Conclusion text
+
+⚠️ CRITICAL: Return ONLY valid JSON. No markdown code blocks, no explanations, just raw JSON.
+```
+
+### User Prompt:
+```
+Transform this blog content into a visually powerful layout:
+
+**Title:** ${title}
+${excerpt ? `**Excerpt:** ${excerpt}` : ''}
+
+**Content:**
+${content}
+
+Analyze the content and return JSON:
+```json
+{
+  "layout": [
+    {"type": "hero", "content": {"title": "...", "subtitle": "..."}, "style": {}},
+    {"type": "stats_grid", "content": {"stats": [{"label": "...", "value": 96, "suffix": "%", "color": "green"}]}, "style": {"columns": 4}},
+    {"type": "text", "content": {"html": "<p>...</p>"}, "style": {}},
+    {"type": "chart", "content": {"type": "bar", "title": "...", "data": [{"name": "2021", "value": 100}]}},
+    {"type": "callout", "content": {"type": "tip", "title": "...", "text": "..."}},
+    {"type": "numbered_steps", "content": {"steps": [{"title": "...", "description": "..."}]}, "style": {"columns": 2}}
+  ],
+  "theme": {
+    "primary_color": "#3b82f6",
+    "style": "modern"
+  },
+  "enhancements": [
+    "Extracted 5 key statistics into stat cards",
+    "Created bar chart from data table",
+    "Added timeline for chronological events",
+    "Highlighted 3 key insights in callouts",
+    "Converted process into 6 numbered steps"
+  ]
+}
+```
+
+Extract EVERYTHING visual. Turn boring text into engaging components.
+```
+
+**Variables:**
+- `title` - Blog post title
+- `excerpt` - Blog post excerpt (optional)
+- `content` - Raw blog content text
+
+**Key Features:**
+- **Aggressive data extraction** - Converts every number into a visual element
+- **Mandatory component rules** - Forces creation of stats, charts, timelines
+- **Pattern enforcement** - Ensures consistent structure across all posts
+- **Enhancement tracking** - Lists all visual improvements made
+
+---
+
+## 3️⃣ Layout Generator
+
+**Location:** `app/api/blog/generate-layout/route.ts`  
+**Model:** `anthropic/claude-opus-4.1`  
+**Temperature:** 0.7  
+**Max Tokens:** 8000
+
+### System Prompt:
+```
+You are an expert visual designer and data storyteller. Your job is to analyze blog post content and create the most impactful visual layout using components like stat cards, charts, timelines, callouts, and infographics.
+
+Available Components:
+1. **hero** - Hero section with title, subtitle, optional background image
+2. **stats_grid** - Grid of statistic cards (2-4 columns)
+3. **text** - Rich text paragraphs (can be 1 or 2 columns)
+4. **chart** - Data visualizations (bar, line, pie, horizontal-bar, multi-series)
+5. **callout** - Highlighted boxes (info, warning, success, tip)
+6. **timeline** - Chronological events
+7. **numbered_steps** - Step-by-step process (1-3 columns)
+8. **comparison_table** - Before/After or Old vs New
+9. **two_column** - Split layout (text + image, or two text blocks)
+10. **highlight_box** - Large stat or key takeaway
+11. **table** - Structured data table
+
+Your Goal:
+- Extract key statistics and create stat cards
+- Identify data that would work as charts
+- Find processes and create numbered steps
+- Detect comparisons and build comparison tables
+- Highlight important information in callouts
+- Create visual flow and hierarchy
+- Make the post scannable and engaging
+
+Return VALID JSON ONLY (no markdown, no explanations).
+```
+
+### User Prompt:
+```
+Generate an optimal visual layout for this blog post:
+
+**Title:** ${title}
+
+${excerpt ? `**Excerpt:** ${excerpt}` : ''}
+
+**Content:**
+${content}
+
+${targetAudience ? `**Target Audience:** ${targetAudience}` : ''}
+${tone ? `**Tone:** ${tone}` : ''}
+
+Analyze the content and return a JSON object with this exact structure:
+
+```json
+{
+  "layout": [
+    {
+      "type": "hero",
+      "content": {
+        "title": "Main title",
+        "subtitle": "Compelling subtitle",
+        "imageUrl": null
+      },
+      "style": {
+        "height": "large",
+        "background": "gradient"
+      }
+    },
+    {
+      "type": "stats_grid",
+      "content": {
+        "stats": [
+          {"label": "Success Rate", "value": 96, "suffix": "%", "color": "green"},
+          {"label": "Cases", "value": 1200, "suffix": "+", "color": "blue"}
+        ]
+      },
+      "style": {
+        "columns": 4
+      }
+    },
+    {
+      "type": "text",
+      "content": {
+        "html": "<p>Paragraph text...</p>"
+      },
+      "style": {
+        "columns": 1
+      }
+    },
+    {
+      "type": "chart",
+      "content": {
+        "title": "Chart Title",
+        "type": "bar",
+        "data": [
+          {"name": "2021", "value": 100},
+          {"name": "2022", "value": 200}
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "content": {
+        "type": "tip",
+        "title": "Pro Tip",
+        "text": "Important information..."
+      }
+    }
+  ],
+  "theme": {
+    "primary_color": "#3b82f6",
+    "style": "modern"
+  },
+  "reasoning": "Brief explanation of design choices"
+}
+```
+
+Extract ALL numbers, percentages, and data points from the content. Convert them to stats or charts.
+Identify processes and create numbered steps.
+Find key quotes or tips and put them in callouts.
+Create a logical flow: Hero → Stats → Problem → Solution → Data → Conclusion.
+```
+
+**Variables:**
+- `title` - Blog post title
+- `excerpt` - Blog post excerpt (optional)
+- `content` - Blog content text
+- `targetAudience` - Target audience (optional)
+- `tone` - Content tone (optional)
+
+**Key Features:**
+- **Component documentation** - Clear list of all 11 available components
+- **Goal-oriented design** - Specific objectives for layout creation
+- **Flow guidance** - Recommended Hero → Stats → Problem → Solution pattern
+- **Reasoning field** - AI explains its design decisions
+
+---
+
+## 4️⃣ Image Analyzer (Gamma-Style Import)
+
+**Location:** `app/api/blog/analyze-image/route.ts`  
+**Model:** `anthropic/claude-opus-4.1` (with vision)  
+**Temperature:** 0.3  
+**Max Tokens:** 4000
+
+### User Prompt (Vision + Text):
+```
+Analyze this blog post design/layout image and extract its structure for HTML/React recreation.
+
+Please identify:
+
+1. **Sections** - What distinct sections exist? (hero, stats grid, text blocks, charts, tables, callouts, etc.)
+2. **Content** - What text, numbers, and data are visible?
+3. **Visual Elements** - Charts (bar, pie, line), tables, timelines, step numbers, icons
+4. **Layout** - Single column, multi-column, grid layouts
+5. **Styling** - Color scheme (primary, accent, background), typography, spacing
+
+Return a JSON object with this structure:
+```json
+{
+  "sections": [
+    {
+      "type": "hero | stats_grid | text | chart | table | callout | timeline | numbered_steps | two_column",
+      "content": {
+        // Relevant content for this section type
+        // For stats_grid: array of {label, value, color}
+        // For chart: {type: "bar|pie|line", data: [...], title, description}
+        // For text: {heading, body}
+        // For table: {headers: [...], rows: [...]}
+      },
+      "style": {
+        "background": "color",
+        "textColor": "color",
+        "columns": 2
+      }
+    }
+  ],
+  "theme": {
+    "primary_color": "#hex",
+    "accent_color": "#hex",
+    "background": "#hex | white | dark",
+    "fonts": ["primary font", "heading font"]
+  }
+}
+```
+
+Be as detailed as possible. Extract ALL visible text, numbers, and data points.
+```
+
+**Input:**
+- Image URL or Base64 encoded image
+- Vision capabilities extract visual structure
+
+**Key Features:**
+- **Vision analysis** - Uses Claude's vision to "see" the design
+- **Structure extraction** - Identifies all components and layout
+- **Theme detection** - Captures colors, fonts, spacing
+- **Data extraction** - Pulls text, numbers, chart data from image
+- **Gamma import** - Enables importing designs from other tools
+
+---
+
+## 🎯 Prompt Design Patterns
+
+### Pattern 1: Structured JSON Output
+All prompts explicitly request JSON with exact schema:
+```
+Return ONLY valid JSON:
+{
+  "field1": "...",
+  "field2": [...]
+}
+```
+
+### Pattern 2: Component Vocabulary
+Consistent component names across all prompts:
+- `hero`, `stats_grid`, `chart`, `callout`, `timeline`, etc.
+
+### Pattern 3: Visual-First Thinking
+Prompts emphasize visual over text:
+- "Make everything visual"
+- "AGGRESSIVELY extract data"
+- "Any number MUST become a stat card"
+
+### Pattern 4: UK Business Context
+All prompts include UK/HMRC/accounting context:
+- "UK accounting, tax, and HMRC matters"
+- "UK business standards"
+- "Professional, corporate style"
+
+### Pattern 5: Temperature Tuning
+- **Research (0.7):** Balanced creativity/accuracy
+- **Writing (0.8):** Creative, engaging content
+- **Layout (0.5-0.6):** Structured, consistent design
+- **SEO (0.3):** Precise, optimized output
+- **Vision (0.3):** Accurate structure extraction
+
+---
+
+## 📝 Prompt Variables Reference
+
+| Variable | Used In | Purpose | Default |
+|----------|---------|---------|---------|
+| `topic` | Research, Writing | Blog subject | (required) |
+| `audience` | Research, Writing | Target readers | "UK accountants and tax professionals" |
+| `tone` | Writing, Layout | Writing style | "professional" |
+| `length` | Writing | Word count | "medium" (1200-1800 words) |
+| `templateStyle` | Layout | Design style | "data-story" |
+| `includeCharts` | Full Generator | Chart generation | true |
+| `includeImages` | Full Generator | Image generation | true |
+| `title` | Transformer, Layout, Analyzer | Post title | (required) |
+| `content` | Transformer, Layout | Post content | (required) |
+| `excerpt` | Transformer, Layout | Post summary | (optional) |
+| `targetAudience` | Layout | Audience context | (optional) |
+
+---
+
+## 🚀 Prompt Evolution Notes
+
+### Version 1.0 (Claude 3.5 Sonnet)
+- Basic layout generation
+- Simple component structure
+- Generic prompts
+
+### Version 2.0 (Current - Opus 4.1 + ChatGPT 5.1 + Gemini 3)
+- ✅ **Multi-stage workflow** - Research → Write → Layout → Visuals → SEO
+- ✅ **Aggressive data extraction** - Forces visual elements
+- ✅ **Component vocabulary** - 11 distinct component types
+- ✅ **UK business context** - HMRC/accounting specialization
+- ✅ **Temperature optimization** - Task-specific creativity levels
+- ✅ **Vision capabilities** - Gamma-style image imports
+
+### Future Considerations:
+- Multi-language prompts (for international markets)
+- Industry-specific prompt variants (legal, medical, etc.)
+- A/B testing different prompt styles
+- User-customizable prompt templates
+- Prompt versioning system
+
+---
+
+## 🔧 Prompt Maintenance
+
+### When to Update Prompts:
+1. **Component additions** - New layout components added
+2. **Quality issues** - AI not following instructions
+3. **Style changes** - Brand/design system updates
+4. **Model upgrades** - New AI models with different capabilities
+5. **User feedback** - Patterns not working well in practice
+
+### Prompt Testing Checklist:
+- ✅ Returns valid JSON 100% of time
+- ✅ Follows component vocabulary
+- ✅ Extracts all numbers/data
+- ✅ Creates engaging layouts
+- ✅ Maintains UK business tone
+- ✅ Handles edge cases (no data, long content, etc.)
+
+---
+
+**Last Updated:** November 24, 2025  
+**Version:** 2.0  
+**Prompt Count:** 9 distinct prompts  
+**Total Tokens:** ~15,000 (prompts only, excluding responses)
