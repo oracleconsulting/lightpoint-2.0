@@ -214,26 +214,24 @@ export default function BlogPostPage() {
 
       {/* Content */}
       <article className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        {/* Always show text content - visual layout is optional enhancement */}
-        <div
-          className="prose prose-lg prose-invert max-w-none
-            prose-headings:font-bold prose-headings:text-white
-            prose-p:text-gray-300 prose-p:leading-relaxed
-            prose-a:text-cyan-400 prose-a:no-underline hover:prose-a:underline
-            prose-strong:text-white prose-strong:font-semibold
-            prose-ul:list-disc prose-ol:list-decimal
-            prose-li:text-gray-300
-            prose-blockquote:border-l-4 prose-blockquote:border-cyan-500 prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-gray-300
-            prose-code:bg-gray-800 prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:text-sm prose-code:text-cyan-400
-            prose-img:rounded-xl prose-img:shadow-lg"
-        >
-          {renderContent()}
-        </div>
-
-        {/* Try to render visual layout if available (optional) */}
-        {post.structured_layout && typeof post.structured_layout === 'object' && (
-          <div className="mt-16">
-            <DynamicGammaRenderer layout={post.structured_layout} />
+        {post.structured_layout && typeof post.structured_layout === 'object' ? (
+          // Render Gamma-style visual layout (includes text interwoven with visuals)
+          <DynamicGammaRenderer layout={post.structured_layout} />
+        ) : (
+          // Fallback: plain text if no visual layout
+          <div
+            className="prose prose-lg prose-invert max-w-none
+              prose-headings:font-bold prose-headings:text-white
+              prose-p:text-gray-300 prose-p:leading-relaxed
+              prose-a:text-cyan-400 prose-a:no-underline hover:prose-a:underline
+              prose-strong:text-white prose-strong:font-semibold
+              prose-ul:list-disc prose-ol:list-decimal
+              prose-li:text-gray-300
+              prose-blockquote:border-l-4 prose-blockquote:border-cyan-500 prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-gray-300
+              prose-code:bg-gray-800 prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:text-sm prose-code:text-cyan-400
+              prose-img:rounded-xl prose-img:shadow-lg"
+          >
+            {renderContent()}
           </div>
         )}
       </article>
