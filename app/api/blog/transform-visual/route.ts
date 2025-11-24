@@ -109,12 +109,13 @@ STEP 5: Return JSON with preserved prose + visual markers
 
 🎨 COMPONENT LIBRARY:
 
-StatCard: {metric, label, context?, prefix?, suffix?, color?, trend?}
-ComparisonChart: {title, data: [{label, value}], chartType: "bar|horizontal-bar|donut"}
-ProcessFlow: {title, steps: [{number, title, description}]}
-Timeline: {title, events: [{date, title, description, status}]}
-CalloutBox: {variant: "quote|info|warning", title, content}
-ChecklistCard: {title, items: [{number, title, description}]}
+**StatCard**: {metric, label, context?, prefix?, suffix?, color?, trend?}
+**ComparisonChart**: {title, data: [{label, value}], chartType: "bar|horizontal-bar|donut"}
+**ProcessFlow**: {title, steps: [{number, title, description}]}
+**Timeline**: {title, events: [{date, title, description, status}]}
+**CalloutBox**: {variant: "quote|info|warning", title, content}
+**ChecklistCard**: {title, items: [{number, title, description}]}
+**TextSection**: {content: "HTML string"} - Use for prose paragraphs between visuals
 
 ✅ GOOD EXAMPLE:
 Source: "92,000 complaints filed. 98% resolved internally. 34% resolved after escalation."
@@ -163,6 +164,13 @@ FORMAT:
   },
   "layout": [
     {
+      "type": "TextSection",
+      "props": {
+        "content": "<p>Opening paragraph with context...</p>"
+      },
+      "sourceText": "Original prose from source"
+    },
+    {
       "type": "StatCard",
       "props": {
         "metric": "92,000",
@@ -171,11 +179,25 @@ FORMAT:
         "color": "blue"
       },
       "sourceText": "Last year, 92,000 complaints were filed"
+    },
+    {
+      "type": "TextSection",
+      "props": {
+        "content": "<p>Next paragraph explaining the statistics...</p>"
+      },
+      "sourceText": "Original prose explaining the data"
     }
   ],
   "warnings": ["List any components you could NOT create due to missing explicit data"]
 }
 \`\`\`
+
+⚠️ CRITICAL LAYOUT RULES:
+- Alternate between TextSections and visual components
+- Never group all visuals together at the end
+- Max 2-3 paragraphs before inserting a visual
+- Preserve the natural flow of the original text
+- Insert visuals where they're contextually relevant
 
 CRITICAL: Every component must include "sourceText" field showing where the data came from. If you cannot find explicit data, DO NOT create the component.`,
           },

@@ -63,6 +63,24 @@ export default function DynamicGammaRenderer({ layout }: DynamicGammaRendererPro
         case 'hero':
           return <HeroGradient key={index} {...props} />;
 
+        case 'TextSection':
+        case 'text':
+          return (
+            <div 
+              key={index} 
+              className="prose prose-lg prose-invert max-w-4xl mx-auto my-8
+                prose-headings:font-bold prose-headings:text-white
+                prose-p:text-gray-300 prose-p:leading-relaxed prose-p:mb-4
+                prose-a:text-cyan-400 prose-a:no-underline hover:prose-a:underline
+                prose-strong:text-white prose-strong:font-semibold
+                prose-ul:list-disc prose-ul:ml-6 prose-ol:list-decimal prose-ol:ml-6
+                prose-li:text-gray-300 prose-li:mb-2
+                prose-blockquote:border-l-4 prose-blockquote:border-cyan-500 prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-gray-300
+                prose-code:bg-gray-800 prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:text-sm prose-code:text-cyan-400"
+              dangerouslySetInnerHTML={{ __html: props.content || section.content || '' }}
+            />
+          );
+
         case 'StatCard':
           return <StatCard key={index} {...props} animationDelay={index * 0.1} />;
 
