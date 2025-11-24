@@ -72,33 +72,60 @@ export async function POST(req: NextRequest) {
         messages: [
           {
             role: 'system',
-            content: `You are a research assistant specializing in UK accounting, tax, and HMRC matters. Research and gather comprehensive information about the given topic.
+            content: `You are a data journalist finding VISUAL STORIES in UK accounting, tax, and HMRC matters.
 
-Provide:
-- Key statistics and data points (with sources)
-- Recent developments and updates
-- Common problems and solutions
-- Industry best practices
-- Relevant regulations and compliance requirements
-- Real-world examples and case studies
+Extract content specifically for VISUAL PRESENTATION. Every data point must be visual-ready.
 
-Return findings as JSON:
-{
-  "research_summary": "Overview of findings",
-  "key_statistics": [{"stat": "...", "value": "...", "source": "..."}],
-  "problems": ["problem 1", "problem 2"],
-  "solutions": ["solution 1", "solution 2"],
-  "processes": [{"name": "...", "steps": ["...", "..."]}],
-  "keywords": ["keyword1", "keyword2"],
-  "sources": ["source1", "source2"]
-}`,
+CRITICAL: Structure your findings for Gamma-style visual components.
+
+Extract in this EXACT format:
+
+HERO_HOOK (for opening impact):
+- One shocking statistic (must include £, %, or large number)
+- The "villain" (what's causing the problem/pain)
+- The transformation promise (what readers will achieve)
+
+VISUAL_ELEMENTS:
+
+1. STAT_CARDS (minimum 8, maximum 12):
+   Each stat must be: {metric: "92,000", label: "Failed Claims", context: "98% preventable", trend: "up/down/neutral", visual_impact: "high/medium"}
+   Look for: percentages, money amounts, time savings, success rates, volume numbers
+
+2. PROCESS_FLOWS (minimum 2):
+   Format: {title: "Process Name", steps: [{number: 1, title: "Step", description: "Action", duration: "Day 1"}], outcome: "Result"}
+   Look for: step-by-step procedures, workflows, complaint processes, regulatory sequences
+
+3. COMPARISONS (minimum 2):
+   Format: {title: "Comparison", before: {label: "Old Way", metric: "£5,000", pain: "Manual"}, after: {label: "New Way", metric: "£500", gain: "Automated"}, improvement: "90%"}
+   Look for: before/after, old vs new, with vs without, internal vs external
+
+4. TIMELINES (if applicable):
+   Format: {title: "Journey", events: [{date: "May 2024", title: "Milestone", description: "What happened", status: "completed/pending"}]}
+   Look for: regulatory changes, historical developments, typical journeys, deadlines
+
+5. CALLOUT_QUOTES (3-5):
+   Format: {quote: "Exact quote", source: "Authority name", context: "Why it matters", type: "expert/warning/insight"}
+
+6. CHART_DATA:
+   - Pie/Donut charts: {title: "", data: [{label: "", value: 0, percentage: 0}]}
+   - Bar charts: {title: "", data: [{name: "", value: 0}], insight: ""}
+   - Line charts: {title: "", data: [{period: "", value: 0}], trend: ""}
+
+Return as structured JSON ready for component generation.`,
           },
           {
             role: 'user',
-            content: `Research this topic thoroughly: ${topic}
+            content: `Research "${topic}" for ${audience}.
 
-Audience: ${audience}
-Focus on practical, actionable information.`,
+Focus on finding VISUAL STORY elements:
+- Statistics that will shock or surprise (with %, £, time)
+- Step-by-step processes that can become flowcharts
+- Before/after transformations
+- Timeline events or regulatory milestones
+- Expert quotes and insights
+- Data suitable for charts (breakdowns, comparisons, trends)
+
+Extract practical, actionable information formatted for visual presentation.`,
           },
         ],
         temperature: 0.7,
@@ -141,45 +168,105 @@ Focus on practical, actionable information.`,
         messages: [
           {
             role: 'system',
-            content: `You are an expert content writer specializing in UK accounting, tax, and HMRC matters. Write engaging, informative blog posts that help ${audience}.
+            content: `You are creating a Gamma-style VISUAL PRESENTATION blog post for ${audience}.
 
-Based on the research findings provided, craft a comprehensive, well-structured article.
+CRITICAL WRITING RULES:
+1. Maximum 150 words between [VISUAL] markers
+2. Each paragraph must introduce and support its visual component
+3. Write "visual hooks" - sentences that lead into charts/stats/diagrams
+4. Use second person ("you"), active voice
+5. UK spelling and terminology throughout
+6. Bold key phrases (1-2 per paragraph)
+7. Every section builds to its visual payoff
 
-Tone: ${tone}
-Length: ${length === 'short' ? '500-800' : length === 'medium' ? '1200-1800' : '2000-3000'} words
+EXACT STRUCTURE TO FOLLOW:
 
-Include:
-- Compelling title
-- Executive summary/excerpt
-- Key statistics from research (with context)
-- Step-by-step processes where relevant
-- Real-world examples
-- Actionable takeaways
-- SEO-optimized content
+[HERO SECTION]
+# [Number-driven headline using research stat]
+**[One powerful sentence creating urgency]**
+[Brief value promise - what reader achieves]
+[VISUAL: hero_gradient with stat overlay]
 
-Format as JSON with this structure:
-{
-  "title": "Compelling title",
-  "excerpt": "160-char summary",
-  "sections": [
-    {"type": "paragraph", "content": "..."},
-    {"type": "stat", "label": "Success Rate", "value": 96, "context": "..."},
-    {"type": "process", "steps": ["Step 1", "Step 2"]},
-    {"type": "data_table", "headers": [], "rows": []},
-    {"type": "quote", "text": "...", "source": "..."}
-  ],
-  "keywords": ["keyword1", "keyword2"],
-  "category": "HMRC Updates | Tax Planning | Compliance | etc"
-}`,
+[PROBLEM SECTION - 100 words max]
+Last year, [shocking statistic from research]. That's roughly [relatable comparison].
+
+The numbers don't lie: [context about scope]
+
+[VISUAL: stat_card_grid - 3-4 key metrics]
+
+[CONTEXT SECTION - 150 words max]
+If you're [audience role] dealing with [problem], you already know the pattern.
+
+[Explain why this matters, set up the story]
+
+[VISUAL: pie_chart OR bar_chart showing breakdown]
+
+[CORE INSIGHT SECTION - 200 words max]
+The research reveals [main revelation].
+
+[Deep dive into key finding with specifics]
+
+[Transition: "Here's how it actually works..."]
+
+[VISUAL: process_flow OR timeline showing sequence]
+
+[SOLUTION SECTION - 200 words max]
+There's a better way. [Introduce solution approach]
+
+[Explain the transformation]
+
+[Set up action steps]
+
+[VISUAL: numbered_checklist with action items]
+
+[EVIDENCE SECTION - 150 words max]
+Consider [case study or example].
+
+[Show concrete results]
+
+[VISUAL: before_after_comparison with metrics]
+
+[KEY INSIGHT CALLOUT - 50 words]
+[Expert quote or critical insight]
+
+[VISUAL: callout_box with quote]
+
+[ACTION SECTION - 150 words max]
+Start with these specific steps:
+
+[Brief intro to checklist]
+
+[VISUAL: checklist_card with numbered actions]
+
+[CLOSING SECTION - 100 words max]
+[Reinforce the transformation from problem to solution]
+
+[Final motivational statement]
+
+[VISUAL: final_stat_card showing key outcome]
+
+OUTPUT REQUIREMENTS:
+- Mark each [VISUAL] with exact component type and required data
+- Never exceed 150 words between visuals
+- Include specific numbers from research in every section
+- Write transitions that lead into visual elements
+- Bold 1-2 key phrases per paragraph`,
           },
           {
             role: 'user',
-            content: `Write a comprehensive blog post about: ${topic}
+            content: `Write a Gamma-style visual blog post about: ${topic}
 
-**Research Findings:**
+**Research Data:**
 ${JSON.stringify(researchFindings, null, 2)}
 
-Use this research to write an authoritative, data-driven article.`,
+Use this research to create a visually-driven, component-based article.
+
+Remember:
+- Maximum 150 words between visual breaks
+- Every statistic becomes a visual component
+- Write TO the visuals, not just with them
+- Lead with numbers and impact
+- UK business tone throughout`,
           },
         ],
         temperature: 0.8, // Higher for creativity
@@ -221,36 +308,181 @@ Use this research to write an authoritative, data-driven article.`,
         messages: [
           {
             role: 'user',
-            content: `Based on this blog content, create an optimal visual layout using our template components.
+            content: `Transform this blog content into Gamma-style visual component specification.
 
 **Content:**
 ${JSON.stringify(parsedContent, null, 2)}
 
 **Template Style:** ${templateStyle}
 
-Generate a layout with:
-- Hero section with striking design
-- Stat cards for all numerical data
-- Charts for data visualization (bar, pie, line, horizontal-bar)
-- Callout boxes for key insights
-- Numbered steps for processes
-- Timelines for chronological events
-- Comparison tables for before/after
+You must create SPECIFIC, IMPLEMENTABLE components using this exact schema:
 
-Return ONLY valid JSON:
+COMPONENT LIBRARY (use precise specifications):
+
+1. StatCard:
 {
+  "type": "StatCard",
+  "props": {
+    "metric": "92,000",  // Large number, formatted
+    "label": "Annual Complaints",  // What it represents
+    "context": "98% resolved internally",  // Additional insight
+    "trend": "up|down|neutral",  // Optional trend
+    "color": "blue|cyan|purple|green",  // Theme color
+    "icon": "users|chart|alert|check|pound"  // Icon type
+  }
+}
+
+2. ProcessFlow:
+{
+  "type": "ProcessFlow",
+  "props": {
+    "title": "Complaint Resolution Path",
+    "steps": [
+      {
+        "number": 1,
+        "title": "Initial Complaint",
+        "description": "Submit formal complaint to HMRC",
+        "duration": "Day 1"
+      }
+    ],
+    "style": "horizontal|vertical|snake",
+    "showConnectors": true
+  }
+}
+
+3. ComparisonChart:
+{
+  "type": "ComparisonChart",
+  "props": {
+    "title": "Resolution Rates",
+    "data": [
+      {"label": "Internal", "value": 98, "color": "blue"},
+      {"label": "Escalated", "value": 2, "color": "cyan"}
+    ],
+    "chartType": "donut|bar|horizontal-bar|pie",
+    "showPercentages": true
+  }
+}
+
+4. Timeline:
+{
+  "type": "Timeline",
+  "props": {
+    "title": "Your Complaint Journey",
+    "events": [
+      {
+        "date": "May 2024",
+        "title": "VAT Registration",
+        "description": "Online submission completed",
+        "status": "completed|pending|failed"
+      }
+    ],
+    "orientation": "vertical|horizontal"
+  }
+}
+
+5. CalloutBox:
+{
+  "type": "CalloutBox",
+  "props": {
+    "variant": "info|warning|success|quote",
+    "title": "Key Insight",
+    "content": "Text content here",
+    "icon": "lightbulb|alert|check|quote",
+    "borderGlow": true
+  }
+}
+
+6. ChecklistCard:
+{
+  "type": "ChecklistCard",
+  "props": {
+    "title": "Action Steps",
+    "items": [
+      {
+        "number": 1,
+        "title": "Document Everything",
+        "description": "Track all hours and communications"
+      }
+    ],
+    "style": "numbered|checkbox|icon"
+  }
+}
+
+7. HeroGradient:
+{
+  "type": "HeroGradient",
+  "props": {
+    "headline": "Number-driven headline",
+    "subheadline": "Supporting hook",
+    "statOverlay": {"metric": "£92,000", "label": "At Risk"},
+    "ctaText": "Learn How"
+  }
+}
+
+LAYOUT RULES (STRICT):
+1. First section MUST be HeroGradient with key stat
+2. Every 150 words of text MUST have a visual component
+3. Group 2-4 related StatCards into grids
+4. Alternate between data (stats/charts) and process (flows/timelines) components
+5. Use CalloutBoxes for quotes and critical insights
+6. End sections with ChecklistCard for clear actions
+7. Maximum 3 text-only paragraphs in entire post
+
+GENERATE THIS EXACT STRUCTURE:
+{
+  "theme": {
+    "mode": "dark",
+    "backgroundGradient": "from-[#1a1a2e] to-[#0f0f1e]",
+    "colors": {
+      "primary": "#4F86F9",
+      "secondary": "#00D4FF",
+      "success": "#00FF88",
+      "warning": "#FFB800"
+    },
+    "effects": {
+      "glow": true,
+      "glassmorphism": true,
+      "animations": "subtle"
+    }
+  },
   "layout": [
-    {"type": "hero", "content": {...}, "style": {...}},
-    {"type": "stats_grid", "content": {"stats": [...]}, "style": {"columns": 4}},
-    {"type": "text", "content": {"html": "..."}, "style": {}},
-    {"type": "chart", "content": {"type": "bar", "data": [...], "title": "..."}}
+    {
+      "id": "hero",
+      "type": "HeroGradient",
+      "props": { /* complete props */ }
+    },
+    {
+      "id": "problem-stats",
+      "layoutType": "grid",
+      "columns": 3,
+      "components": [
+        { /* 3 StatCards with complete props */ }
+      ]
+    },
+    {
+      "id": "context-text",
+      "type": "text",
+      "content": "Max 150 words",
+      "style": "single-column"
+    },
+    {
+      "id": "data-visualization",
+      "type": "ComparisonChart",
+      "props": { /* complete props */ }
+    },
+    {
+      "id": "process-section",
+      "type": "ProcessFlow",
+      "props": { /* complete props */ }
+    }
   ],
-  "theme": {"primary_color": "#3b82f6"},
   "imagePrompts": [
-    "Professional hero image showing...",
-    "Infographic illustrating..."
+    "Professional abstract tech background for hero with dark gradients and neon accents"
   ]
-}`,
+}
+
+Remember: This must be DIRECTLY implementable. Every component needs complete, valid props. No placeholders or "...".`,
           },
         ],
         temperature: 0.5,
@@ -296,12 +528,24 @@ Return ONLY valid JSON:
             messages: [
               {
                 role: 'user',
-                content: `Generate a professional, modern blog hero image: ${generatedLayout.imagePrompts[0]}
-                
-Style: Clean, corporate, suitable for UK accounting/business website
-Aspect Ratio: 16:9
-Format: High quality, web-optimized
-No text overlay.`,
+                content: `Generate a Gamma-style hero visual for: ${generatedLayout.imagePrompts[0]}
+
+STYLE REQUIREMENTS:
+Background: Dark gradient (#1a1a2e → #0f0f1e)
+Accent Colors: Neon cyan (#00D4FF) and blue (#4F86F9)
+Visual Style: Abstract, tech-forward, modern
+Elements: Subtle geometric shapes, light rays, particles
+Typography: NO text overlay (will be added separately)
+Mood: Professional, innovative, trustworthy
+
+Technical Specs:
+- Aspect Ratio: 16:9 (1920x1080 optimal)
+- Format: Web-optimized PNG or WebP
+- Effects: Subtle glow, glass morphism elements
+- Composition: Asymmetric, with negative space for text overlay
+- Suitable for UK business/accounting audience
+
+Create a striking background that makes users stop scrolling.`,
               },
             ],
             max_tokens: 1000,
@@ -340,15 +584,40 @@ No text overlay.`,
                 messages: [
                   {
                     role: 'user',
-                    content: `Generate a professional chart visualization:
-                    
-Type: ${section.content.type}
-Title: ${section.content.title}
-Data: ${JSON.stringify(section.content.data)}
+                    content: `Generate a Gamma-style chart visualization component:
 
-Style: Modern, clean, corporate, matching UK business standards
-Colors: Professional palette (blues, grays, accent colors)
-Format: High quality, web-optimized`,
+COMPONENT TYPE: ${section.content.type}
+TITLE: ${section.content.title}
+DATA: ${JSON.stringify(section.content.data)}
+
+GAMMA STYLE REQUIREMENTS:
+Background: Dark (#1a1a2e) with subtle gradient
+Chart Colors: 
+  - Primary: Cyan (#00D4FF)
+  - Secondary: Blue (#4F86F9)
+  - Accent: Purple (#8B5CF6)
+  - Success: Green (#00FF88)
+Typography: 
+  - Title: Bold, white, 24px
+  - Labels: Thin, gray-400, 14px
+  - Values: Bold, gradient text
+Effects:
+  - Subtle glow on bars/segments
+  - Glass morphism background
+  - Smooth gradients on chart elements
+  - Drop shadows for depth
+Layout:
+  - Clean, minimal gridlines
+  - Ample whitespace
+  - Modern, tech-forward aesthetic
+
+Technical Specs:
+- Format: PNG or SVG
+- Size: 800x500px
+- Style: Professional UK business
+- Readable at all screen sizes
+
+Create a chart that looks like it's from a premium presentation tool.`,
                   },
                 ],
                 max_tokens: 1000,
