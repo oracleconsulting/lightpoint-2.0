@@ -215,11 +215,15 @@ export default function BlogPostPage() {
 
       {/* Content */}
       <article className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        {/* If we have Gamma-style visual layout, render it */}
-        {post.structured_layout ? (
-          <DynamicGammaRenderer 
-            layout={post.structured_layout}
-          />
+        {/* Try to render Gamma-style visual layout, fall back to plain text */}
+        {post.structured_layout && typeof post.structured_layout === 'object' ? (
+          <div>
+            <DynamicGammaRenderer layout={post.structured_layout} />
+            {/* Fallback text content if visual layout is incomplete */}
+            <div className="mt-16 prose prose-lg prose-invert max-w-none">
+              {renderContent()}
+            </div>
+          </div>
         ) : (
           <div
             className="prose prose-lg prose-invert max-w-none
