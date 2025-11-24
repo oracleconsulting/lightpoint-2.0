@@ -24,11 +24,28 @@ interface DynamicGammaRendererProps {
 }
 
 export default function DynamicGammaRenderer({ layout }: DynamicGammaRendererProps) {
+  // Early return if no layout
+  if (!layout) {
+    console.warn('DynamicGammaRenderer: No layout provided');
+    return null;
+  }
+
   // Handle both direct array and wrapped object
-  const layoutArray = Array.isArray(layout) ? layout : layout?.layout || [];
+  const layoutArray = Array.isArray(layout) ? layout : (layout?.layout || []);
   const theme = Array.isArray(layout) ? null : layout?.theme;
 
+  // If no components to render, return null
+  if (!layoutArray || layoutArray.length === 0) {
+    console.warn('DynamicGammaRenderer: Empty layout array');
+    return null;
+  }
+
   const renderComponent = (section: GammaLayout, index: number) => {
+    if (!section) {
+      console.warn(`DynamicGammaRenderer: Null section at index ${index}`);
+      return null;
+    }
+
     const type = section.type || section.layoutType;
     const props = section.props || {};
 
@@ -83,6 +100,7 @@ export default function DynamicGammaRenderer({ layout }: DynamicGammaRendererPro
         default:
           // Unknown component - show warning in dev only
           if (process.env.NODE_ENV === 'development') {
+            console.warn(`Unknown component type: ${type}`, section);
             return (
               <div key={index} className="my-8 p-6 bg-yellow-500/10 border border-yellow-500/30 rounded-xl">
                 <p className="text-yellow-400">
@@ -102,6 +120,7 @@ export default function DynamicGammaRenderer({ layout }: DynamicGammaRendererPro
             <p className="text-red-400">
               Error rendering: <code className="font-mono">{type}</code>
             </p>
+            <p className="text-sm text-gray-400 mt-2">{String(error)}</p>
           </div>
         );
       }
