@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
         'HTTP-Referer': process.env.NEXT_PUBLIC_BASE_URL || 'https://lightpoint.uk',
       },
       body: JSON.stringify({
-        model: 'anthropic/claude-3.5-sonnet',
+        model: 'anthropic/claude-opus-4.1',
         messages: [
           {
             role: 'system',

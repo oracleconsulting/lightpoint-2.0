@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
         'X-Title': 'Lightpoint Blog AI Layout Generator',
       },
       body: JSON.stringify({
-        model: 'anthropic/claude-3.5-sonnet',
+        model: 'anthropic/claude-opus-4.1',
         messages: [
           {
             role: 'system',

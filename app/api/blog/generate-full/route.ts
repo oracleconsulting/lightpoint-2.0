@@ -2,14 +2,12 @@
  * ONE-CLICK BLOG GENERATOR
  * Full Gamma-style blog generation from a simple topic/prompt
  * Uses multiple AI models:
- * - Claude 3.5 Sonnet: Content analysis & layout generation
- * - GPT-4o: Creative writing & SEO optimization
- * - Flux Pro: Hero images & custom graphics
- * - nano-banana: Chart generation (future)
+ * - ChatGPT 5.1 Deep Search: Research & data gathering
+ * - Claude Opus 4.1: Expert writing, layout generation & SEO
+ * - Gemini 3 Pro: Hero images, charts & visual generation
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import Replicate from 'replicate';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -47,7 +45,6 @@ export async function POST(req: NextRequest) {
     }
 
     const openrouterApiKey = process.env.OPENROUTER_API_KEY;
-    const replicateApiKey = process.env.REPLICATE_API_TOKEN;
 
     if (!openrouterApiKey) {
       return NextResponse.json(
@@ -59,9 +56,78 @@ export async function POST(req: NextRequest) {
     console.log(`🚀 Starting one-click blog generation for topic: ${topic}`);
 
     // ============================================
-    // STEP 1: Generate Content with GPT-4o (Creative Writing)
+    // STEP 1: Research with ChatGPT 5.1 Deep Search
     // ============================================
-    console.log('📝 Step 1: Generating content with GPT-4o...');
+    console.log('🔍 Step 1: Researching topic with ChatGPT 5.1 Deep Search...');
+    
+    const researchResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openrouterApiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': process.env.NEXT_PUBLIC_BASE_URL || 'https://lightpoint.uk',
+      },
+      body: JSON.stringify({
+        model: 'openai/chatgpt-5.1',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a research assistant specializing in UK accounting, tax, and HMRC matters. Research and gather comprehensive information about the given topic.
+
+Provide:
+- Key statistics and data points (with sources)
+- Recent developments and updates
+- Common problems and solutions
+- Industry best practices
+- Relevant regulations and compliance requirements
+- Real-world examples and case studies
+
+Return findings as JSON:
+{
+  "research_summary": "Overview of findings",
+  "key_statistics": [{"stat": "...", "value": "...", "source": "..."}],
+  "problems": ["problem 1", "problem 2"],
+  "solutions": ["solution 1", "solution 2"],
+  "processes": [{"name": "...", "steps": ["...", "..."]}],
+  "keywords": ["keyword1", "keyword2"],
+  "sources": ["source1", "source2"]
+}`,
+          },
+          {
+            role: 'user',
+            content: `Research this topic thoroughly: ${topic}
+
+Audience: ${audience}
+Focus on practical, actionable information.`,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 3000,
+      }),
+    });
+
+    if (!researchResponse.ok) {
+      throw new Error(`Research failed: ${researchResponse.statusText}`);
+    }
+
+    const researchData = await researchResponse.json();
+    const researchRaw = researchData.choices[0].message.content;
+    
+    // Parse research JSON
+    let researchFindings;
+    try {
+      const jsonMatch = researchRaw.match(/```json\n([\s\S]*?)\n```/);
+      researchFindings = JSON.parse(jsonMatch ? jsonMatch[1] : researchRaw);
+    } catch {
+      researchFindings = { research_summary: researchRaw, key_statistics: [], problems: [], solutions: [] };
+    }
+
+    console.log('✅ Research complete:', researchFindings.key_statistics?.length || 0, 'statistics found');
+
+    // ============================================
+    // STEP 2: Generate Content with Claude Opus 4.1 (Expert Writing)
+    // ============================================
+    console.log('📝 Step 2: Writing content with Claude Opus 4.1...');
     
     const contentResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -71,11 +137,13 @@ export async function POST(req: NextRequest) {
         'HTTP-Referer': process.env.NEXT_PUBLIC_BASE_URL || 'https://lightpoint.uk',
       },
       body: JSON.stringify({
-        model: 'openai/gpt-4o',
+        model: 'anthropic/claude-opus-4.1',
         messages: [
           {
             role: 'system',
             content: `You are an expert content writer specializing in UK accounting, tax, and HMRC matters. Write engaging, informative blog posts that help ${audience}.
+
+Based on the research findings provided, craft a comprehensive, well-structured article.
 
 Tone: ${tone}
 Length: ${length === 'short' ? '500-800' : length === 'medium' ? '1200-1800' : '2000-3000'} words
@@ -83,7 +151,7 @@ Length: ${length === 'short' ? '500-800' : length === 'medium' ? '1200-1800' : '
 Include:
 - Compelling title
 - Executive summary/excerpt
-- Key statistics and data points (with numbers)
+- Key statistics from research (with context)
 - Step-by-step processes where relevant
 - Real-world examples
 - Actionable takeaways
@@ -106,7 +174,12 @@ Format as JSON with this structure:
           },
           {
             role: 'user',
-            content: `Write a comprehensive blog post about: ${topic}`,
+            content: `Write a comprehensive blog post about: ${topic}
+
+**Research Findings:**
+${JSON.stringify(researchFindings, null, 2)}
+
+Use this research to write an authoritative, data-driven article.`,
           },
         ],
         temperature: 0.8, // Higher for creativity
@@ -133,9 +206,9 @@ Format as JSON with this structure:
     console.log('✅ Content generated:', parsedContent.title);
 
     // ============================================
-    // STEP 2: Generate Visual Layout with Claude 3.5 Sonnet
+    // STEP 3: Generate Visual Layout with Claude Opus 4.1
     // ============================================
-    console.log('🎨 Step 2: Generating visual layout with Claude...');
+    console.log('🎨 Step 3: Generating visual layout with Claude Opus 4.1...');
     
     const layoutResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -144,7 +217,7 @@ Format as JSON with this structure:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'anthropic/claude-3.5-sonnet',
+        model: 'anthropic/claude-opus-4.1',
         messages: [
           {
             role: 'user',
@@ -203,40 +276,104 @@ Return ONLY valid JSON:
     console.log('✅ Layout generated with', generatedLayout.layout.length, 'sections');
 
     // ============================================
-    // STEP 3: Generate Hero Image with Flux Pro (Optional)
+    // STEP 4: Generate Hero Image & Charts with Gemini 3 Pro
     // ============================================
     let heroImageUrl = null;
     
-    if (includeImages && replicateApiKey && generatedLayout.imagePrompts?.[0]) {
-      console.log('🖼️  Step 3: Generating hero image with Flux Pro...');
+    if (includeImages && generatedLayout.imagePrompts?.[0]) {
+      console.log('🖼️  Step 4: Generating hero image with Gemini 3 Pro...');
       
       try {
-        const replicate = new Replicate({ auth: replicateApiKey });
-        
-        const output = await replicate.run(
-          "black-forest-labs/flux-pro",
-          {
-            input: {
-              prompt: `Professional, modern, high-quality blog hero image: ${generatedLayout.imagePrompts[0]}. Clean, corporate style, suitable for business website. No text overlay.`,
-              aspect_ratio: "16:9",
-              output_format: "webp",
-              output_quality: 90,
-            }
-          }
-        ) as any;
+        const imageResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openrouterApiKey}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': process.env.NEXT_PUBLIC_BASE_URL || 'https://lightpoint.uk',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-3-pro-image-preview',
+            messages: [
+              {
+                role: 'user',
+                content: `Generate a professional, modern blog hero image: ${generatedLayout.imagePrompts[0]}
+                
+Style: Clean, corporate, suitable for UK accounting/business website
+Aspect Ratio: 16:9
+Format: High quality, web-optimized
+No text overlay.`,
+              },
+            ],
+            max_tokens: 1000,
+          }),
+        });
 
-        heroImageUrl = output?.output || output?.[0] || null;
-        console.log('✅ Hero image generated:', heroImageUrl);
-      } catch (imageError: any) {
-        console.warn('⚠️  Image generation failed:', imageError.message);
+        if (imageResponse.ok) {
+          const imageData = await imageResponse.json();
+          // Gemini returns image data or URL in the response
+          heroImageUrl = imageData.choices[0].message.content?.image_url || imageData.choices[0].message.content;
+          console.log('✅ Hero image generated');
+        } else {
+          console.warn('⚠️  Image generation failed, continuing without image');
+        }
+      } catch (error) {
+        console.error('Error generating image:', error);
         // Continue without image
       }
     }
 
+    // Generate charts for visual sections
+    if (includeCharts && generatedLayout.layout) {
+      console.log('📊 Generating charts with Gemini 3 Pro...');
+      
+      for (const section of generatedLayout.layout) {
+        if (section.type === 'chart' && section.content?.data) {
+          try {
+            const chartResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${openrouterApiKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                model: 'google/gemini-3-pro-image-preview',
+                messages: [
+                  {
+                    role: 'user',
+                    content: `Generate a professional chart visualization:
+                    
+Type: ${section.content.type}
+Title: ${section.content.title}
+Data: ${JSON.stringify(section.content.data)}
+
+Style: Modern, clean, corporate, matching UK business standards
+Colors: Professional palette (blues, grays, accent colors)
+Format: High quality, web-optimized`,
+                  },
+                ],
+                max_tokens: 1000,
+              }),
+            });
+
+            if (chartResponse.ok) {
+              const chartData = await chartResponse.json();
+              section.content.generated_image = chartData.choices[0].message.content?.image_url || chartData.choices[0].message.content;
+              console.log(`✅ Chart generated for: ${section.content.title}`);
+            }
+          } catch (error) {
+            console.error('Error generating chart:', error);
+            // Continue without chart image
+          }
+        }
+      }
+    }
+
+    console.log('✅ Image and chart generation complete');
+
     // ============================================
-    // STEP 4: Generate SEO Metadata
+    // STEP 5: Generate SEO Metadata
     // ============================================
-    console.log('🔍 Step 4: Generating SEO metadata...');
+    console.log('🔍 Step 5: Generating SEO metadata...');
     
     const seoResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -245,7 +382,7 @@ Return ONLY valid JSON:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'openai/gpt-4o',
+        model: 'anthropic/claude-opus-4.1',
         messages: [
           {
             role: 'user',
