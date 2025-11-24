@@ -113,7 +113,10 @@ export default function BlogPostPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#1a1a2e] to-[#0f0f1e]">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900 relative overflow-hidden">
+      {/* Animated background gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-purple-600/10 to-pink-600/10 animate-gradient-shift pointer-events-none" />
+      
       {/* Preview Banner */}
       {isPreview && (
         <div className="bg-amber-500 text-white py-3 px-4 text-center font-semibold z-50 relative">
