@@ -49,26 +49,46 @@ All models are accessed via **OpenRouter** for unified API access and cost manag
 
 ---
 
-### 3️⃣ **Visual Layout Generation**
+### 3️⃣ **Visual Layout Generation (Gamma-Style)**
 **Model:** `anthropic/claude-opus-4.1` (Claude Opus 4.1)
 
-**Purpose:** Create visual layouts for blog posts
-- Analyzes content to identify visual opportunities
-- Generates structured JSON layouts
-- Places stat cards, charts, timelines, callouts
-- Creates Hero sections and infographics
-- Optimizes visual storytelling
+**Purpose:** Create elegant, narrative-focused visual layouts
+- Analyzes content to extract key data points (NEVER invents content)
+- Generates structured JSON layouts with Gamma-style components
+- Creates compact, horizontal stat displays (not dominating boxes)
+- Places visuals at same width as text (`max-w-4xl`) for unified flow
+- Interweaves TextSections with visual elements for seamless reading
+- Optimizes for typography-first, visual-second approach
+
+**Gamma Design Principles:**
+1. **Unified Width:** All components flow at same width as text
+2. **Compact Stats:** Horizontal layouts, border-left accents, no full boxes
+3. **Typography First:** Large, readable text (prose-xl, text-lg)
+4. **Content Preservation:** Visual elements ENHANCE, never REPLACE narrative
+5. **Minimal Chrome:** Less borders/padding, more content
+6. **Strategic Spacing:** Tight, cohesive (my-6), not vast whitespace
 
 **Why Claude Opus 4.1?**
 - Best at structured JSON output
 - Strong reasoning for design decisions
-- Excellent at identifying key data points
+- Excellent at identifying key data points WITHOUT inventing
 - Consistent formatting
+- Respects strict content preservation rules
 
 **Used in:**
 - `app/api/blog/generate-full/route.ts` (Step 3)
 - `app/api/blog/generate-layout/route.ts`
 - `app/api/blog/transform-visual/route.ts`
+
+**Component Library:**
+- `StatCard`: Compact horizontal stats with border-left accent
+- `ComparisonChart`: Data visualizations (bar, pie, line)
+- `ProcessFlow`: Step-by-step flows with responsive grid
+- `Timeline`: Chronological event displays
+- `CalloutBox`: Highlighted quotes/insights with subtle borders
+- `ChecklistCard`: Numbered action items
+- `HeroGradient`: Full-width hero sections
+- `TextSection`: Prose blocks interwoven with visuals
 
 ---
 
@@ -140,27 +160,47 @@ All models are accessed via **OpenRouter** for unified API access and cost manag
 
 ---
 
-## 🔄 Complete Generation Workflow
+## 🔄 Complete Generation Workflow (Gamma-Style)
 
 ```
 User Input: Topic
     ↓
 [1] ChatGPT 5.1 Deep Search
     → Research findings, statistics, problems/solutions
+    → Identifies visual storytelling opportunities
     ↓
 [2] Claude Opus 4.1
     → Comprehensive blog post content
+    → Visually-rich structure (max 150 words between visual markers)
+    → UK spelling, bold key phrases, scannable paragraphs
     ↓
-[3] Claude Opus 4.1
-    → Visual layout with components (stats, charts, etc.)
+[3] Claude Opus 4.1 - GAMMA LAYOUT ENGINE
+    → Analyzes content for visual extraction (STRICT RULES):
+      • NEVER invents content
+      • ONLY extracts explicitly stated data
+      • Preserves original prose in TextSections
+      • Creates compact, horizontal StatCards
+      • All components at max-w-4xl width
+      • Typography-first, visual-second approach
+    → Outputs JSON with interwoven TextSections + Visuals
     ↓
 [4] Gemini 3 Pro (optional)
     → Hero image + chart visualizations
+    → Dark gradient, neon accents, professional UK aesthetic
     ↓
 [5] Claude Opus 4.1
     → SEO metadata (title, description, tags, slug)
     ↓
-Output: Complete blog post with content, layout, images, SEO
+[6] DynamicGammaRenderer (Client-side)
+    → Renders all components at unified width
+    → Applies Gamma-style CSS (glows, gradients, glassmorphism)
+    → Ensures seamless flow: text → stat → text → chart → text
+    ↓
+Output: Gamma-style blog post
+- Elegant, narrative-focused
+- Unified visual hierarchy
+- Large, readable typography
+- Visual elements enhance (not overpower) content
 ```
 
 ---

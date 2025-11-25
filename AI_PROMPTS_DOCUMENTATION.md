@@ -1,6 +1,15 @@
-# 🤖 AI Visual Tool - Complete Prompts Documentation
+# 🤖 AI Visual Tool - Complete Prompts Documentation (Gamma-Style)
 
-This document contains all AI prompts used in the Lightpoint 2.0 blog visual layout system.
+This document contains all AI prompts used in the Lightpoint 2.0 **Gamma-style** blog visual layout system.
+
+## 🎨 **Gamma Design Philosophy**
+Our visual system follows Gamma.app's elegant approach:
+- **Unified Width:** Text and visuals flow at same width (max-w-4xl)
+- **Compact Stats:** Horizontal layouts with border-left accents, not dominating boxes
+- **Typography First:** Large, readable text (prose-xl, text-lg)
+- **Content Preservation:** Visuals ENHANCE, never REPLACE the narrative
+- **Minimal Chrome:** Less borders/padding, more content
+- **Strategic Spacing:** Tight, cohesive flow
 
 ---
 
