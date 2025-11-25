@@ -68,49 +68,69 @@ export default function DynamicGammaRenderer({ layout }: DynamicGammaRendererPro
           return (
             <div 
               key={index} 
-              className="prose prose-lg prose-invert max-w-4xl mx-auto my-8
-                prose-headings:font-bold prose-headings:text-white
-                prose-p:text-white prose-p:leading-relaxed prose-p:mb-4
+              className="prose prose-xl prose-invert max-w-4xl mx-auto my-6
+                prose-headings:font-bold prose-headings:text-white prose-headings:mb-4 prose-headings:text-2xl
+                prose-p:text-white prose-p:leading-relaxed prose-p:mb-4 prose-p:text-lg
                 prose-a:text-cyan-400 prose-a:no-underline hover:prose-a:underline
                 prose-strong:text-white prose-strong:font-semibold
-                prose-ul:list-disc prose-ul:ml-6 prose-ol:list-decimal prose-ol:ml-6
+                prose-ul:list-disc prose-ul:ml-6 prose-ul:text-lg prose-ol:list-decimal prose-ol:ml-6
                 prose-li:text-white prose-li:mb-2
-                prose-blockquote:border-l-4 prose-blockquote:border-cyan-500 prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-gray-200
-                prose-code:bg-gray-800 prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:text-sm prose-code:text-cyan-400"
+                prose-blockquote:border-l-4 prose-blockquote:border-cyan-500 prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-gray-200 prose-blockquote:text-lg
+                prose-code:bg-gray-800 prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:text-base prose-code:text-cyan-400"
               dangerouslySetInnerHTML={{ __html: props.content || section.content || '' }}
             />
           );
 
         case 'StatCard':
-          return <StatCard key={index} {...props} animationDelay={index * 0.1} />;
+          return <StatCard key={index} {...props} animationDelay={index * 0.05} />;
 
         case 'grid':
-          // Render grid of components (usually StatCards)
+          // Grid layout - constrained to content width
           return (
-            <div key={index} className={`grid grid-cols-1 md:grid-cols-${section.columns || 3} gap-6 my-12`}>
+            <div key={index} className={`max-w-4xl mx-auto grid grid-cols-1 gap-4 my-8`}>
               {section.components?.map((comp, i) => renderComponent(comp, i))}
             </div>
           );
 
         case 'ProcessFlow':
         case 'process':
-          return <ProcessFlow key={index} {...props} />;
+          return (
+            <div key={index} className="max-w-4xl mx-auto my-8">
+              <ProcessFlow {...props} />
+            </div>
+          );
 
         case 'Timeline':
         case 'timeline':
-          return <Timeline key={index} {...props} />;
+          return (
+            <div key={index} className="max-w-4xl mx-auto my-8">
+              <Timeline {...props} />
+            </div>
+          );
 
         case 'ComparisonChart':
         case 'chart':
-          return <ComparisonChart key={index} {...props} />;
+          return (
+            <div key={index} className="max-w-4xl mx-auto my-8">
+              <ComparisonChart {...props} />
+            </div>
+          );
 
         case 'CalloutBox':
         case 'callout':
-          return <CalloutBox key={index} {...props} />;
+          return (
+            <div key={index} className="max-w-4xl mx-auto my-6">
+              <CalloutBox {...props} />
+            </div>
+          );
 
         case 'ChecklistCard':
         case 'checklist':
-          return <ChecklistCard key={index} {...props} />;
+          return (
+            <div key={index} className="max-w-4xl mx-auto my-8">
+              <ChecklistCard {...props} />
+            </div>
+          );
 
         case 'text':
           // Plain text section
@@ -155,7 +175,7 @@ export default function DynamicGammaRenderer({ layout }: DynamicGammaRendererPro
   };
 
   return (
-    <div className="gamma-blog-content">
+    <div className="w-full">
       {/* Apply theme if provided */}
       {theme && (
         <style jsx>{`
@@ -167,10 +187,8 @@ export default function DynamicGammaRenderer({ layout }: DynamicGammaRendererPro
         `}</style>
       )}
 
-      {/* Render all sections */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {layoutArray.map((section, index) => renderComponent(section, index))}
-      </div>
+      {/* Render all sections - no extra wrapper padding */}
+      {layoutArray.map((section, index) => renderComponent(section, index))}
     </div>
   );
 }

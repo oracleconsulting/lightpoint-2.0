@@ -100,58 +100,53 @@ export default function StatCard({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 10 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-50px' }}
-      transition={{ duration: 0.5, delay: animationDelay }}
-      className="relative group h-full"
+      transition={{ duration: 0.4, delay: animationDelay }}
+      className="my-6 max-w-4xl mx-auto"
     >
-      {/* Animated glow effect */}
-      <div 
-        className="absolute inset-0 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-        style={{
-          background: `radial-gradient(circle at center, ${colors.glow}, transparent 70%)`
-        }}
-      />
-
-      {/* Card content */}
-      <div className={`relative h-full bg-gray-900/50 backdrop-blur-sm border ${colors.border} 
-                      rounded-2xl p-6 hover:border-opacity-70 transition-all duration-300
-                      hover:transform hover:-translate-y-1`}>
+      {/* Gamma-style: Compact, elegant stat display */}
+      <div className={`relative bg-gradient-to-br from-gray-900/40 to-gray-900/20 border-l-4 ${colors.border} 
+                      rounded-lg px-6 py-4 backdrop-blur-sm hover:bg-gray-900/50 transition-all duration-300`}>
         
-        {/* Header with icon and trend */}
-        <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center gap-6">
+          {/* Icon - small and subtle */}
           {IconComponent && (
-            <div className={`${colors.bg} p-3 rounded-xl`}>
-              <IconComponent className={`w-6 h-6 text-${color}-400`} />
+            <div className={`${colors.bg} p-2 rounded-lg flex-shrink-0`}>
+              <IconComponent className={`w-5 h-5 text-${color}-400`} />
             </div>
           )}
-          {TrendIcon && (
-            <div className="flex items-center gap-1">
-              <TrendIcon className={`w-5 h-5 ${trendMap[trend!].color}`} />
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-baseline gap-3 flex-wrap">
+              {/* Metric - prominent but not overwhelming */}
+              <div className={`text-4xl font-bold bg-gradient-to-r ${colors.gradient} 
+                              bg-clip-text text-transparent leading-none`}>
+                {prefix}{metric}{suffix}
+              </div>
+
+              {/* Trend indicator */}
+              {TrendIcon && (
+                <div className="flex items-center gap-1">
+                  <TrendIcon className={`w-4 h-4 ${trendMap[trend!].color}`} />
+                </div>
+              )}
             </div>
-          )}
-        </div>
 
-        {/* Metric */}
-        <div className="mb-2">
-          <div className={`text-5xl font-bold bg-gradient-to-r ${colors.gradient} 
-                          bg-clip-text text-transparent leading-tight`}>
-            {prefix}{metric}{suffix}
+            {/* Label - integrated, not separated */}
+            <div className="text-gray-300 text-base font-medium mt-1">
+              {label}
+            </div>
+
+            {/* Context - flows naturally */}
+            {context && (
+              <div className="text-gray-400 text-sm mt-1">
+                {context}
+              </div>
+            )}
           </div>
         </div>
-
-        {/* Label */}
-        <div className="text-gray-400 text-sm uppercase tracking-wider font-semibold mb-2">
-          {label}
-        </div>
-
-        {/* Context */}
-        {context && (
-          <div className="text-gray-300 text-base mt-2 leading-relaxed">
-            {context}
-          </div>
-        )}
       </div>
     </motion.div>
   );
