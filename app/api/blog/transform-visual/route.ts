@@ -140,53 +140,89 @@ function postProcessLayout(layout: any[]): any[] {
   return result;
 }
 
-// Validation: Filter out broken components with placeholder/empty content
+// Validation: Filter and fix broken components
 function validateLayout(layout: any[]): any[] {
-  return layout.filter(item => {
-    // Filter out broken ChecklistCards with placeholder content
+  const result: any[] = [];
+  
+  for (const item of layout) {
+    // ChecklistCard Validation
     if (item.type === 'ChecklistCard') {
       const items = item.props?.items || [];
+      
+      console.log('🔍 ChecklistCard items:', JSON.stringify(items.map((i: any) => i.title)));
+      
       if (items.length === 0) {
-        console.warn('⚠️ Removing ChecklistCard with no items');
-        return false;
+        console.warn('⚠️ REMOVING: ChecklistCard with no items');
+        continue;
       }
-      const hasPlaceholders = items.some((i: any) => 
-        !i.title || 
-        i.title.match(/^(Step|Item|Action)\s*\d+$/i) ||
-        i.title.trim() === ''
-      );
+      
+      // MORE AGGRESSIVE placeholder detection
+      const hasPlaceholders = items.some((i: any) => {
+        const title = String(i.title || '').trim().toLowerCase();
+        if (!title) return true;
+        if (/^(step|item|action|task)\s*\d*:?$/i.test(title)) return true;
+        if (/^\d+\.?\s*(step|item)?$/i.test(title)) return true;
+        if (title.length < 5 && /\d/.test(title)) return true;
+        return false;
+      });
+      
       if (hasPlaceholders) {
-        console.warn('⚠️ Removing ChecklistCard with placeholder content:', items.map((i: any) => i.title));
-        return false;
+        console.warn('⚠️ REMOVING: ChecklistCard with placeholders:', items.map((i: any) => i.title));
+        // Fallback to text
+        if (item.props?.title) {
+          result.push({
+            type: 'TextSection',
+            content: `<p><strong>${item.props.title}</strong> - See article for full details.</p>`,
+            sourceText: item.sourceText
+          });
+        }
+        continue;
       }
+      result.push(item);
+      continue;
     }
     
-    // Filter out broken HorizontalStatRow with missing metrics
+    // HorizontalStatRow Validation  
     if (item.type === 'HorizontalStatRow') {
       const stats = item.props?.stats || [];
+      
+      console.log('🔍 HorizontalStatRow stats:', JSON.stringify(stats.map((s: any) => ({ m: s.metric, l: s.label }))));
+      
       if (stats.length === 0) {
-        console.warn('⚠️ Removing HorizontalStatRow with no stats');
-        return false;
+        console.warn('⚠️ REMOVING: HorizontalStatRow with no stats');
+        continue;
       }
-      const hasMissingMetrics = stats.some((s: any) => 
-        !s.metric || s.metric.toString().trim() === ''
-      );
-      if (hasMissingMetrics) {
-        console.warn('⚠️ Removing HorizontalStatRow with missing metrics:', stats.map((s: any) => ({ metric: s.metric, label: s.label })));
-        return false;
+      
+      // Keep only stats with actual metrics
+      const validStats = stats.filter((s: any) => {
+        const m = String(s.metric || '').trim();
+        return m && m !== '' && m !== 'undefined';
+      });
+      
+      if (validStats.length === 0) {
+        console.warn('⚠️ REMOVING: HorizontalStatRow - all metrics empty');
+        continue;
       }
+      
+      result.push({ ...item, props: { ...item.props, stats: validStats } });
+      continue;
     }
     
-    // Filter out broken StatCards with missing metrics
+    // StatCard Validation
     if (item.type === 'StatCard') {
-      if (!item.props?.metric || item.props.metric.toString().trim() === '') {
-        console.warn('⚠️ Removing StatCard with missing metric');
-        return false;
+      const m = String(item.props?.metric || '').trim();
+      if (!m || m === 'undefined') {
+        console.warn('⚠️ REMOVING: StatCard missing metric:', item.props?.label);
+        continue;
       }
+      result.push(item);
+      continue;
     }
     
-    return true;
-  });
+    result.push(item);
+  }
+  
+  return result;
 }
 
 export async function POST(req: NextRequest) {
@@ -418,21 +454,23 @@ RULE: If the source has a checklist/steps, use ChecklistCard.
 RULE: The LAST stats in the source are often the most important - DO NOT DROP THEM.
 
 ═══════════════════════════════════════════════════════════════════
-                    🚨 CHECKLIST EXTRACTION - CRITICAL 🚨
+          🚨🚨🚨 CRITICAL: EXTRACTION EXAMPLES 🚨🚨🚨
 ═══════════════════════════════════════════════════════════════════
 
-When source text contains a list like:
-"Include: 
+EXAMPLE 1: CHECKLIST EXTRACTION
+
+INPUT TEXT:
+"Your professional fee claim should include:
 - Itemised time records (date, duration, specific task)
 - Clear causation (why HMRC's failure created this work)
 - Professional hourly rate
 - Total calculation with invoice"
 
-You MUST extract the ACTUAL TEXT and output:
+CORRECT OUTPUT:
 {
   "type": "ChecklistCard",
   "props": {
-    "title": "Professional Fee Recovery Checklist",
+    "title": "Professional Fee Claim Requirements",
     "items": [
       { "number": 1, "title": "Itemised time records", "description": "date, duration, specific task" },
       { "number": 2, "title": "Clear causation", "description": "why HMRC's failure created this work" },
@@ -442,35 +480,58 @@ You MUST extract the ACTUAL TEXT and output:
   }
 }
 
-❌ NEVER use placeholder text like "Step 1", "Step 2", "Item 1", "Action 1"
-❌ NEVER output empty titles or generic numbered items
-✅ ALWAYS extract the actual item text from the source
-✅ Split parenthetical content into description field
+❌ WRONG OUTPUT (WILL BE REJECTED):
+{
+  "type": "ChecklistCard",
+  "props": {
+    "items": [
+      { "number": 1, "title": "Step 1" },
+      { "number": 2, "title": "Step 2" }
+    ]
+  }
+}
 
-═══════════════════════════════════════════════════════════════════
-                    🚨 STAT VALUES - MANDATORY 🚨
-═══════════════════════════════════════════════════════════════════
+RULE: The title MUST contain actual words from the source text, NOT "Step 1", "Item 1", etc.
 
-For HorizontalStatRow, EVERY stat MUST have a metric value:
+---
 
-❌ WRONG (will render blank):
-{ "label": "Professional Costs", "sublabel": "Paid via Adjudicator" }
+EXAMPLE 2: STAT EXTRACTION
 
-✅ CORRECT:
-{ "metric": "6,174", "prefix": "£", "label": "Professional Costs", "sublabel": "Paid via Adjudicator", "color": "green" }
+INPUT TEXT:
+"Lightpoint achieves a 67% success rate at Adjudicator level, compared to the 41% industry average. Last year, £6,174 in professional costs were recovered."
 
-RULES:
-1. EVERY stat MUST have a "metric" field with a number value
-2. If the number has £, put it in "prefix": "£"
-3. If the number has %, put it in "suffix": "%"
-4. NEVER create a stat without finding a specific number in the source
-5. If you can't find a number, use TextSection instead of a stat
+CORRECT OUTPUT:
+{
+  "type": "HorizontalStatRow",
+  "props": {
+    "stats": [
+      { "metric": "67", "suffix": "%", "label": "Success Rate", "sublabel": "Lightpoint at Adjudicator", "color": "green" },
+      { "metric": "41", "suffix": "%", "label": "Industry Average", "sublabel": "Standard success rate", "color": "blue" },
+      { "metric": "6,174", "prefix": "£", "label": "Costs Recovered", "sublabel": "Professional fees", "color": "cyan" }
+    ]
+  }
+}
 
-Example source: "Professional costs of £6,174 were paid out last year"
-→ metric: "6,174", prefix: "£", label: "Professional Costs"
+❌ WRONG OUTPUT (WILL BE REJECTED):
+{
+  "type": "HorizontalStatRow",
+  "props": {
+    "stats": [
+      { "label": "Success Rate", "sublabel": "Lightpoint system" },
+      { "label": "Industry Average" }
+    ]
+  }
+}
 
-Example source: "67% success rate at Adjudicator level versus 41% average"
-→ Two stats: {metric: "67", suffix: "%"} and {metric: "41", suffix: "%"}
+RULE: Every stat MUST have a "metric" field with the actual number from the source.
+
+---
+
+EXTRACTION RULES:
+1. READ the source text carefully
+2. FIND the exact numbers and list items
+3. COPY them into your output - do not paraphrase or use placeholders
+4. If you cannot find specific content, use TextSection instead
 
 ═══════════════════════════════════════════════════════════════════
                     STAT GROUPING STRATEGY
