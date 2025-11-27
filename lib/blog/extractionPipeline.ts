@@ -1,11 +1,10 @@
 /**
- * Content Extraction Pipeline V6.1 - FIXED
+ * Content Extraction Pipeline V6.2
  * 
- * Key fixes:
- * 1. Programmatic paragraph splitting (don't rely on AI for text)
- * 2. Validation before mapping (reject empty content)
- * 3. Guaranteed TextSection generation
- * 4. Better error handling and logging
+ * Key fix: Smart paragraph detection for continuous text
+ * - Detects sentence boundaries
+ * - Groups 2-4 sentences per paragraph
+ * - Inserts visuals every 2-3 paragraphs for better flow
  */
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -87,164 +86,129 @@ export interface ExtractionResult {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// EXTRACTION PROMPT (Simplified - focus on structured data, not paragraphs)
-// ═══════════════════════════════════════════════════════════════════════════
-
-export const EXTRACTION_PROMPT = `You are a content extraction system. Extract structured data from a blog post.
-
-## WHAT TO EXTRACT
-
-### STATS (Every number)
-Find ALL numbers. For each:
-- value: exact number (keep commas)
-- prefix: £, $, etc.
-- suffix: %, K, minutes, etc.
-- label: what it measures
-- context: surrounding info
-- category: volume | percentage | money | time | comparison
-- sentiment: positive | negative | neutral
-- groupId: group related stats (opening, middle, closing, adjudicator, success)
-
-### QUOTES
-Find important quotes, Charter references, guidance citations:
-- text: exact quote
-- attribution: source name
-- type: charter | guidance | example | callout
-- emphasis: high | medium | low
-
-### LISTS
-Find ALL lists (formatted or inline):
-- title: list heading
-- items: [{ title: "item text", description: "optional detail" }]
-- type: checklist | bullet | numbered | process
-- actionable: true/false
-
-CRITICAL: Extract ACTUAL TEXT, never "Step 1", "Item 1", etc.
-
-### TIMELINE
-If sequential dates exist:
-- title: timeline heading
-- events: [{ date, description, type: action|delay|failure|success }]
-
-### PROCESSES
-Find multi-step explanations with clear titles:
-- title: process name (e.g., "Why Most Complaints Fail")
-- steps: [{ number: "01", title: "Clear Title Here", description: "explanation" }]
-
-CRITICAL for processes: Each step MUST have a real title extracted from the content.
-Example from text "Missing the target entirely - Most complaints read like general frustration":
-{ number: "01", title: "Missing the target entirely", description: "Most complaints read like general frustration rather than specific breaches" }
-
-Another example from "No evidence trail - Vague timelines kill complaints":
-{ number: "02", title: "No evidence trail", description: "Vague timelines kill complaints" }
-
-### SECTION HEADINGS
-Find all headings/subheadings in the document:
-- Just list them as strings
-
-## OUTPUT FORMAT
-
-Return ONLY valid JSON:
-{
-  "stats": [...],
-  "quotes": [...],
-  "lists": [...],
-  "timeline": {...} or null,
-  "processes": [...],
-  "sectionHeadings": ["heading1", "heading2", ...],
-  "metadata": {
-    "totalWords": number,
-    "statCount": number,
-    "hasTimeline": boolean,
-    "hasChecklist": boolean
-  }
-}
-
-## CRITICAL RULES
-1. Extract EVERY number as a stat
-2. NEVER use placeholder text - use actual content
-3. Process steps MUST have real titles from the content
-4. Return valid JSON only`;
-
-// ═══════════════════════════════════════════════════════════════════════════
-// TEXT PROCESSING UTILITIES
+// SMART TEXT PROCESSING
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
- * Split content into paragraphs programmatically
- * This is the GUARANTEED fallback - never trust AI for text content
+ * Split continuous text into sentences
  */
-function splitIntoParagraphs(content: string): string[] {
-  return content
-    .split(/\n\n+/)
-    .map(p => p.trim())
-    .filter(p => p.length > 30) // Skip tiny fragments
-    .filter(p => !p.match(/^#{1,3}\s/)) // Skip markdown headings (handled separately)
-    .filter(p => !p.match(/^[-*]\s/)); // Skip list items (handled separately)
-}
-
-/**
- * Extract headings from content
- */
-function extractHeadings(content: string): { text: string; level: number; position: number }[] {
-  const headings: { text: string; level: number; position: number }[] = [];
-  const lines = content.split('\n');
+function splitIntoSentences(text: string): string[] {
+  // Handle common abbreviations that shouldn't be split
+  const protectedText = text
+    .replaceAll('Mr.', 'Mr##')
+    .replaceAll('Mrs.', 'Mrs##')
+    .replaceAll('Dr.', 'Dr##')
+    .replaceAll('Ms.', 'Ms##')
+    .replaceAll('vs.', 'vs##')
+    .replaceAll('etc.', 'etc##')
+    .replaceAll('i.e.', 'i##e##')
+    .replaceAll('e.g.', 'e##g##')
+    .replaceAll('gov.uk', 'gov##uk');
   
-  lines.forEach((line, index) => {
-    // Markdown headings
-    const mdMatch = line.match(/^(#{1,3})\s+(.+)$/);
-    if (mdMatch) {
-      headings.push({
-        text: mdMatch[2].trim(),
-        level: mdMatch[1].length,
-        position: index,
-      });
+  // Split on sentence endings
+  const sentences = protectedText
+    .split(/(?<=[.!?])\s+(?=[A-Z"'])/)
+    .map(s => s
+      .replaceAll('##', '.')
+      .trim()
+    )
+    .filter(s => s.length > 10);
+  
+  return sentences;
+}
+
+/**
+ * Detect if a sentence looks like a heading
+ */
+function isLikelyHeading(sentence: string): boolean {
+  // Short, no period at end, starts with capital
+  if (sentence.length > 80) return false;
+  if (sentence.endsWith('.')) return false;
+  
+  // Common heading patterns
+  const headingPatterns = [
+    /^The\s+\w+\s+(trap|problem|solution|answer|question)/i,
+    /^Why\s+/i,
+    /^How\s+to\s+/i,
+    /^What\s+/i,
+    /^(Making|Building|Creating|Getting)\s+/i,
+    /\s+(that works|that fails|you need)/i,
+    /^Professional\s+fee/i,
+    /^The\s+October\s+\d{4}/i,
+  ];
+  
+  return headingPatterns.some(p => p.test(sentence));
+}
+
+/**
+ * Group sentences into paragraphs (2-4 sentences each)
+ */
+function groupIntoParagraphs(sentences: string[]): { type: 'heading' | 'paragraph'; text: string }[] {
+  const result: { type: 'heading' | 'paragraph'; text: string }[] = [];
+  let currentParagraph: string[] = [];
+  
+  sentences.forEach((sentence, idx) => {
+    // Check if this looks like a heading
+    if (isLikelyHeading(sentence)) {
+      // Flush current paragraph first
+      if (currentParagraph.length > 0) {
+        result.push({ type: 'paragraph', text: currentParagraph.join(' ') });
+        currentParagraph = [];
+      }
+      result.push({ type: 'heading', text: sentence });
       return;
     }
     
-    // Bold text at start of line (common heading pattern)
-    const boldMatch = line.match(/^\*\*(.+?)\*\*\s*$/);
-    if (boldMatch && boldMatch[1].length < 80) {
-      headings.push({
-        text: boldMatch[1].trim(),
-        level: 2,
-        position: index,
-      });
-    }
+    currentParagraph.push(sentence);
     
-    // Title case lines that look like headings
-    if (line.length < 80 && line.length > 10 && !line.includes('.')) {
-      const words = line.trim().split(/\s+/);
-      const capitalizedWords = words.filter(w => /^[A-Z]/.test(w));
-      // If most words are capitalized and line is short, might be a heading
-      if (words.length >= 3 && words.length <= 10 && capitalizedWords.length >= words.length * 0.5) {
-        // Check common heading patterns
-        const headingPatterns = [
-          /^(The|Why|How|What|When|Where|Which)\s/i,
-          /\s(That|Which|Works?|Fails?|Recovery|Resolution|Process|Step)/i,
-        ];
-        if (headingPatterns.some(p => p.test(line))) {
-          headings.push({
-            text: line.trim(),
-            level: 2,
-            position: index,
-          });
-        }
-      }
+    // Create paragraph every 3-4 sentences, or at natural break points
+    const nextSentence = sentences[idx + 1];
+    const shouldBreak = 
+      currentParagraph.length >= 4 ||
+      (currentParagraph.length >= 2 && sentence.endsWith('?')) ||
+      (currentParagraph.length >= 3 && /\.$/.test(sentence) && nextSentence && /^(But|However|Yet|So|The|This|That|If|When)\s/.test(nextSentence));
+    
+    if (shouldBreak) {
+      result.push({ type: 'paragraph', text: currentParagraph.join(' ') });
+      currentParagraph = [];
     }
   });
   
-  // Deduplicate headings
-  const seen = new Set<string>();
-  return headings.filter(h => {
-    if (seen.has(h.text.toLowerCase())) return false;
-    seen.add(h.text.toLowerCase());
-    return true;
-  });
+  // Flush remaining
+  if (currentParagraph.length > 0) {
+    result.push({ type: 'paragraph', text: currentParagraph.join(' ') });
+  }
+  
+  return result;
 }
 
 /**
- * Apply Gamma-style inline highlighting to text
+ * Smart paragraph splitting - handles continuous text
+ */
+function smartSplitContent(content: string): { type: 'heading' | 'paragraph'; text: string }[] {
+  // First try normal paragraph splitting (if content has \n\n)
+  const hasExplicitParagraphs = content.includes('\n\n');
+  
+  if (hasExplicitParagraphs) {
+    const parts = content.split(/\n\n+/).filter(p => p.trim().length > 20);
+    return parts.map(p => {
+      const trimmed = p.trim();
+      if (isLikelyHeading(trimmed)) {
+        return { type: 'heading' as const, text: trimmed };
+      }
+      return { type: 'paragraph' as const, text: trimmed };
+    });
+  }
+  
+  // Otherwise, split by sentences and group
+  const sentences = splitIntoSentences(content);
+  console.log(`📝 Split into ${sentences.length} sentences`);
+  
+  return groupIntoParagraphs(sentences);
+}
+
+/**
+ * Apply Gamma-style inline highlighting
  */
 function applyInlineHighlighting(text: string): string {
   return text
@@ -259,7 +223,67 @@ function applyInlineHighlighting(text: string): string {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// AI EXTRACTION FUNCTION
+// AI EXTRACTION PROMPT
+// ═══════════════════════════════════════════════════════════════════════════
+
+export const EXTRACTION_PROMPT = `You are a content extraction system. Extract structured data from a blog post.
+
+## EXTRACT THESE ELEMENTS
+
+### STATS
+Find ALL numbers:
+- value: exact number (keep commas)
+- prefix: £, $ etc.
+- suffix: %, K, minutes etc.
+- label: what it measures
+- context: surrounding context
+- category: volume | percentage | money | time | comparison
+- sentiment: positive | negative | neutral
+- groupId: opening | middle | closing | adjudicator | success | ungrouped
+
+### QUOTES
+Find quotes, Charter references, guidance citations:
+- text: exact quote
+- attribution: source
+- type: charter | guidance | example | callout
+- emphasis: high | medium | low
+
+### LISTS
+Find ALL lists:
+- title: list heading
+- items: [{ title: "text", description: "detail" }]
+- type: checklist | bullet | numbered | process
+
+### TIMELINE
+Sequential dates:
+- title: heading
+- events: [{ date, description, type: action|delay|failure|success }]
+
+### PROCESSES
+Multi-step explanations (MUST have real titles from text):
+- title: process name
+- steps: [{ number: "01", title: "Real Title Here", description: "explanation" }]
+
+Example: "Why most complaints fail" with steps like:
+- "Missing the target entirely" (not "Step 1")
+- "No evidence trail" (not "Step 2")
+- "Wrong resolution request" (not "Step 3")
+
+## OUTPUT
+
+Return ONLY valid JSON:
+{
+  "stats": [...],
+  "quotes": [...],
+  "lists": [...],
+  "timeline": {...} or null,
+  "processes": [...]
+}
+
+CRITICAL: Never use placeholder text. Extract actual content.`;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// AI EXTRACTION
 // ═══════════════════════════════════════════════════════════════════════════
 
 export async function extractContent(
@@ -267,7 +291,7 @@ export async function extractContent(
   apiKey: string
 ): Promise<ExtractionResult> {
   
-  console.log('🔍 Starting content extraction...');
+  console.log('🔍 Starting AI extraction...');
   
   const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
@@ -280,10 +304,7 @@ export async function extractContent(
       model: 'anthropic/claude-3.5-sonnet',
       messages: [
         { role: 'system', content: EXTRACTION_PROMPT },
-        { 
-          role: 'user', 
-          content: `Extract structured content from this blog post:\n\n${content}` 
-        },
+        { role: 'user', content: `Extract from:\n\n${content}` },
       ],
       temperature: 0.1,
       max_tokens: 8000,
@@ -291,184 +312,88 @@ export async function extractContent(
   });
 
   if (!response.ok) {
-    const errorData = await response.json();
-    console.error('Extraction API failed:', errorData);
     throw new Error(`Extraction API failed: ${response.statusText}`);
   }
 
   const data = await response.json();
   const aiOutput = data.choices[0].message.content;
 
-  console.log('📄 Extraction response received, parsing...');
-
   try {
-    const cleanedOutput = aiOutput
-      .replace(/```json\n?/g, '')
-      .replace(/```\n?/g, '')
-      .trim();
+    const cleaned = aiOutput.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    const result = JSON.parse(cleaned);
     
-    const result = JSON.parse(cleanedOutput);
+    console.log(`✅ AI extracted: ${result.stats?.length || 0} stats, ${result.quotes?.length || 0} quotes, ${result.lists?.length || 0} lists`);
     
-    // Debug log
-    console.log('🔍 AI Extraction result:', JSON.stringify({
-      statsCount: result.stats?.length || 0,
-      quotesCount: result.quotes?.length || 0,
-      listsCount: result.lists?.length || 0,
-      processesCount: result.processes?.length || 0,
-      firstProcess: result.processes?.[0],
-    }, null, 2));
-    
-    const validated = validateExtractionResult(result);
-    
-    console.log(`✅ Extraction complete: ${validated.stats.length} stats, ${validated.lists.length} lists, ${validated.quotes.length} quotes`);
-    
-    return validated;
+    return validateExtractionResult(result);
   } catch (e) {
-    console.error('Failed to parse extraction result:', e);
-    console.error('AI output:', aiOutput.substring(0, 1000));
-    
-    // Return empty but valid structure on parse failure
+    console.error('Parse error:', e);
     return {
-      stats: [],
-      quotes: [],
-      lists: [],
-      timeline: null,
-      sections: [],
-      processes: [],
-      metadata: {
-        totalWords: content.split(/\s+/).length,
-        statCount: 0,
-        hasTimeline: false,
-        hasChecklist: false,
-      },
+      stats: [], quotes: [], lists: [], timeline: null, sections: [], processes: [],
+      metadata: { totalWords: 0, statCount: 0, hasTimeline: false, hasChecklist: false }
     };
   }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// VALIDATION FUNCTIONS
+// VALIDATION
 // ═══════════════════════════════════════════════════════════════════════════
 
 function validateExtractionResult(result: any): ExtractionResult {
   return {
-    stats: (result.stats || []).map(validateStat).filter(Boolean) as ExtractedStat[],
-    quotes: (result.quotes || []).map(validateQuote).filter(Boolean) as ExtractedQuote[],
-    lists: (result.lists || []).map(validateList).filter(Boolean) as ExtractedList[],
-    timeline: result.timeline ? validateTimeline(result.timeline) : null,
-    sections: [], // We'll fill this programmatically
-    processes: (result.processes || []).map(validateProcess).filter(Boolean) as ExtractedProcess[],
+    stats: (result.stats || []).filter((s: any) => s?.value && s?.label).map((s: any) => ({
+      value: String(s.value),
+      prefix: s.prefix,
+      suffix: s.suffix,
+      label: String(s.label),
+      context: s.context,
+      category: s.category || 'volume',
+      sentiment: s.sentiment || 'neutral',
+      sourceQuote: s.sourceQuote || '',
+      groupId: s.groupId || 'ungrouped',
+    })),
+    quotes: (result.quotes || []).filter((q: any) => q?.text?.length > 10).map((q: any) => ({
+      text: String(q.text),
+      attribution: q.attribution,
+      type: q.type || 'callout',
+      emphasis: q.emphasis || 'medium',
+    })),
+    lists: (result.lists || []).filter((l: any) => l?.items?.length > 0).map((l: any) => ({
+      title: String(l.title || 'List'),
+      items: l.items.map((i: any) => ({
+        title: String(i.title || i || ''),
+        description: i.description,
+      })).filter((i: any) => i.title.length > 2 && !/^(step|item)\s*\d*$/i.test(i.title)),
+      type: l.type || 'bullet',
+      actionable: l.actionable ?? false,
+    })).filter((l: any) => l.items.length > 0),
+    timeline: result.timeline?.events?.length > 0 ? {
+      title: String(result.timeline.title || 'Timeline'),
+      events: result.timeline.events.filter((e: any) => e?.date && e?.description).map((e: any) => ({
+        date: String(e.date),
+        description: String(e.description),
+        type: e.type || 'neutral',
+      })),
+    } : null,
+    sections: [],
+    processes: (result.processes || []).filter((p: any) => {
+      const validSteps = (p.steps || []).filter((s: any) => 
+        s?.title?.length > 3 && !/^(step|item)\s*\d*$/i.test(s.title)
+      );
+      return validSteps.length >= 2;
+    }).map((p: any) => ({
+      title: String(p.title || ''),
+      steps: p.steps.filter((s: any) => s?.title?.length > 3).map((s: any, i: number) => ({
+        number: s.number || String(i + 1).padStart(2, '0'),
+        title: String(s.title),
+        description: String(s.description || ''),
+      })),
+    })),
     metadata: {
       totalWords: result.metadata?.totalWords || 0,
       statCount: result.stats?.length || 0,
-      hasTimeline: !!result.timeline,
+      hasTimeline: !!result.timeline?.events?.length,
       hasChecklist: (result.lists || []).some((l: any) => l.type === 'checklist'),
     },
-  };
-}
-
-function validateStat(stat: any): ExtractedStat | null {
-  if (!stat || !stat.value || !stat.label) return null;
-  
-  return {
-    value: String(stat.value || ''),
-    prefix: stat.prefix || undefined,
-    suffix: stat.suffix || undefined,
-    label: String(stat.label || 'Statistic'),
-    context: stat.context || undefined,
-    category: stat.category || 'volume',
-    sentiment: stat.sentiment || 'neutral',
-    sourceQuote: stat.sourceQuote || '',
-    groupId: stat.groupId || 'ungrouped',
-  };
-}
-
-function validateQuote(quote: any): ExtractedQuote | null {
-  if (!quote || !quote.text || quote.text.length < 10) return null;
-  
-  return {
-    text: String(quote.text || ''),
-    attribution: quote.attribution || undefined,
-    type: quote.type || 'callout',
-    emphasis: quote.emphasis || 'medium',
-  };
-}
-
-function validateList(list: any): ExtractedList | null {
-  if (!list || !list.items || list.items.length === 0) return null;
-  
-  const validItems = (list.items || [])
-    .map((item: any) => ({
-      title: String(item.title || item || ''),
-      description: item.description || undefined,
-    }))
-    .filter((item: any) => {
-      // Reject placeholder patterns
-      const title = item.title.toLowerCase();
-      if (/^(step|item|action|point)\s*\d*$/i.test(title)) return false;
-      if (title.length < 3) return false;
-      return true;
-    });
-  
-  if (validItems.length === 0) return null;
-  
-  return {
-    title: String(list.title || 'List'),
-    items: validItems,
-    type: list.type || 'bullet',
-    actionable: list.actionable ?? false,
-  };
-}
-
-function validateTimeline(timeline: any): ExtractedTimeline | null {
-  if (!timeline || !timeline.events || timeline.events.length === 0) return null;
-  
-  const validEvents = (timeline.events || [])
-    .map((event: any) => ({
-      date: String(event.date || ''),
-      description: String(event.description || event.title || ''),
-      type: event.type || 'neutral',
-    }))
-    .filter((e: any) => e.date && e.description);
-  
-  if (validEvents.length === 0) return null;
-  
-  return {
-    title: String(timeline.title || 'Timeline'),
-    events: validEvents,
-  };
-}
-
-function validateProcess(process: any): ExtractedProcess | null {
-  if (!process || !process.steps || process.steps.length === 0) return null;
-  
-  const validSteps = (process.steps || [])
-    .map((step: any, i: number) => ({
-      number: step.number || String(i + 1).padStart(2, '0'),
-      title: String(step.title || '').trim(),
-      description: String(step.description || '').trim(),
-    }))
-    .filter((step: any) => {
-      // CRITICAL: Reject steps with empty or placeholder titles
-      if (!step.title || step.title.length < 3) {
-        console.warn(`⚠️ Rejecting step with empty title`);
-        return false;
-      }
-      if (/^(step|item|action|point)\s*\d*$/i.test(step.title)) {
-        console.warn(`⚠️ Rejecting placeholder step: "${step.title}"`);
-        return false;
-      }
-      return true;
-    });
-  
-  // Only return process if we have at least 2 valid steps
-  if (validSteps.length < 2) {
-    console.warn(`⚠️ Rejecting process "${process.title}" - only ${validSteps.length} valid steps`);
-    return null;
-  }
-  
-  return {
-    title: String(process.title || ''),
-    steps: validSteps,
   };
 }
 
@@ -479,25 +404,19 @@ function validateProcess(process: any): ExtractedProcess | null {
 export interface MappedComponent {
   type: string;
   props: Record<string, any>;
-  sourceText?: string;
 }
 
 function sentimentToColor(sentiment: string): string {
-  switch (sentiment) {
-    case 'positive': return 'green';
-    case 'negative': return 'red';
-    default: return 'blue';
-  }
+  return sentiment === 'positive' ? 'green' : sentiment === 'negative' ? 'red' : 'blue';
 }
 
 export function mapToComponents(
   extraction: ExtractionResult,
-  paragraphs: string[],
-  headings: { text: string; level: number; position: number }[]
+  contentBlocks: { type: 'heading' | 'paragraph'; text: string }[]
 ): MappedComponent[] {
   const components: MappedComponent[] = [];
   
-  // Group stats by groupId
+  // Organize stats by group
   const statGroups = new Map<string, ExtractedStat[]>();
   extraction.stats.forEach(stat => {
     const group = statGroups.get(stat.groupId) || [];
@@ -505,110 +424,88 @@ export function mapToComponents(
     statGroups.set(stat.groupId, group);
   });
   
-  const usedStatGroups = new Set<string>();
+  const usedGroups = new Set<string>();
   const usedQuotes = new Set<number>();
-  const usedHeadings = new Set<string>();
   
-  // Track paragraph index for interleaving visuals
-  let paragraphIndex = 0;
-  const totalParagraphs = paragraphs.length;
-  console.log(`📝 Mapping ${totalParagraphs} paragraphs with ${extraction.stats.length} stats, ${extraction.quotes.length} quotes`);
+  // Visual insertion points (after every N paragraphs)
+  let paragraphCount = 0;
+  let visualsInserted = 0;
+
+  console.log(`📦 Mapping ${contentBlocks.length} blocks with ${extraction.stats.length} stats`);
 
   // ─────────────────────────────────────────────────────────────────────────
-  // 1. Opening Stats (first stat group)
+  // 1. Opening stats
   // ─────────────────────────────────────────────────────────────────────────
   const openingStats = statGroups.get('opening') || [];
   if (openingStats.length >= 2) {
-    usedStatGroups.add('opening');
+    usedGroups.add('opening');
     components.push({
       type: 'HorizontalStatRow',
       props: {
         stats: openingStats.slice(0, 3).map(s => ({
-          metric: s.value,
-          prefix: s.prefix,
-          suffix: s.suffix,
-          label: s.label,
-          sublabel: s.context,
-          color: sentimentToColor(s.sentiment),
+          metric: s.value, prefix: s.prefix, suffix: s.suffix,
+          label: s.label, sublabel: s.context, color: sentimentToColor(s.sentiment),
         })),
       },
     });
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // 2. Process all paragraphs with interleaved visuals
+  // 2. Content blocks with interleaved visuals
   // ─────────────────────────────────────────────────────────────────────────
-  let processAdded = false;
-  let timelineAdded = false;
-  let middleStatsAdded = false;
-  let checklistAdded = false;
-  
-  paragraphs.forEach((para, idx) => {
-    // Check if this paragraph looks like a heading itself (short, no period)
-    if (para.length < 80 && !para.includes('.') && para.split(/\s+/).length <= 10) {
-      // Might be a heading we should surface
-      const isLikelyHeading = /^(The|Why|How|What|When)\s/i.test(para) ||
-                             /\s(Process|Structure|Recovery|Resolution|Works?|Fails?)$/i.test(para);
-      if (isLikelyHeading && !usedHeadings.has(para.toLowerCase())) {
-        usedHeadings.add(para.toLowerCase());
-        components.push({
-          type: 'SectionHeading',
-          props: { text: para },
-        });
-        paragraphIndex++;
-        return; // Don't also add as TextSection
-      }
-    }
-    
-    // Check for pre-detected headings
-    const matchingHeading = headings.find(h => 
-      !usedHeadings.has(h.text.toLowerCase()) &&
-      (para.toLowerCase().includes(h.text.toLowerCase()) || 
-       h.text.toLowerCase().includes(para.toLowerCase().substring(0, 30)))
-    );
-    
-    if (matchingHeading && para.length < 100) {
-      usedHeadings.add(matchingHeading.text.toLowerCase());
+  contentBlocks.forEach((block) => {
+    // Headings
+    if (block.type === 'heading') {
       components.push({
         type: 'SectionHeading',
-        props: { text: matchingHeading.text },
+        props: { text: block.text },
       });
-      paragraphIndex++;
       return;
     }
     
-    // Add the paragraph as TextSection with highlighting
+    // Paragraph
     components.push({
       type: 'TextSection',
-      props: { 
-        content: `<p class="text-lg text-slate-300 leading-relaxed mb-6">${applyInlineHighlighting(para)}</p>` 
+      props: {
+        content: `<p class="text-xl text-slate-300 leading-relaxed">${applyInlineHighlighting(block.text)}</p>`,
       },
-      sourceText: para.substring(0, 100),
     });
     
-    paragraphIndex++;
+    paragraphCount++;
     
     // ─────────────────────────────────────────────────────────────────────
-    // Interleave visuals at natural break points
+    // Insert visuals every 2-3 paragraphs
     // ─────────────────────────────────────────────────────────────────────
     
-    // After ~3rd paragraph: Add process flow (if valid)
-    if (paragraphIndex === 3 && !processAdded && extraction.processes.length > 0) {
+    // After paragraph 2: Process flow
+    if (paragraphCount === 2 && extraction.processes.length > 0) {
       const process = extraction.processes[0];
-      console.log(`✅ Adding process: "${process.title}" with ${process.steps.length} steps`);
       components.push({
         type: 'NumberedProcessFlowV6',
-        props: {
-          title: process.title,
-          steps: process.steps,
-        },
+        props: { title: process.title, steps: process.steps },
       });
-      processAdded = true;
+      visualsInserted++;
     }
     
-    // After ~5th paragraph: Add timeline (if exists)
-    if (paragraphIndex === 5 && !timelineAdded && extraction.timeline) {
-      console.log(`✅ Adding timeline with ${extraction.timeline.events.length} events`);
+    // After paragraph 4: Quote
+    if (paragraphCount === 4 && extraction.quotes.length > 0) {
+      const quote = extraction.quotes.find((_, i) => !usedQuotes.has(i));
+      if (quote) {
+        usedQuotes.add(extraction.quotes.indexOf(quote));
+        components.push({
+          type: 'QuoteCalloutV6',
+          props: {
+            text: quote.text,
+            attribution: quote.attribution,
+            accent: quote.type === 'charter' ? 'cyan' : 'purple',
+          },
+        });
+        visualsInserted++;
+      }
+    }
+    
+    // After paragraph 6: Timeline
+    if (paragraphCount === 6 && extraction.timeline) {
       components.push({
         type: 'TableTimeline',
         props: {
@@ -616,196 +513,107 @@ export function mapToComponents(
           events: extraction.timeline.events,
         },
       });
-      timelineAdded = true;
+      visualsInserted++;
     }
     
-    // After ~6th paragraph: Add a relevant quote
-    if (paragraphIndex === 6 && extraction.quotes.length > 0) {
-      const highEmphasisQuote = extraction.quotes.find((q, i) => 
-        (q.emphasis === 'high' || q.type === 'charter') && !usedQuotes.has(i)
-      );
-      if (highEmphasisQuote) {
-        const quoteIndex = extraction.quotes.indexOf(highEmphasisQuote);
-        usedQuotes.add(quoteIndex);
-        console.log(`✅ Adding quote: "${highEmphasisQuote.text.substring(0, 50)}..."`);
+    // After paragraph 8: Another quote
+    if (paragraphCount === 8 && extraction.quotes.length > 1) {
+      const quote = extraction.quotes.find((_, i) => !usedQuotes.has(i));
+      if (quote) {
+        usedQuotes.add(extraction.quotes.indexOf(quote));
         components.push({
           type: 'QuoteCalloutV6',
           props: {
-            text: highEmphasisQuote.text,
-            attribution: highEmphasisQuote.attribution,
-            accent: highEmphasisQuote.type === 'charter' ? 'cyan' : 'purple',
+            text: quote.text,
+            attribution: quote.attribution,
+            accent: 'purple',
           },
         });
+        visualsInserted++;
       }
     }
     
-    // After ~8th paragraph: Add middle stats
-    if (paragraphIndex === 8 && !middleStatsAdded) {
+    // After paragraph 10: Checklist
+    if (paragraphCount === 10) {
+      const checklist = extraction.lists.find(l => l.type === 'checklist');
+      if (checklist) {
+        components.push({
+          type: 'GridChecklist',
+          props: {
+            title: checklist.title,
+            items: checklist.items.map((item, i) => ({
+              number: i + 1,
+              title: item.title,
+              description: item.description || '',
+            })),
+          },
+        });
+        visualsInserted++;
+      }
+    }
+    
+    // After paragraph 12: Middle stats
+    if (paragraphCount === 12) {
       const middleStats = statGroups.get('middle') || statGroups.get('adjudicator') || [];
-      if (middleStats.length >= 2) {
-        usedStatGroups.add('middle');
-        usedStatGroups.add('adjudicator');
-        console.log(`✅ Adding middle stats: ${middleStats.length} stats`);
+      if (middleStats.length >= 2 && !usedGroups.has('middle')) {
+        usedGroups.add('middle');
+        usedGroups.add('adjudicator');
         components.push({
           type: 'HorizontalStatRow',
           props: {
             stats: middleStats.slice(0, 3).map(s => ({
-              metric: s.value,
-              prefix: s.prefix,
-              suffix: s.suffix,
-              label: s.label,
-              sublabel: s.context,
-              color: sentimentToColor(s.sentiment),
+              metric: s.value, prefix: s.prefix, suffix: s.suffix,
+              label: s.label, sublabel: s.context, color: sentimentToColor(s.sentiment),
             })),
           },
         });
-        middleStatsAdded = true;
-      }
-    }
-    
-    // After ~10th paragraph: Add checklist if available
-    if (paragraphIndex === 10 && !checklistAdded) {
-      const checklists = extraction.lists.filter(l => l.type === 'checklist');
-      if (checklists.length > 0) {
-        const checklist = checklists[0];
-        console.log(`✅ Adding checklist: "${checklist.title}" with ${checklist.items.length} items`);
-        components.push({
-          type: 'GridChecklist',
-          props: {
-            title: checklist.title,
-            items: checklist.items.map((item, i) => ({
-              number: i + 1,
-              title: item.title,
-              description: item.description || '',
-            })),
-          },
-        });
-        checklistAdded = true;
-      }
-    }
-    
-    // After ~12th paragraph: Add another quote if available
-    if (paragraphIndex === 12) {
-      const unusedQuote = extraction.quotes.find((_, i) => !usedQuotes.has(i));
-      if (unusedQuote) {
-        const quoteIndex = extraction.quotes.indexOf(unusedQuote);
-        usedQuotes.add(quoteIndex);
-        components.push({
-          type: 'QuoteCalloutV6',
-          props: {
-            text: unusedQuote.text,
-            attribution: unusedQuote.attribution,
-            accent: unusedQuote.type === 'guidance' ? 'purple' : 'cyan',
-          },
-        });
+        visualsInserted++;
       }
     }
   });
 
   // ─────────────────────────────────────────────────────────────────────────
-  // 3. Add remaining visuals that weren't interleaved
+  // 3. Remaining visuals at end
   // ─────────────────────────────────────────────────────────────────────────
   
-  // Timeline (if not added yet)
-  if (!timelineAdded && extraction.timeline) {
-    console.log(`✅ Adding remaining timeline`);
+  // Timeline if not added
+  if (extraction.timeline && !components.some(c => c.type === 'TableTimeline')) {
     components.push({
       type: 'TableTimeline',
+      props: { title: extraction.timeline.title, events: extraction.timeline.events },
+    });
+  }
+  
+  // Checklist if not added
+  const checklist = extraction.lists.find(l => l.type === 'checklist');
+  if (checklist && !components.some(c => c.type === 'GridChecklist')) {
+    components.push({
+      type: 'GridChecklist',
       props: {
-        title: extraction.timeline.title,
-        events: extraction.timeline.events,
+        title: checklist.title,
+        items: checklist.items.map((item, i) => ({
+          number: i + 1, title: item.title, description: item.description || '',
+        })),
       },
     });
   }
   
-  // Remaining high-emphasis quotes
-  extraction.quotes.forEach((quote, idx) => {
-    if (!usedQuotes.has(idx) && quote.emphasis === 'high') {
-      components.push({
-        type: 'QuoteCalloutV6',
-        props: {
-          text: quote.text,
-          attribution: quote.attribution,
-          accent: quote.type === 'charter' ? 'cyan' : 'purple',
-        },
-      });
-    }
-  });
-  
-  // Remaining checklists
-  if (!checklistAdded) {
-    const checklists = extraction.lists.filter(l => l.type === 'checklist');
-    checklists.forEach(checklist => {
-      if (checklist.items.length > 0 && checklist.items.length <= 6) {
-        console.log(`✅ Adding remaining checklist: "${checklist.title}"`);
-        components.push({
-          type: 'GridChecklist',
-          props: {
-            title: checklist.title,
-            items: checklist.items.map((item, i) => ({
-              number: i + 1,
-              title: item.title,
-              description: item.description || '',
-            })),
-          },
-        });
-      }
-    });
-  }
-  
-  // Bullet lists
-  const bulletLists = extraction.lists.filter(l => l.type === 'bullet');
-  bulletLists.forEach(list => {
-    if (list.items.length > 0) {
-      components.push({
-        type: 'BulletList',
-        props: {
-          title: list.title,
-          items: list.items.map(i => i.title),
-          icon: 'bullet',
-          accent: 'cyan',
-        },
-      });
-    }
-  });
-  
   // Closing stats
   const closingStats = statGroups.get('closing') || statGroups.get('success') || [];
-  if (closingStats.length >= 2 && !usedStatGroups.has('closing') && !usedStatGroups.has('success')) {
-    console.log(`✅ Adding closing stats: ${closingStats.length} stats`);
+  if (closingStats.length >= 2 && !usedGroups.has('closing')) {
     components.push({
       type: 'HorizontalStatRow',
       props: {
         stats: closingStats.slice(0, 3).map(s => ({
-          metric: s.value,
-          prefix: s.prefix,
-          suffix: s.suffix,
-          label: s.label,
-          sublabel: s.context,
-          color: 'green',
-        })),
-      },
-    });
-  }
-  
-  // Ungrouped stats (if any remain and we don't have many stats shown)
-  const ungroupedStats = statGroups.get('ungrouped') || [];
-  if (ungroupedStats.length >= 2 && usedStatGroups.size < 2) {
-    components.push({
-      type: 'HorizontalStatRow',
-      props: {
-        stats: ungroupedStats.slice(0, 3).map(s => ({
-          metric: s.value,
-          prefix: s.prefix,
-          suffix: s.suffix,
-          label: s.label,
-          sublabel: s.context,
-          color: sentimentToColor(s.sentiment),
+          metric: s.value, prefix: s.prefix, suffix: s.suffix,
+          label: s.label, sublabel: s.context, color: 'green',
         })),
       },
     });
   }
 
+  console.log(`✅ Generated ${components.length} components (${paragraphCount} paragraphs, ${visualsInserted} visuals)`);
+  
   return components;
 }
 
@@ -820,65 +628,39 @@ export async function transformContentV6(
   apiKey: string
 ): Promise<{ layout: any; extraction: ExtractionResult }> {
   
-  console.log('🚀 Starting V6.1 transformation pipeline...');
-  console.log(`📝 Content length: ${content.length} characters`);
+  console.log('🚀 Starting V6.2 transformation...');
+  console.log(`📝 Content: ${content.length} chars`);
   
-  // ─────────────────────────────────────────────────────────────────────────
-  // Stage 1: Programmatically extract paragraphs and headings (GUARANTEED)
-  // ─────────────────────────────────────────────────────────────────────────
-  console.log('📊 Stage 1: Splitting content programmatically...');
+  // Stage 1: Smart paragraph splitting
+  console.log('📊 Stage 1: Smart content splitting...');
+  const contentBlocks = smartSplitContent(content);
+  console.log(`✅ Created ${contentBlocks.length} blocks (${contentBlocks.filter(b => b.type === 'heading').length} headings, ${contentBlocks.filter(b => b.type === 'paragraph').length} paragraphs)`);
   
-  const paragraphs = splitIntoParagraphs(content);
-  const headings = extractHeadings(content);
-  
-  console.log(`✅ Found ${paragraphs.length} paragraphs, ${headings.length} headings`);
-  console.log(`📌 Headings: ${headings.map(h => h.text).join(', ')}`);
-  
-  // Fallback if no paragraphs found
-  const finalParagraphs = paragraphs.length > 0 ? paragraphs : [content];
-  
-  // ─────────────────────────────────────────────────────────────────────────
-  // Stage 2: AI extraction for structured content (stats, quotes, lists)
-  // ─────────────────────────────────────────────────────────────────────────
-  console.log('📊 Stage 2: AI extraction for structured content...');
-  
+  // Stage 2: AI extraction
+  console.log('📊 Stage 2: AI extraction...');
   const extraction = await extractContent(content, apiKey);
   
-  console.log(`✅ AI extracted: ${extraction.stats.length} stats, ${extraction.lists.length} lists, ${extraction.quotes.length} quotes, ${extraction.processes.length} valid processes`);
+  // Stage 3: Component mapping
+  console.log('🔧 Stage 3: Mapping components...');
+  const components = mapToComponents(extraction, contentBlocks);
   
-  // ─────────────────────────────────────────────────────────────────────────
-  // Stage 3: Map to components (deterministic)
-  // ─────────────────────────────────────────────────────────────────────────
-  console.log('🔧 Stage 3: Mapping to components...');
-  
-  const components = mapToComponents(extraction, finalParagraphs, headings);
-  
-  console.log(`✅ Mapped to ${components.length} components`);
-  
-  // Debug: Log component types
-  const typeCounts: Record<string, number> = {};
-  components.forEach(c => {
-    typeCounts[c.type] = (typeCounts[c.type] || 0) + 1;
-  });
-  console.log('📊 Component breakdown:', typeCounts);
-  
-  // ─────────────────────────────────────────────────────────────────────────
-  // Stage 4: Assemble final layout
-  // ─────────────────────────────────────────────────────────────────────────
-  const hero = {
-    type: 'HeroGradient',
-    props: {
-      headline: title,
-      subheadline: excerpt,
-    },
-  };
-
+  // Assemble layout
   const layout = {
     theme: { name: 'lightpoint', mode: 'dark' },
-    layout: [hero, ...components],
+    layout: [
+      {
+        type: 'HeroGradient',
+        props: { headline: title, subheadline: excerpt },
+      },
+      ...components,
+    ],
   };
 
-  console.log(`🎉 V6.1 transformation complete: ${layout.layout.length} total sections`);
+  // Log breakdown
+  const types: Record<string, number> = {};
+  layout.layout.forEach(c => { types[c.type] = (types[c.type] || 0) + 1; });
+  console.log('📊 Component breakdown:', types);
+  console.log(`🎉 V6.2 complete: ${layout.layout.length} total components`);
 
   return { layout, extraction };
 }
