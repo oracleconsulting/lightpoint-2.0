@@ -228,22 +228,39 @@ export default function BlogPostPage() {
 
       {/* Content */}
       <article className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        {post.structured_layout && typeof post.structured_layout === 'object' ? (
+        {/* DEBUG: Show structured_layout info */}
+        <div className="hidden">
+          <pre>{JSON.stringify({
+            hasLayout: !!post.structured_layout,
+            type: typeof post.structured_layout,
+            layoutLength: post.structured_layout?.layout?.length || 0
+          })}</pre>
+        </div>
+        
+        {(() => {
+          // Debug logging
+          console.log('📊 structured_layout:', post.structured_layout);
+          console.log('📊 structured_layout type:', typeof post.structured_layout);
+          console.log('📊 has layout array:', post.structured_layout?.layout?.length);
+          return null;
+        })()}
+        
+        {post.structured_layout && typeof post.structured_layout === 'object' && post.structured_layout.layout ? (
           // Render Gamma-style visual layout (includes text interwoven with visuals)
           <DynamicGammaRenderer layout={post.structured_layout} />
         ) : (
           // Fallback: plain text if no visual layout
           <div
             className="prose prose-lg prose-invert max-w-none
-              prose-headings:font-bold prose-headings:text-white
-              prose-p:text-gray-300 prose-p:leading-relaxed
-              prose-a:text-cyan-400 prose-a:no-underline hover:prose-a:underline
-              prose-strong:text-white prose-strong:font-semibold
-              prose-ul:list-disc prose-ol:list-decimal
-              prose-li:text-gray-300
-              prose-blockquote:border-l-4 prose-blockquote:border-cyan-500 prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-gray-300
-              prose-code:bg-gray-800 prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:text-sm prose-code:text-cyan-400
-              prose-img:rounded-xl prose-img:shadow-lg"
+            prose-headings:font-bold prose-headings:text-white
+            prose-p:text-gray-300 prose-p:leading-relaxed
+            prose-a:text-cyan-400 prose-a:no-underline hover:prose-a:underline
+            prose-strong:text-white prose-strong:font-semibold
+            prose-ul:list-disc prose-ol:list-decimal
+            prose-li:text-gray-300
+            prose-blockquote:border-l-4 prose-blockquote:border-cyan-500 prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-gray-300
+            prose-code:bg-gray-800 prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:text-sm prose-code:text-cyan-400
+            prose-img:rounded-xl prose-img:shadow-lg"
           >
             {renderContent()}
           </div>
