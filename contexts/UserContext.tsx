@@ -35,14 +35,18 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   // Fetch current user's profile directly (includes superadmin status)
-  const { data: profile, isLoading: profileLoading } = trpc.users.getCurrentUser.useQuery(undefined, {
-    enabled: !!authUser,
+  // Always run the query - it will return null if no session
+  const { data: profile, isLoading: profileLoading, isFetched } = trpc.users.getCurrentUser.useQuery(undefined, {
     refetchOnWindowFocus: false,
+    retry: 1,
+    staleTime: 30000, // Cache for 30 seconds
   });
 
   useEffect(() => {
-    if (authUser && profile) {
-      console.log('👤 Setting current user:', profile);
+    console.log('👤 UserContext effect:', { authUser: !!authUser, profile, authLoading, profileLoading, isFetched });
+    
+    if (profile) {
+      console.log('👤 Setting current user from profile:', profile);
       setCurrentUser({
         id: profile.id,
         email: profile.email,
@@ -54,13 +58,15 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         is_active: profile.is_active,
         is_super_admin: profile.is_super_admin || false,
       });
-    } else if (!authUser) {
+    } else if (!authLoading && isFetched && !profile) {
+      // Auth is done loading and we fetched but got no profile
+      console.log('👤 No profile found, setting currentUser to null');
       setCurrentUser(null);
     }
-  }, [authUser, profile]);
+  }, [authUser, profile, authLoading, profileLoading, isFetched]);
 
-  // Loading state - true while auth or profile is loading
-  const isLoading = authLoading || (!!authUser && profileLoading);
+  // Loading state - true while auth is loading OR profile query hasn't completed yet
+  const isLoading = authLoading || (!isFetched && profileLoading);
   
   const isAdmin = currentUser?.role === 'admin';
   const isManager = currentUser?.role === 'manager' || isAdmin;
