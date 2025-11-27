@@ -4,12 +4,14 @@ import React from 'react';
 import HeroGradient from '@/components/blog/gamma/HeroGradient';
 import StatCard from '@/components/blog/gamma/StatCard';
 import StatCardGroup from '@/components/blog/gamma/StatCardGroup';
+import TextSection from '@/components/blog/gamma/TextSection';
 import ProcessFlow from '@/components/blog/gamma/ProcessFlow';
 import Timeline from '@/components/blog/gamma/Timeline';
 import ComparisonChart from '@/components/blog/gamma/ComparisonChart';
 import CalloutBox from '@/components/blog/gamma/CalloutBox';
 import ChecklistCard from '@/components/blog/gamma/ChecklistCard';
 import SectionDivider from '@/components/blog/gamma/SectionDivider';
+import { getTheme, defaultTheme, type ThemeConfig } from '@/lib/blog/themes';
 
 interface GammaLayout {
   id?: string;
@@ -23,8 +25,9 @@ interface GammaLayout {
 }
 
 interface GammaTheme {
-  mode: 'dark';
-  colors: {
+  name?: string;
+  mode?: 'dark' | 'medium' | 'light';
+  colors?: {
     background?: string;
     backgroundGradient?: string;
     primary?: string;
@@ -35,10 +38,11 @@ interface GammaTheme {
 }
 
 interface DynamicGammaRendererProps {
-  layout: GammaLayout[] | { layout: GammaLayout[]; theme?: GammaTheme };
+  readonly layout: GammaLayout[] | { layout: GammaLayout[]; theme?: GammaTheme };
+  readonly themeName?: string;
 }
 
-export default function DynamicGammaRenderer({ layout }: DynamicGammaRendererProps) {
+export default function DynamicGammaRenderer({ layout, themeName }: DynamicGammaRendererProps) {
   // Early return if no layout
   if (!layout) {
     console.warn('DynamicGammaRenderer: No layout provided');
@@ -47,11 +51,16 @@ export default function DynamicGammaRenderer({ layout }: DynamicGammaRendererPro
 
   // Handle both direct array and wrapped object
   const layoutArray = Array.isArray(layout) ? layout : (layout?.layout || []);
-  const theme = Array.isArray(layout) ? null : layout?.theme;
+  const layoutTheme = Array.isArray(layout) ? null : layout?.theme;
 
-  // Validate dark theme
-  if (theme && theme.mode !== 'dark') {
-    console.error('THEME VIOLATION: mode must be "dark"');
+  // V4: Get theme from props, layout, or default
+  let resolvedTheme: ThemeConfig;
+  if (themeName) {
+    resolvedTheme = getTheme(themeName);
+  } else if (layoutTheme?.name) {
+    resolvedTheme = getTheme(layoutTheme.name);
+  } else {
+    resolvedTheme = defaultTheme;
   }
 
   // If no components to render, return null
@@ -77,30 +86,24 @@ export default function DynamicGammaRenderer({ layout }: DynamicGammaRendererPro
 
         case 'TextSection':
         case 'text':
+          // V4: Use dedicated TextSection component with larger text
           return (
-            <div 
+            <TextSection 
               key={index} 
-              className="prose prose-xl prose-invert max-w-4xl mx-auto my-6 px-4
-                prose-headings:font-bold prose-headings:text-white prose-headings:mb-4 prose-headings:text-2xl
-                prose-p:text-white prose-p:leading-relaxed prose-p:mb-4 prose-p:text-lg
-                prose-a:text-cyan-400 prose-a:no-underline hover:prose-a:underline
-                prose-strong:text-white prose-strong:font-semibold
-                prose-ul:list-disc prose-ul:ml-6 prose-ul:text-lg prose-ol:list-decimal prose-ol:ml-6
-                prose-li:text-white prose-li:mb-2
-                prose-blockquote:border-l-4 prose-blockquote:border-cyan-500 prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-gray-200 prose-blockquote:text-lg
-                prose-code:bg-gray-800 prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:text-base prose-code:text-cyan-400"
-              dangerouslySetInnerHTML={{ __html: props.content || section.content || '' }}
+              content={props.content || section.content || ''} 
             />
           );
 
         case 'StatCard':
+          // V4: Standalone stat - narrower width
           return (
-            <div key={index} className="max-w-4xl mx-auto px-4">
+            <div key={index} className="max-w-xl mx-auto px-4 my-6">
               <StatCard {...props} animationDelay={index * 0.05} />
             </div>
           );
 
         case 'StatCardGroup':
+          // V4: Grouped stats - horizontal layout enforced
           return (
             <StatCardGroup key={index} {...props} />
           );
@@ -170,19 +173,26 @@ export default function DynamicGammaRenderer({ layout }: DynamicGammaRendererPro
     }
   };
 
-  // V3: Enforce dark theme background
-  const backgroundStyle = theme?.colors?.backgroundGradient || 
-    'linear-gradient(180deg, #0a0a1a 0%, #0f0f23 50%, #1a1a2e 100%)';
+  // V4: Apply theme background - support both gradient and solid
+  const backgroundStyle = layoutTheme?.colors?.backgroundGradient || 
+    resolvedTheme.colors.pageBgGradient;
+
+  // V4: Determine text color based on theme mode
+  const textColor = resolvedTheme.mode === 'light' 
+    ? resolvedTheme.colors.textPrimary 
+    : '#FFFFFF';
 
   return (
     <div 
-      className="gamma-blog-container w-full min-h-screen"
+      className="gamma-blog-container w-full min-h-screen py-8"
       style={{
         background: backgroundStyle,
-        color: theme?.colors?.text || '#FFFFFF'
+        color: textColor
       }}
     >
-      {layoutArray.map((section, index) => renderComponent(section, index))}
+      <div className="max-w-5xl mx-auto">
+        {layoutArray.map((section, index) => renderComponent(section, index))}
+      </div>
     </div>
   );
 }

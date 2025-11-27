@@ -1,17 +1,96 @@
 /**
- * Visual Transformation API V3
+ * Visual Transformation API V4
  * Takes existing blog content and transforms it into a Gamma-style visual layout
+ * with configurable themes and enforced horizontal stat grouping
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { getTheme, getThemePromptVars } from '@/lib/blog/themes';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300; // 5 minutes for complex transformations
 
+// Post-process layout to ensure stats are grouped horizontally
+function postProcessLayout(layout: any[]): any[] {
+  const result: any[] = [];
+  let statBuffer: any[] = [];
+  
+  for (const item of layout) {
+    if (item.type === 'StatCard') {
+      statBuffer.push(item.props);
+      
+      // Look ahead - if next item is not a StatCard, flush buffer
+      const currentIndex = layout.indexOf(item);
+      const nextItem = layout[currentIndex + 1];
+      
+      if (!nextItem || nextItem.type !== 'StatCard') {
+        if (statBuffer.length >= 2) {
+          // Group 2-3 stats together
+          result.push({
+            type: 'StatCardGroup',
+            props: { stats: statBuffer.slice(0, 3) },
+            sourceText: statBuffer.map(s => s.sourceText || '').join(' ')
+          });
+          // Handle overflow (more than 3 stats)
+          if (statBuffer.length > 3) {
+            result.push({
+              type: 'StatCardGroup',
+              props: { stats: statBuffer.slice(3) },
+              sourceText: statBuffer.slice(3).map((s: any) => s.sourceText || '').join(' ')
+            });
+          }
+        } else if (statBuffer.length === 1) {
+          // Single stat - keep as standalone but mark it
+          result.push({
+            type: 'StatCard',
+            props: { ...statBuffer[0], standalone: true },
+            sourceText: statBuffer[0].sourceText
+          });
+        }
+        statBuffer = [];
+      }
+    } else {
+      // Non-stat item - flush any pending stats first
+      if (statBuffer.length >= 2) {
+        result.push({
+          type: 'StatCardGroup',
+          props: { stats: statBuffer },
+          sourceText: statBuffer.map((s: any) => s?.sourceText || '').join(' ')
+        });
+      } else if (statBuffer.length === 1) {
+        result.push({
+          type: 'StatCard',
+          props: { ...statBuffer[0], standalone: true },
+          sourceText: statBuffer[0].sourceText
+        });
+      }
+      statBuffer = [];
+      result.push(item);
+    }
+  }
+  
+  // Flush remaining stats
+  if (statBuffer.length >= 2) {
+    result.push({
+      type: 'StatCardGroup',
+      props: { stats: statBuffer },
+      sourceText: statBuffer.map((s: any) => s.sourceText || '').join(' ')
+    });
+  } else if (statBuffer.length === 1) {
+    result.push({
+      type: 'StatCard',
+      props: { ...statBuffer[0], standalone: true },
+      sourceText: statBuffer[0].sourceText
+    });
+  }
+  
+  return result;
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const { title, content, excerpt } = await req.json();
+    const { title, content, excerpt, themeName = 'lightpoint' } = await req.json();
 
     if (!title || !content) {
       return NextResponse.json(
@@ -28,9 +107,104 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.log(`🎨 Starting visual transformation for: ${title}`);
+    // Get theme configuration
+    const theme = getTheme(themeName);
+    const themeVars = getThemePromptVars(themeName);
 
-    // Call Claude 3.5 Sonnet for visual transformation (faster than Opus)
+    console.log(`🎨 Starting V4 visual transformation for: ${title} (theme: ${theme.name})`);
+
+    // V4 AI Prompt - Streamlined for speed and quality
+    const systemPrompt = `You are a visual designer creating Gamma-style blog layouts. Transform content into visually engaging presentations that ENHANCE text without overpowering it.
+
+═══════════════════════════════════════════════════════════════════
+                         THEME: ${themeVars.THEME_NAME}
+═══════════════════════════════════════════════════════════════════
+Use this colour palette:
+- Page background: ${themeVars.PAGE_BG}
+- Card background: ${themeVars.CARD_BG}
+- Primary text: ${themeVars.TEXT_PRIMARY}
+- Accent: ${themeVars.ACCENT_PRIMARY}
+
+═══════════════════════════════════════════════════════════════════
+                    🚨 CRITICAL RULES 🚨
+═══════════════════════════════════════════════════════════════════
+
+1. STAT GROUPING (MANDATORY)
+   - 2-3 related stats within 200 words → StatCardGroup (horizontal)
+   - NEVER output consecutive individual StatCards
+   - Single isolated stat → StatCard with standalone: true
+
+2. TYPOGRAPHY (READABILITY)
+   - Body text must be substantial and readable
+   - Section headings clear hierarchy
+   
+3. CONTENT EXTRACTION
+   - NEVER invent content - only use what's in the source
+   - Every component needs sourceText field with exact source snippet
+   - UK spelling: standardised, optimise, colour
+   - Replace em-dashes (—) with regular dashes (-)
+   - Currency: "£5,000" → metric: "5,000", prefix: "£" (NEVER "££")
+
+4. VISUAL RHYTHM
+   - Max 150 words between visual elements
+   - Alternate: Text → Visual → Text → Visual
+   - Never cluster 3+ visuals without text between
+
+═══════════════════════════════════════════════════════════════════
+                    COMPONENT MAPPING
+═══════════════════════════════════════════════════════════════════
+
+NUMBERS:
+- 2-3 related numbers → StatCardGroup
+- Number comparison → ComparisonChart (bar or horizontalBar)
+- Percentage breakdown → ComparisonChart (donut)
+
+SEQUENCES:
+- Explicit dates → Timeline
+- Numbered steps → ProcessFlow
+- Generic sequence → ChecklistCard
+
+EMPHASIS:
+- Quote → CalloutBox (quote)
+- Warning/tip → CalloutBox (warning)
+- Key insight → CalloutBox (info)
+
+═══════════════════════════════════════════════════════════════════
+                    OUTPUT STRUCTURE
+═══════════════════════════════════════════════════════════════════
+
+{
+  "theme": {
+    "name": "${themeVars.THEME_NAME}",
+    "mode": "${themeVars.MODE}",
+    "colors": {
+      "background": "${themeVars.PAGE_BG}",
+      "backgroundGradient": "${themeVars.PAGE_BG_GRADIENT}",
+      "primary": "${themeVars.ACCENT_PRIMARY}"
+    }
+  },
+  "layout": [
+    {
+      "type": "TextSection",
+      "props": { "content": "<p>Prose paragraph...</p>" },
+      "sourceText": "exact source text"
+    },
+    {
+      "type": "StatCardGroup",
+      "props": {
+        "stats": [
+          { "metric": "92,000", "label": "Complaints", "context": "Last year", "color": "blue" },
+          { "metric": "98", "suffix": "%", "label": "Resolved Internally", "color": "amber" }
+        ]
+      },
+      "sourceText": "exact source text"
+    }
+  ]
+}
+
+Return ONLY valid JSON. No markdown code blocks. No text before or after.`;
+
+    // Call Claude 3.5 Sonnet for visual transformation
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -41,36 +215,10 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         model: 'anthropic/claude-3.5-sonnet',
         messages: [
-          {
-            role: 'system',
-            content: `You are a visual designer creating Gamma-style blog layouts. Transform content into stunning dark-themed presentations.
-
-CRITICAL RULES:
-1. DARK THEME ONLY: Background #0a0a1a to #1a1a2e. NO light/purple/lavender backgrounds.
-2. NEVER INVENT CONTENT: Only extract data explicitly in the source text.
-3. GROUP RELATED STATS: 2-3 related numbers → StatCardGroup (horizontal). NEVER stack individual StatCards vertically.
-4. UK ENGLISH: standardised, optimise, colour. Replace em-dashes (—) with dashes (-).
-5. CURRENCY: "£5,000" → metric: "5,000", prefix: "£". NEVER output "££".
-6. MAX 150 WORDS between visuals. Alternate TextSection and visual components.
-7. Every component MUST include "sourceText" field with the exact source snippet.
-
-COMPONENTS:
-- TextSection: {content: "HTML"} - Prose paragraphs (preserve exact wording)
-- StatCardGroup: {stats: [{metric, label, context?, prefix?, suffix?, color}]} - 2-3 horizontal stats
-- StatCard: Single stat only when isolated (use StatCardGroup for 2+ related stats)
-- ComparisonChart: {title, type: "bar"|"horizontalBar"|"donut", data: [{label, value}]}
-- ProcessFlow: {steps: [{number, title, description}]} - ONLY if explicit numbered steps exist
-- Timeline: {events: [{date, title, description}]} - ONLY if explicit dates exist
-- CalloutBox: {variant: "quote"|"warning"|"info", text}
-- ChecklistCard: {title, items: [{number, title, description}]}
-
-COLORS: blue (general), cyan (secondary), green (positive), amber (warning), red (negative), purple (special)
-
-Return ONLY valid JSON, no markdown code blocks.`
-          },
+          { role: 'system', content: systemPrompt },
           {
             role: 'user',
-            content: `Transform this blog post into a visual layout. Return ONLY a valid JSON object.
+            content: `Transform this blog post into a visual layout.
 
 TITLE: ${title}
 ${excerpt ? `EXCERPT: ${excerpt}` : ''}
@@ -78,13 +226,10 @@ ${excerpt ? `EXCERPT: ${excerpt}` : ''}
 CONTENT:
 ${content}
 
-IMPORTANT: Return a single, complete, valid JSON object. Do not include any text before or after the JSON.
-
-Example structure:
-{"theme":{"mode":"dark","colors":{"background":"#0a0a1a","primary":"#4F86F9"}},"layout":[{"type":"TextSection","props":{"content":"<p>Text here</p>"},"sourceText":"source"},{"type":"StatCardGroup","props":{"stats":[{"metric":"92000","label":"Complaints","color":"blue"}]},"sourceText":"source"}]}`
+Return a single, complete, valid JSON object.`
           },
         ],
-        temperature: 0.5,
+        temperature: 0.4, // Lower for more consistent output
         max_tokens: 8000,
       }),
     });
@@ -114,12 +259,12 @@ Example structure:
       jsonString = jsonString
         .replace(/^[^{]*/, '') // Remove anything before first {
         .replace(/[^}]*$/, '') // Remove anything after last }
-        .replace(/,\s*}/g, '}') // Remove trailing commas before }
-        .replace(/,\s*]/g, ']') // Remove trailing commas before ]
-        .replace(/}\s*{/g, '},{') // Fix missing commas between objects
-        .replace(/]\s*{/g, '],{') // Fix missing commas after arrays
-        .replace(/}\s*"/g, '},"') // Fix missing commas before strings
-        .replace(/"\s*{/g, '",{'); // Fix missing commas after strings
+        .replaceAll(/,\s*}/g, '}') // Remove trailing commas before }
+        .replaceAll(/,\s*]/g, ']') // Remove trailing commas before ]
+        .replaceAll(/}\s*{/g, '},{') // Fix missing commas between objects
+        .replaceAll(/]\s*{/g, '],{') // Fix missing commas after arrays
+        .replaceAll(/}\s*"/g, '},"') // Fix missing commas before strings
+        .replaceAll(/"\s*{/g, '",{'); // Fix missing commas after strings
       
       console.log('🔧 Attempting to parse cleaned JSON...');
       transformedLayout = JSON.parse(jsonString);
@@ -136,7 +281,15 @@ Example structure:
         if (layoutMatch) {
           const layoutArray = JSON.parse(`[${layoutMatch[1]}]`);
           transformedLayout = {
-            theme: { mode: 'dark', colors: { background: '#0a0a1a', primary: '#4F86F9', secondary: '#00D4FF' } },
+            theme: { 
+              name: theme.name,
+              mode: theme.mode, 
+              colors: { 
+                background: theme.colors.pageBg, 
+                backgroundGradient: theme.colors.pageBgGradient,
+                primary: theme.colors.accentPrimary 
+              } 
+            },
             layout: layoutArray
           };
           console.log('✅ Recovered layout array with', layoutArray.length, 'items');
@@ -164,7 +317,26 @@ Example structure:
       );
     }
 
-    console.log('✅ Visual transformation complete:', transformedLayout.layout.length, 'sections');
+    // V4: Post-process to enforce horizontal stat grouping
+    console.log('🔧 Post-processing layout for stat grouping...');
+    const originalCount = transformedLayout.layout.length;
+    transformedLayout.layout = postProcessLayout(transformedLayout.layout);
+    console.log(`✅ Post-processing complete: ${originalCount} → ${transformedLayout.layout.length} sections`);
+
+    // Ensure theme is applied
+    if (!transformedLayout.theme) {
+      transformedLayout.theme = {
+        name: theme.name,
+        mode: theme.mode,
+        colors: {
+          background: theme.colors.pageBg,
+          backgroundGradient: theme.colors.pageBgGradient,
+          primary: theme.colors.accentPrimary
+        }
+      };
+    }
+
+    console.log('✅ V4 Visual transformation complete:', transformedLayout.layout.length, 'sections');
 
     return NextResponse.json({
       success: true,

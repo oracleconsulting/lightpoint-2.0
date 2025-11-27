@@ -611,14 +611,14 @@
   }
 
   /* ═══════════════════════════════════════════════════════════════════
-     GAMMA V3 - DARK THEME SPECIFICATION
+     GAMMA V4 - CONFIGURABLE THEME SYSTEM
      ═══════════════════════════════════════════════════════════════════ */
 
-  /* V3 CSS Variables */
+  /* V4 CSS Variables - Now configurable via theme system */
   :root {
-    /* Page backgrounds - MANDATORY DARK */
-    --gamma-bg-page: linear-gradient(180deg, #0a0a1a 0%, #0f0f23 50%, #1a1a2e 100%);
-    --gamma-bg-card: linear-gradient(135deg, rgba(26, 26, 46, 0.6) 0%, rgba(15, 15, 30, 0.8) 100%);
+    /* Page backgrounds - Default: Lightpoint theme */
+    --gamma-bg-page: linear-gradient(180deg, #0f1729 0%, #1a2744 50%, #243b61 100%);
+    --gamma-bg-card: rgba(26, 39, 68, 0.85);
     --gamma-bg-elevated: linear-gradient(135deg, rgba(30, 30, 55, 0.7) 0%, rgba(20, 20, 40, 0.9) 100%);
     --gamma-bg-chart: linear-gradient(135deg, rgba(15, 15, 35, 0.9) 0%, rgba(10, 10, 25, 0.95) 100%);
     
@@ -636,11 +636,26 @@
     --gamma-purple: #8B5CF6;
     --gamma-purple-glow: rgba(139, 92, 246, 0.3);
     
-    /* Text colors */
+    /* Text colors - V4: Higher contrast for readability */
     --gamma-text-primary: #FFFFFF;
-    --gamma-text-secondary: rgba(255, 255, 255, 0.7);
-    --gamma-text-tertiary: rgba(255, 255, 255, 0.5);
-    --gamma-text-muted: rgba(255, 255, 255, 0.4);
+    --gamma-text-secondary: rgba(255, 255, 255, 0.85);
+    --gamma-text-tertiary: rgba(255, 255, 255, 0.6);
+    --gamma-text-muted: rgba(255, 255, 255, 0.5);
+    
+    /* V4 Typography Scale */
+    --font-body: 1.25rem;        /* 20px - up from 18px */
+    --font-body-lg: 1.375rem;    /* 22px */
+    --font-heading-section: 2rem; /* 32px */
+    --font-heading-sub: 1.5rem;   /* 24px */
+    --font-heading-hero: 3rem;    /* 48px */
+    --font-stat-metric: 2.5rem;   /* 40px standalone */
+    --font-stat-metric-grouped: 2rem; /* 32px in groups */
+    --font-label: 0.9375rem;      /* 15px */
+    --font-caption: 0.9375rem;    /* 15px */
+    
+    /* Line heights */
+    --line-height-body: 1.8;
+    --line-height-heading: 1.2;
   }
 
   /* Blog container - ENFORCED DARK THEME */
@@ -687,8 +702,9 @@
       0 0 40px var(--gamma-blue-glow);
   }
 
+  /* V4: Standalone stat metric - 40px */
   .stat-metric {
-    font-size: 2.25rem;
+    font-size: var(--font-stat-metric);  /* V4: 40px standalone */
     font-weight: 800;
     line-height: 1;
     background: linear-gradient(135deg, var(--gamma-blue) 0%, var(--gamma-cyan) 100%);
@@ -698,13 +714,86 @@
     filter: drop-shadow(0 0 12px var(--gamma-blue-glow));
   }
 
-  /* Stat card group - horizontal layout */
+  /* V4: Stat card group - ENFORCED HORIZONTAL LAYOUT */
   .stat-card-group {
     max-width: 896px;
     margin: 2rem auto;
     padding: 0 1rem;
   }
 
+  .stat-card-group-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--gamma-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 1rem;
+    padding-left: 0.75rem;
+    border-left: 2px solid rgba(79, 134, 249, 0.4);
+  }
+
+  .stat-card-group-grid {
+    display: grid;
+    gap: 1.5rem;
+  }
+
+  /* 2 stats = 2 columns */
+  .stat-card-group-grid[data-cols="2"] {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* 3 stats = 3 columns */
+  .stat-card-group-grid[data-cols="3"] {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  /* V4: Grouped stat card - smaller metric, horizontal layout */
+  .stat-card-grouped {
+    padding: 1.25rem;
+    background: var(--gamma-bg-card);
+    border-left: 4px solid var(--gamma-blue);
+    border-radius: 0 12px 12px 0;
+    box-shadow: 
+      0 4px 6px -1px rgba(0, 0, 0, 0.15),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+    transition: all 0.2s ease;
+  }
+
+  .stat-card-grouped:hover {
+    transform: translateY(-2px);
+    box-shadow: 
+      0 8px 15px rgba(0, 0, 0, 0.2),
+      0 0 20px var(--gamma-blue-glow);
+  }
+
+  .stat-card-grouped .stat-metric {
+    font-size: var(--font-stat-metric-grouped);  /* V4: 32px in groups */
+  }
+
+  .stat-card-grouped .stat-label {
+    font-size: var(--font-label);  /* V4: 15px */
+    font-weight: 600;
+    color: var(--gamma-text-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-top: 0.375rem;
+  }
+
+  .stat-card-grouped .stat-context {
+    font-size: var(--font-caption);
+    color: var(--gamma-text-muted);
+    margin-top: 0.25rem;
+  }
+
+  /* Responsive: Stack on mobile */
+  @media (max-width: 768px) {
+    .stat-card-group-grid[data-cols="2"],
+    .stat-card-group-grid[data-cols="3"] {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Legacy support */
   .stat-card-group .stat-card {
     margin: 0;
     max-height: 100px;
@@ -712,7 +801,7 @@
   }
 
   .stat-card-group .stat-metric {
-    font-size: 1.75rem;
+    font-size: var(--font-stat-metric-grouped);
   }
 
   /* Chart container V3 */
@@ -739,7 +828,7 @@
     text-align: center;
   }
 
-  /* Text section V3 */
+  /* Text section V4 - LARGER BODY TEXT FOR READABILITY */
   .text-section {
     max-width: 896px;
     margin: 1.5rem auto;
@@ -747,10 +836,27 @@
   }
 
   .text-section p {
-    font-size: 1.125rem;
-    line-height: 1.75;
+    font-size: var(--font-body);  /* V4: 20px minimum */
+    line-height: var(--line-height-body);  /* V4: 1.8 */
+    color: var(--gamma-text-secondary);  /* V4: Slightly softer for long-form */
+    margin-bottom: 1.25rem;
+  }
+
+  .text-section h2 {
+    font-size: var(--font-heading-section);  /* V4: 32px */
+    font-weight: 700;
     color: var(--gamma-text-primary);
+    margin-top: 2rem;
     margin-bottom: 1rem;
+    line-height: var(--line-height-heading);
+  }
+
+  .text-section h3 {
+    font-size: var(--font-heading-sub);  /* V4: 24px */
+    font-weight: 600;
+    color: var(--gamma-text-primary);
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
   }
 
   .text-section strong {
@@ -761,6 +867,28 @@
   .text-section em {
     color: var(--gamma-cyan);
     font-style: italic;
+  }
+
+  .text-section a {
+    color: var(--gamma-cyan);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .text-section a:hover {
+    color: var(--gamma-blue);
+  }
+
+  .text-section ul,
+  .text-section ol {
+    margin: 1rem 0 1rem 1.5rem;
+  }
+
+  .text-section li {
+    font-size: var(--font-body);
+    line-height: 1.7;
+    margin-bottom: 0.5rem;
+    color: var(--gamma-text-secondary);
   }
 
   /* Callout box V3 */
