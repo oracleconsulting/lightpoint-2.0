@@ -349,6 +349,28 @@ function sentimentToColor(sentiment: string): string {
   }
 }
 
+/**
+ * Apply Gamma-style inline highlighting to text
+ * - Numbers get cyan highlighting
+ * - Currency gets emerald highlighting
+ * - Percentages get cyan highlighting
+ * - Key phrases in quotes get subtle emphasis
+ */
+function applyInlineHighlighting(text: string): string {
+  return text
+    // Currency values: £1,234 or £1,234.56
+    .replace(/(£\d{1,3}(?:,\d{3})*(?:\.\d+)?)/g, '<span class="text-emerald-400 font-semibold">$1</span>')
+    // Percentages: 98% or 98.5%
+    .replace(/(\d{1,3}(?:\.\d+)?%)/g, '<span class="text-cyan-400 font-semibold">$1</span>')
+    // Large numbers with commas: 92,000 or 1,234,567
+    .replace(/(\d{1,3}(?:,\d{3})+)/g, '<span class="text-cyan-400 font-semibold">$1</span>')
+    // Time durations: 15 days, 23 minutes, 6 months
+    .replace(/(\d+)\s+(days?|weeks?|months?|years?|hours?|minutes?)/gi, '<span class="text-amber-400 font-semibold">$1 $2</span>')
+    // Escape any double-applied spans (safety)
+    .replace(/<span[^>]*><span/g, '<span')
+    .replace(/<\/span><\/span>/g, '</span>');
+}
+
 export function mapToComponents(extraction: ExtractionResult): MappedComponent[] {
   const components: MappedComponent[] = [];
   
@@ -383,7 +405,7 @@ export function mapToComponents(extraction: ExtractionResult): MappedComponent[]
     });
   }
 
-  // 2. Opening section text
+  // 2. Opening section text - PARAGRAPH BY PARAGRAPH with inline highlighting
   const openingSections = extraction.sections.filter(s => s.position === 'opening');
   openingSections.forEach(section => {
     if (section.heading) {
@@ -393,10 +415,14 @@ export function mapToComponents(extraction: ExtractionResult): MappedComponent[]
       });
     }
     if (section.content) {
-      components.push({
-        type: 'TextSection',
-        props: { content: `<p>${section.content}</p>` },
-        sourceText: section.content,
+      // Split into paragraphs and add each separately
+      const paragraphs = section.content.split(/\n\n+/).filter(p => p.trim());
+      paragraphs.forEach(para => {
+        components.push({
+          type: 'TextSection',
+          props: { content: `<p>${applyInlineHighlighting(para)}</p>` },
+          sourceText: para,
+        });
       });
     }
   });
@@ -414,44 +440,54 @@ export function mapToComponents(extraction: ExtractionResult): MappedComponent[]
     }
   });
 
-  // 4. Middle sections with interleaved visuals
+  // 4. Middle sections with interleaved visuals - PARAGRAPH BY PARAGRAPH
   const middleSections = extraction.sections.filter(s => s.position === 'middle');
-  middleSections.forEach((section, index) => {
+  let paragraphCount = 0;
+  
+  middleSections.forEach((section, sectionIndex) => {
     if (section.heading) {
       components.push({
         type: 'SectionHeading',
         props: { text: section.heading },
       });
     }
-    if (section.content) {
-      components.push({
-        type: 'TextSection',
-        props: { content: `<p>${section.content}</p>` },
-        sourceText: section.content,
-      });
-    }
     
-    // Add a visual after every 2 sections
-    if (index % 2 === 1) {
-      // Check for middle stats
-      const middleStats = statGroups.get('middle') || statGroups.get('adjudicator') || [];
-      if (middleStats.length >= 2 && !usedStatGroups.has('middle') && !usedStatGroups.has('adjudicator')) {
-        usedStatGroups.add('middle');
-        usedStatGroups.add('adjudicator');
+    if (section.content) {
+      // Split into paragraphs and add each separately with inline highlighting
+      const paragraphs = section.content.split(/\n\n+/).filter(p => p.trim());
+      
+      paragraphs.forEach((para, paraIndex) => {
         components.push({
-          type: 'HorizontalStatRow',
-          props: {
-            stats: middleStats.slice(0, 3).map(s => ({
-              metric: s.value,
-              prefix: s.prefix,
-              suffix: s.suffix,
-              label: s.label,
-              sublabel: s.context,
-              color: sentimentToColor(s.sentiment),
-            })),
-          },
+          type: 'TextSection',
+          props: { content: `<p>${applyInlineHighlighting(para)}</p>` },
+          sourceText: para,
         });
-      }
+        
+        paragraphCount++;
+        
+        // Insert visuals after every 3-4 paragraphs for natural flow
+        if (paragraphCount % 4 === 0) {
+          // Check for middle stats that haven't been used
+          const middleStats = statGroups.get('middle') || statGroups.get('adjudicator') || [];
+          if (middleStats.length >= 2 && !usedStatGroups.has('middle') && !usedStatGroups.has('adjudicator')) {
+            usedStatGroups.add('middle');
+            usedStatGroups.add('adjudicator');
+            components.push({
+              type: 'HorizontalStatRow',
+              props: {
+                stats: middleStats.slice(0, 3).map(s => ({
+                  metric: s.value,
+                  prefix: s.prefix,
+                  suffix: s.suffix,
+                  label: s.label,
+                  sublabel: s.context,
+                  color: sentimentToColor(s.sentiment),
+                })),
+              },
+            });
+          }
+        }
+      });
     }
   });
 
@@ -542,7 +578,7 @@ export function mapToComponents(extraction: ExtractionResult): MappedComponent[]
     }
   });
 
-  // 10. Closing sections
+  // 10. Closing sections - PARAGRAPH BY PARAGRAPH
   const closingSections = extraction.sections.filter(s => s.position === 'closing');
   closingSections.forEach(section => {
     if (section.heading) {
@@ -552,10 +588,14 @@ export function mapToComponents(extraction: ExtractionResult): MappedComponent[]
       });
     }
     if (section.content) {
-      components.push({
-        type: 'TextSection',
-        props: { content: `<p>${section.content}</p>` },
-        sourceText: section.content,
+      // Split into paragraphs and add each separately with inline highlighting
+      const paragraphs = section.content.split(/\n\n+/).filter(p => p.trim());
+      paragraphs.forEach(para => {
+        components.push({
+          type: 'TextSection',
+          props: { content: `<p>${applyInlineHighlighting(para)}</p>` },
+          sourceText: para,
+        });
       });
     }
   });

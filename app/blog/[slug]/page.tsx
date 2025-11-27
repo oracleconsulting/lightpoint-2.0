@@ -253,39 +253,8 @@ export default function BlogPostPage() {
         })()}
         
         {post.structured_layout && typeof post.structured_layout === 'object' && post.structured_layout.layout ? (
-          <>
-            {/* Render Gamma-style visual layout */}
-            <DynamicGammaRenderer layout={post.structured_layout} />
-            
-            {/* If layout has few TextSections, also show original content below */}
-            {(() => {
-              const layoutArray = post.structured_layout?.layout || [];
-              const textSections = layoutArray.filter((item: any) => item.type === 'TextSection' || item.type === 'text');
-              
-              // If less than 3 text sections, show original content too
-              if (textSections.length < 3 && post.content) {
-                return (
-                  <div className="mt-16 pt-8 border-t border-white/10">
-                    <div className="max-w-4xl mx-auto px-4">
-                      <h3 className="text-xl font-semibold text-white/60 mb-6">Full Article Text</h3>
-                      <div
-                        className="prose prose-lg prose-invert max-w-none
-                        prose-headings:font-bold prose-headings:text-white
-                        prose-p:text-gray-300 prose-p:leading-relaxed prose-p:text-lg
-                        prose-a:text-cyan-400 prose-a:no-underline hover:prose-a:underline
-                        prose-strong:text-white prose-strong:font-semibold
-                        prose-ul:list-disc prose-ol:list-decimal
-                        prose-li:text-gray-300"
-                      >
-                        {renderContent()}
-                      </div>
-                    </div>
-                  </div>
-                );
-              }
-              return null;
-            })()}
-          </>
+          // Render Gamma-style visual layout ONLY - no fallback dump
+          <DynamicGammaRenderer layout={post.structured_layout} />
         ) : (
           // Fallback: plain text if no visual layout
           <div
