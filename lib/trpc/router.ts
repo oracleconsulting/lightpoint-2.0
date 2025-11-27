@@ -1798,6 +1798,63 @@ export const appRouter = router({
           isSuperAdmin: !error && data?.role === 'super_admin',
         };
       }),
+
+    // Get current user's profile including superadmin status
+    getCurrentUser: publicProcedure
+      .query(async () => {
+        const cookieStore = await import('next/headers').then(m => m.cookies());
+        const { createServerClient } = await import('@supabase/ssr');
+        
+        const supabase = createServerClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          {
+            cookies: {
+              getAll() {
+                return cookieStore.getAll();
+              },
+              setAll() {},
+            },
+          }
+        );
+
+        const { data: { session } } = await supabase.auth.getSession();
+        const userId = session?.user?.id;
+        const userEmail = session?.user?.email;
+
+        if (!userId) {
+          return null;
+        }
+
+        // Get user profile from lightpoint_users
+        const { data: profile } = await (supabaseAdmin as any)
+          .from('lightpoint_users')
+          .select('*')
+          .eq('id', userId)
+          .single();
+
+        // Check if super_admin
+        const { data: roleData } = await (supabaseAdmin as any)
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', userId)
+          .eq('role', 'super_admin')
+          .is('revoked_at', null)
+          .single();
+
+        const isSuperAdmin = roleData?.role === 'super_admin';
+
+        logger.info('👤 getCurrentUser:', { userId, userEmail, profile: !!profile, isSuperAdmin });
+
+        if (!profile) {
+          return null;
+        }
+
+        return {
+          ...profile,
+          is_super_admin: isSuperAdmin,
+        };
+      }),
   }),
 
   // Tickets

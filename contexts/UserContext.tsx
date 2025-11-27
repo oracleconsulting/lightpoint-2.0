@@ -33,37 +33,30 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const { user: authUser, loading: authLoading } = useAuth();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-  // Fetch user profile from lightpoint_users when auth user changes
-  const { data: userProfile, isLoading: profileLoading } = trpc.users.list.useQuery(undefined, {
+  // Fetch current user's profile directly (includes superadmin status)
+  const { data: profile, isLoading: profileLoading } = trpc.users.getCurrentUser.useQuery(undefined, {
     enabled: !!authUser,
-  });
-
-  // Fetch super_admin status from user_roles table
-  const { data: superAdminStatus } = trpc.users.checkSuperAdmin.useQuery(undefined, {
-    enabled: !!authUser,
+    refetchOnWindowFocus: false,
   });
 
   useEffect(() => {
-    if (authUser && userProfile) {
-      // Find the user profile that matches the authenticated user
-      const profile = userProfile.find((u: any) => u.id === authUser.id);
-      if (profile) {
-        setCurrentUser({
-          id: profile.id,
-          email: profile.email,
-          full_name: profile.full_name,
-          role: profile.role,
-          organization_id: profile.organization_id,
-          job_title: profile.job_title,
-          phone: profile.phone,
-          is_active: profile.is_active,
-          is_super_admin: superAdminStatus?.isSuperAdmin || false,
-        });
-      }
+    if (authUser && profile) {
+      console.log('👤 Setting current user:', profile);
+      setCurrentUser({
+        id: profile.id,
+        email: profile.email,
+        full_name: profile.full_name,
+        role: profile.role,
+        organization_id: profile.organization_id,
+        job_title: profile.job_title,
+        phone: profile.phone,
+        is_active: profile.is_active,
+        is_super_admin: profile.is_super_admin || false,
+      });
     } else if (!authUser) {
       setCurrentUser(null);
     }
-  }, [authUser, userProfile, superAdminStatus]);
+  }, [authUser, profile]);
 
   const isAdmin = currentUser?.role === 'admin';
   const isManager = currentUser?.role === 'manager' || isAdmin;
