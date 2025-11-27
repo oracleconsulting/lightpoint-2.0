@@ -9,7 +9,7 @@
 import React, { useState } from 'react';
 import { Sparkles, Wand2, Loader2, CheckCircle, XCircle, RefreshCw, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { DynamicLayoutRenderer } from './DynamicLayoutRenderer';
+import DynamicGammaRenderer from './DynamicGammaRenderer';
 
 interface VisualTransformerProps {
   title: string;
@@ -221,9 +221,8 @@ export function VisualTransformer({
                 <span>AI-Enhanced Visual Layout Preview</span>
               </div>
             </div>
-            <DynamicLayoutRenderer
-              layout={transformedLayout.layout}
-              theme={transformedLayout.theme}
+            <DynamicGammaRenderer
+              layout={transformedLayout}
             />
           </div>
 

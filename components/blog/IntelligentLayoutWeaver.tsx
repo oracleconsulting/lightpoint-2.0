@@ -7,7 +7,7 @@
  */
 
 import React from 'react';
-import { DynamicLayoutRenderer } from './DynamicLayoutRenderer';
+import DynamicGammaRenderer from './DynamicGammaRenderer';
 
 interface LayoutSection {
   type: string;
@@ -272,9 +272,8 @@ export function IntelligentLayoutWeaver({
         if (block.type === 'visual') {
           return (
             <div key={block.id} className="my-12">
-              <DynamicLayoutRenderer
-                layout={[block.content]}
-                theme={visualLayout.theme}
+              <DynamicGammaRenderer
+                layout={{ layout: [block.content], theme: visualLayout.theme }}
               />
             </div>
           );

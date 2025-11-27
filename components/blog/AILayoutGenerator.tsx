@@ -9,7 +9,7 @@
 import React, { useState } from 'react';
 import { Sparkles, Wand2, RefreshCw, CheckCircle, XCircle, Loader2, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { DynamicLayoutRenderer } from './DynamicLayoutRenderer';
+import DynamicGammaRenderer from './DynamicGammaRenderer';
 
 interface AILayoutGeneratorProps {
   title: string;
@@ -175,9 +175,8 @@ export function AILayoutGenerator({
               <Eye className="h-4 w-4" />
               <span>Preview Mode</span>
             </div>
-            <DynamicLayoutRenderer
-              layout={generatedLayout.layout}
-              theme={generatedLayout.theme}
+            <DynamicGammaRenderer
+              layout={generatedLayout}
             />
           </div>
 
