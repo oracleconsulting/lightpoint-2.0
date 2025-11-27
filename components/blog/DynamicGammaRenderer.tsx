@@ -203,21 +203,86 @@ export default function DynamicGammaRenderer({
   const backgroundStyle = layoutTheme?.colors?.backgroundGradient || 
     resolvedTheme.colors.pageBgGradient;
 
+  // Component-specific width classes for better flow
+  const getContainerClass = (type: string): string => {
+    switch (type) {
+      case 'HeroGradient':
+      case 'hero':
+        return 'w-full'; // Full bleed for hero
+      case 'HorizontalStatRow':
+      case 'StatCardGroup':
+      case 'TableTimeline':
+      case 'Timeline':
+      case 'NumberedProcessFlowV6':
+      case 'ProcessFlow':
+      case 'GridChecklist':
+      case 'ChevronFlow':
+      case 'ChevronFlowV6':
+      case 'ComparisonChart':
+      case 'DonutChart':
+      case 'HorizontalBarChart':
+        return 'max-w-6xl mx-auto px-4 lg:px-8'; // Wide for visual elements
+      case 'TextSection':
+      case 'text':
+      case 'QuoteCalloutV6':
+      case 'QuoteCallout':
+      case 'CalloutBox':
+        return 'max-w-4xl mx-auto px-6 lg:px-8'; // Comfortable reading width
+      case 'SectionHeading':
+        return 'max-w-5xl mx-auto px-6 lg:px-8'; // Slightly wider for headings
+      default:
+        return 'max-w-5xl mx-auto px-6 lg:px-8'; // Default
+    }
+  };
+
+  // Component-specific spacing for natural flow
+  const getSpacingClass = (type: string, index: number): string => {
+    switch (type) {
+      case 'HeroGradient':
+      case 'hero':
+        return 'mb-12'; // Big gap after hero
+      case 'SectionHeading':
+        return 'mt-14 mb-4'; // Space before new sections
+      case 'HorizontalStatRow':
+      case 'StatCardGroup':
+        return 'my-10'; // Medium gap around stats
+      case 'TextSection':
+      case 'text':
+        return index === 0 ? 'mb-6' : 'my-4'; // Tighter for text flow
+      case 'QuoteCalloutV6':
+      case 'QuoteCallout':
+        return 'my-8'; // Pull quotes get breathing room
+      case 'TableTimeline':
+      case 'Timeline':
+      case 'NumberedProcessFlowV6':
+      case 'ProcessFlow':
+      case 'GridChecklist':
+        return 'my-12'; // Special components get space
+      default:
+        return 'my-6';
+    }
+  };
+
   return (
     <div 
-      className="gamma-blog-container w-full min-h-screen py-8"
+      className="gamma-blog-container w-full min-h-screen"
       style={{
         background: backgroundStyle,
         color: '#FFFFFF'
       }}
     >
-      <div className="max-w-5xl mx-auto">
+      {/* Unified container - components control their own widths */}
+      <div className="py-8">
         {processedLayout.map((item, index) => (
-          <ComponentRenderer 
-            key={`${item.type}-${index}`} 
-            item={item}
-            index={index}
-          />
+          <div 
+            key={`${item.type}-${index}`}
+            className={`${getContainerClass(item.type)} ${getSpacingClass(item.type, index)}`}
+          >
+            <ComponentRenderer 
+              item={item}
+              index={index}
+            />
+          </div>
         ))}
       </div>
     </div>

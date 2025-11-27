@@ -50,7 +50,7 @@ export default function HorizontalStatRow({ stats, title }: HorizontalStatRowPro
     ? 'grid-cols-2' 
     : stats.length === 3 
     ? 'grid-cols-3' 
-    : 'grid-cols-2 md:grid-cols-4';
+    : 'grid-cols-2 lg:grid-cols-4';
 
   return (
     <motion.div 
@@ -58,18 +58,18 @@ export default function HorizontalStatRow({ stats, title }: HorizontalStatRowPro
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-50px' }}
       transition={{ duration: 0.5 }}
-      className="max-w-4xl mx-auto my-10 px-4"
+      className="w-full"
     >
       {title && (
-        <h3 className="text-lg font-semibold text-white/60 mb-6 text-center uppercase tracking-wider">
+        <h3 className="text-lg font-semibold text-white/60 mb-8 text-center uppercase tracking-wider">
           {title}
         </h3>
       )}
       
-      <div className={`grid ${gridCols} gap-6 md:gap-10`}>
+      {/* Subtle background panel for visual grouping - very transparent */}
+      <div className={`grid ${gridCols} gap-8 lg:gap-12 py-8 px-4 rounded-2xl bg-white/[0.02]`}>
         {stats.map((stat) => {
-          console.log('🔢 Rendering stat:', stat); // DEBUG LINE
-          const safeColor = stat.color && colorClasses[stat.color] ? stat.color : 'blue';
+          const safeColor = stat.color && colorClasses[stat.color] ? stat.color : 'cyan';
           const colors = colorClasses[safeColor];
           const statKey = `${stat.metric}-${stat.label}`.replaceAll(/\s+/g, '-');
           
@@ -89,7 +89,7 @@ export default function HorizontalStatRow({ stats, title }: HorizontalStatRowPro
                   font-black 
                   ${colors.text}
                   ${colors.glow}
-                  mb-2
+                  mb-3
                   tracking-tight
                 `}
               >
@@ -99,16 +99,13 @@ export default function HorizontalStatRow({ stats, title }: HorizontalStatRowPro
               </div>
               
               {/* Primary label */}
-              <div className="text-base md:text-lg font-semibold text-white mb-2">
+              <div className="text-base md:text-lg font-semibold text-white mb-3">
                 {stat.label}
               </div>
               
-              {/* Divider line */}
-              <div className="w-12 md:w-16 h-0.5 bg-gradient-to-r from-transparent via-white/30 to-transparent mx-auto my-3" />
-              
-              {/* Sublabel / context */}
+              {/* Sublabel / context - no divider line */}
               {stat.sublabel && (
-                <div className="text-sm text-white/50 leading-relaxed max-w-[180px] mx-auto">
+                <div className="text-sm text-white/50 leading-relaxed max-w-[200px] mx-auto">
                   {stat.sublabel}
                 </div>
               )}
@@ -119,4 +116,5 @@ export default function HorizontalStatRow({ stats, title }: HorizontalStatRowPro
     </motion.div>
   );
 }
+
 

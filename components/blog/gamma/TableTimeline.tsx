@@ -29,16 +29,15 @@ export default function TableTimeline({ title, events, compact = false }: TableT
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-50px' }}
       transition={{ duration: 0.5 }}
-      className="max-w-4xl mx-auto my-10 px-4"
+      className="w-full"
     >
       <h3 className="text-2xl font-bold text-white mb-6">{title}</h3>
       
       <div 
         className="
           rounded-xl overflow-hidden 
-          border border-white/10
-          bg-slate-900/50
-          backdrop-blur-sm
+          border border-white/[0.08]
+          bg-slate-800/20
         "
       >
         <table className="w-full">
@@ -54,18 +53,18 @@ export default function TableTimeline({ title, events, compact = false }: TableT
                   viewport={{ once: true }}
                   transition={{ duration: 0.3, delay: index * 0.05 }}
                   className={`
-                    border-b border-white/5 last:border-b-0
-                    hover:bg-white/5 transition-colors duration-200
+                    border-b border-white/[0.04] last:border-b-0
+                    hover:bg-white/[0.03] transition-colors duration-200
                   `}
                 >
                   {/* Date column */}
                   <td className={`
-                    ${compact ? 'px-4 py-3' : 'px-6 py-4'} 
-                    w-36 md:w-44
-                    border-r border-white/5
+                    ${compact ? 'px-4 py-3' : 'px-6 py-5'} 
+                    w-36 md:w-48
+                    border-r border-white/[0.04]
                   `}>
                     <span className={`
-                      font-semibold text-sm
+                      font-semibold text-sm md:text-base
                       ${typeColors[event.type || 'neutral']}
                     `}>
                       {event.date}
@@ -73,13 +72,13 @@ export default function TableTimeline({ title, events, compact = false }: TableT
                   </td>
                   
                   {/* Content column */}
-                  <td className={`${compact ? 'px-4 py-3' : 'px-6 py-4'}`}>
+                  <td className={`${compact ? 'px-4 py-3' : 'px-6 py-5'}`}>
                     {event.title && (
                       <div className="font-semibold text-white mb-1">
                         {event.title}
                       </div>
                     )}
-                    <span className="text-white/80 text-sm md:text-base">
+                    <span className="text-white/70 text-sm md:text-base leading-relaxed">
                       {event.description}
                     </span>
                   </td>

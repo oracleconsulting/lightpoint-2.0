@@ -31,10 +31,10 @@ export function GridChecklist({ title, items }: GridChecklistProps) {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.5 }}
-      className="my-10 max-w-4xl mx-auto px-4"
+      className="w-full"
     >
-      <h3 className="text-3xl font-bold text-white mb-8">{title}</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <h3 className="text-2xl md:text-3xl font-bold text-white mb-8">{title}</h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {items.map((item) => (
           <motion.div 
             key={item.number}
@@ -42,14 +42,14 @@ export function GridChecklist({ title, items }: GridChecklistProps) {
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.3, delay: item.number * 0.1 }}
-            className="relative bg-slate-800/60 border border-slate-600 rounded-xl p-6 pt-8 hover:border-cyan-500/50 transition-colors"
+            className="relative bg-slate-800/30 border border-slate-700/50 rounded-xl p-6 pt-8 hover:bg-slate-800/50 hover:border-cyan-500/30 transition-all duration-300"
           >
             {/* Numbered badge - cyan circle */}
-            <div className="absolute -top-4 left-6 w-9 h-9 bg-cyan-500 rounded-full flex items-center justify-center shadow-lg shadow-cyan-500/30">
+            <div className="absolute -top-4 left-6 w-9 h-9 bg-cyan-500 rounded-full flex items-center justify-center shadow-lg shadow-cyan-500/20">
               <span className="text-white font-bold text-sm">{item.number}</span>
             </div>
             
-            <h4 className="text-xl font-semibold text-white mb-2">
+            <h4 className="text-lg md:text-xl font-semibold text-white mb-2">
               {item.title}
             </h4>
             <p className="text-slate-400 text-base leading-relaxed">
@@ -100,12 +100,12 @@ export function ThreeColumnCardsV6({ title, cards }: ThreeColumnCardsV6Props) {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.5 }}
-      className="my-10 max-w-4xl mx-auto px-4"
+      className="w-full"
     >
       {title && (
         <h3 className="text-2xl font-bold text-white mb-6">{title}</h3>
       )}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {cards.map((card, index) => {
           const accent = card.accent || 'cyan';
           return (
@@ -116,11 +116,11 @@ export function ThreeColumnCardsV6({ title, cards }: ThreeColumnCardsV6Props) {
               viewport={{ once: true }}
               transition={{ duration: 0.3, delay: index * 0.1 }}
               className={`
-                bg-slate-800/50 border border-slate-700 border-t-4 
+                bg-slate-800/30 border border-slate-700/50 border-t-4 
                 ${accentBorders[accent]} 
                 rounded-lg p-5
                 transition-all duration-300
-                hover:bg-slate-800/70 hover:shadow-lg ${accentGlows[accent]}
+                hover:bg-slate-800/50 hover:shadow-lg ${accentGlows[accent]}
               `}
             >
               <h4 className="text-lg font-semibold text-white mb-3">
@@ -184,7 +184,7 @@ export function QuoteCalloutV6({ text, attribution, accent = 'cyan', icon = true
       whileInView={{ opacity: 1, x: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.5 }}
-      className={`my-8 p-6 border-l-4 ${c.border} ${c.bg} rounded-r-lg max-w-4xl mx-auto`}
+      className={`p-6 md:p-8 border-l-4 ${c.border} ${c.bg} rounded-r-lg w-full`}
     >
       <div className="flex gap-4">
         {icon && (
@@ -196,7 +196,7 @@ export function QuoteCalloutV6({ text, attribution, accent = 'cyan', icon = true
           </div>
         )}
         <div>
-          <p className="text-slate-200 text-lg leading-relaxed">
+          <p className="text-slate-200 text-lg md:text-xl leading-relaxed">
             &ldquo;{text}&rdquo;
           </p>
           {attribution && (
@@ -232,12 +232,12 @@ export function NumberedProcessFlowV6({ title, steps }: NumberedProcessFlowV6Pro
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.5 }}
-      className="my-10 max-w-4xl mx-auto px-4"
+      className="w-full"
     >
       {title && (
-        <h3 className="text-2xl font-bold text-white mb-6">{title}</h3>
+        <h3 className="text-2xl font-bold text-white mb-8">{title}</h3>
       )}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-0">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-0">
         {steps.map((step, index) => (
           <div key={index} className="relative">
             {/* Connecting arrow between cards */}
