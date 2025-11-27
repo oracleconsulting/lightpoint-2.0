@@ -246,10 +246,79 @@ Available components:
 4. DonutChart - Proportion visualization ⭐ USE THIS
 5. TableTimeline - Clean table-format timeline ⭐ USE THIS
 6. ComparisonChart - Bar/horizontal bar charts
-7. ProcessFlow - Numbered steps with arrows
-8. CalloutBox - Highlighted quotes/warnings
-9. ChecklistCard - Action items
-10. SectionDivider - Visual break between sections
+7. NumberedProcessFlow - 01→02→03 horizontal cards with arrows ⭐ NEW
+8. ThreeColumnCards - 3-column card grid for failures/features ⭐ NEW
+9. QuoteCallout - Styled quote box with attribution ⭐ NEW
+10. ChevronFlow - Document → Build → Recover arrows ⭐ NEW
+11. ChecklistCard - 2x2 numbered action items grid
+12. CalloutBox - Highlighted quotes/warnings
+13. SectionDivider - Visual break between sections
+
+═══════════════════════════════════════════════════════════════════
+                    NEW COMPONENT EXAMPLES
+═══════════════════════════════════════════════════════════════════
+
+NumberedProcessFlow (for "Why Most Complaints Fail" type content):
+{
+  "type": "NumberedProcessFlow",
+  "props": {
+    "title": "Why Most Complaints Fail",
+    "steps": [
+      { "number": "01", "title": "Missing the Target", "description": "Complaints read as frustration..." },
+      { "number": "02", "title": "No Evidence", "description": "Vague timelines..." },
+      { "number": "03", "title": "Wrong Request", "description": "Generic compensation asks..." }
+    ]
+  }
+}
+
+ThreeColumnCards (for "Critical Failures" type content):
+{
+  "type": "ThreeColumnCards",
+  "props": {
+    "title": "Critical Failures",
+    "cards": [
+      { "title": "Missing Target", "description": "...", "accent": "red" },
+      { "title": "No Evidence", "description": "...", "accent": "amber" },
+      { "title": "Wrong Request", "description": "...", "accent": "red" }
+    ]
+  }
+}
+
+QuoteCallout (for Charter quotes, key statements):
+{
+  "type": "QuoteCallout",
+  "props": {
+    "text": "The Taxpayers' Charter states HMRC will treat you even-handedly...",
+    "attribution": "Taxpayers' Charter",
+    "accent": "cyan"
+  }
+}
+
+ChevronFlow (for process arrows like Document → Build → Recover):
+{
+  "type": "ChevronFlow",
+  "props": {
+    "steps": [
+      { "title": "Document", "icon": "document" },
+      { "title": "Build", "icon": "build" },
+      { "title": "Recover", "icon": "money" }
+    ]
+  }
+}
+
+ChecklistCard (for fee claim steps, action items):
+{
+  "type": "ChecklistCard",
+  "props": {
+    "title": "What to Include in Professional Fee Claims",
+    "items": [
+      { "number": 1, "title": "Itemised time records", "description": "date, duration, task" },
+      { "number": 2, "title": "Clear causation", "description": "why HMRC's failure created this work" },
+      { "number": 3, "title": "Professional hourly rate", "description": "" },
+      { "number": 4, "title": "Total calculation with invoice", "description": "" }
+    ]
+  }
+}
 
 ═══════════════════════════════════════════════════════════════════
                     STAT COLOR GUIDE

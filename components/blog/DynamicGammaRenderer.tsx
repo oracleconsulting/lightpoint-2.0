@@ -15,6 +15,11 @@ import SectionDivider from '@/components/blog/gamma/SectionDivider';
 import HorizontalStatRow from '@/components/blog/gamma/HorizontalStatRow';
 import DonutChart from '@/components/blog/gamma/DonutChart';
 import TableTimeline from '@/components/blog/gamma/TableTimeline';
+// V5.1 Additional components
+import NumberedProcessFlow from '@/components/blog/gamma/NumberedProcessFlow';
+import ThreeColumnCards from '@/components/blog/gamma/ThreeColumnCards';
+import QuoteCallout from '@/components/blog/gamma/QuoteCallout';
+import ChevronFlow from '@/components/blog/gamma/ChevronFlow';
 // Theme system
 import { getTheme, defaultTheme, type ThemeConfig } from '@/lib/blog/themes';
 
@@ -223,9 +228,23 @@ function ComponentRenderer({ item, index }: ComponentRendererProps) {
       // ========== V5 NEW COMPONENTS ==========
       
       case 'HorizontalStatRow':
+        // Normalize stats - AI might send different formats
+        const horizontalStats = (props?.stats || []).map((s: any) => ({
+          metric: s.metric || s.value || s.number || '0',
+          label: s.label || s.title || s.name || '',
+          sublabel: s.sublabel || s.context || s.description || '',
+          prefix: s.prefix || '',
+          suffix: s.suffix || '',
+          color: s.color || 'blue'
+        }));
+        
+        if (process.env.NODE_ENV === 'development') {
+          console.log('HorizontalStatRow stats:', horizontalStats);
+        }
+        
         return (
           <HorizontalStatRow 
-            stats={props?.stats || []} 
+            stats={horizontalStats} 
             title={props?.title}
           />
         );
@@ -249,6 +268,57 @@ function ComponentRenderer({ item, index }: ComponentRendererProps) {
             title={props?.title || 'Timeline'}
             events={props?.events || []}
             compact={props?.compact}
+          />
+        );
+
+      case 'NumberedProcessFlow':
+        return (
+          <NumberedProcessFlow 
+            title={props?.title}
+            steps={(props?.steps || []).map((s: any, idx: number) => ({
+              number: s.number || s.step || idx + 1,
+              title: s.title || s.name || '',
+              description: s.description || s.text || ''
+            }))}
+            accent={props?.accent}
+          />
+        );
+
+      case 'ThreeColumnCards':
+      case 'ColumnCards':
+        return (
+          <ThreeColumnCards 
+            title={props?.title}
+            cards={(props?.cards || props?.items || []).map((c: any) => ({
+              title: c.title || c.name || '',
+              description: c.description || c.text || c.content || '',
+              icon: c.icon,
+              accent: c.accent || c.color
+            }))}
+            style={props?.style}
+          />
+        );
+
+      case 'QuoteCallout':
+      case 'Quote':
+        return (
+          <QuoteCallout 
+            text={props?.text || props?.quote || props?.content || ''}
+            attribution={props?.attribution || props?.author}
+            source={props?.source}
+            accent={props?.accent}
+          />
+        );
+
+      case 'ChevronFlow':
+        return (
+          <ChevronFlow 
+            title={props?.title}
+            steps={(props?.steps || []).map((s: any) => ({
+              title: s.title || s.name || s.label || '',
+              icon: s.icon
+            }))}
+            accent={props?.accent}
           />
         );
 
@@ -381,11 +451,22 @@ function ComponentRenderer({ item, index }: ComponentRendererProps) {
 
       case 'ChecklistCard':
       case 'checklist':
+        // Normalize items - AI might send different formats
+        const checklistItems = (props?.items || []).map((item: any, idx: number) => ({
+          number: item.number || item.step || idx + 1,
+          title: item.title || item.name || item.heading || `Step ${idx + 1}`,
+          description: item.description || item.text || item.content || ''
+        }));
+        
+        if (process.env.NODE_ENV === 'development') {
+          console.log('ChecklistCard items:', checklistItems);
+        }
+        
         return (
           <div className="max-w-4xl mx-auto my-8 px-4">
             <ChecklistCard 
               title={props?.title || 'Checklist'} 
-              items={props?.items || []}
+              items={checklistItems}
             />
           </div>
         );

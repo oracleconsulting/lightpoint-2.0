@@ -15,3 +15,9 @@ export { default as SectionDivider } from './SectionDivider';
 export { default as HorizontalStatRow } from './HorizontalStatRow';
 export { default as DonutChart, ResolutionDonut } from './DonutChart';
 export { default as TableTimeline, InlineTimeline } from './TableTimeline';
+
+// V5.1 Additional components - Full Gamma parity
+export { default as NumberedProcessFlow } from './NumberedProcessFlow';
+export { default as ThreeColumnCards } from './ThreeColumnCards';
+export { default as QuoteCallout } from './QuoteCallout';
+export { default as ChevronFlow } from './ChevronFlow';
