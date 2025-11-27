@@ -183,28 +183,107 @@ function groupIntoParagraphs(sentences: string[]): { type: 'heading' | 'paragrap
 }
 
 /**
- * Smart paragraph splitting - handles continuous text
+ * Smart paragraph splitting - handles ALL content formats
+ * 
+ * Key fix: Properly handles HTML content, markdown, and continuous text
  */
 function smartSplitContent(content: string): { type: 'heading' | 'paragraph'; text: string }[] {
-  // First try normal paragraph splitting (if content has \n\n)
-  const hasExplicitParagraphs = content.includes('\n\n');
+  console.log(`📝 smartSplitContent input: ${content.length} chars`);
   
-  if (hasExplicitParagraphs) {
-    const parts = content.split(/\n\n+/).filter(p => p.trim().length > 20);
-    return parts.map(p => {
-      const trimmed = p.trim();
-      if (isLikelyHeading(trimmed)) {
-        return { type: 'heading' as const, text: trimmed };
+  // Step 1: Normalize the content
+  let normalized = content
+    // Normalize line endings
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    // Convert HTML paragraph tags to double newlines
+    .replace(/<\/p>\s*<p[^>]*>/gi, '\n\n')
+    .replace(/<p[^>]*>/gi, '')
+    .replace(/<\/p>/gi, '\n\n')
+    // Convert <br> tags to single newlines
+    .replace(/<br\s*\/?>/gi, '\n')
+    // Convert HTML headings to markdown-style
+    .replace(/<h([1-6])[^>]*>(.*?)<\/h\1>/gi, (_, level, text) => `\n\n${'#'.repeat(parseInt(level))} ${text.trim()}\n\n`)
+    // Remove other HTML tags but keep content
+    .replace(/<[^>]+>/g, '')
+    // Normalize multiple newlines to exactly two
+    .replace(/\n{3,}/g, '\n\n')
+    // Decode HTML entities
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .trim();
+  
+  console.log(`📝 After normalization: ${normalized.length} chars, ${(normalized.match(/\n\n/g) || []).length} paragraph breaks`);
+  
+  // Step 2: Split on paragraph boundaries
+  const rawParts = normalized.split(/\n\n+/);
+  console.log(`📝 Raw split: ${rawParts.length} parts`);
+  
+  const result: { type: 'heading' | 'paragraph'; text: string }[] = [];
+  
+  for (const part of rawParts) {
+    const trimmed = part.trim();
+    if (trimmed.length < 10) continue; // Skip very short fragments
+    
+    // Check for markdown headings
+    const headingMatch = trimmed.match(/^(#{1,3})\s+(.+)$/);
+    if (headingMatch) {
+      result.push({ type: 'heading', text: headingMatch[2].trim() });
+      continue;
+    }
+    
+    // Check if it looks like a heading (short, no period, title-case)
+    if (isLikelyHeading(trimmed)) {
+      result.push({ type: 'heading', text: trimmed });
+      continue;
+    }
+    
+    // Check if this "paragraph" is actually multiple paragraphs joined by single newlines
+    // This handles cases where source has single \n between paragraphs
+    if (trimmed.includes('\n') && trimmed.length > 400) {
+      // Split on single newlines and check if they look like separate paragraphs
+      const subParts = trimmed.split(/\n/).filter(s => s.trim().length > 20);
+      
+      // If we have multiple substantial parts, treat them as separate paragraphs
+      if (subParts.length >= 2) {
+        for (const subPart of subParts) {
+          const subTrimmed = subPart.trim();
+          if (isLikelyHeading(subTrimmed)) {
+            result.push({ type: 'heading', text: subTrimmed });
+          } else if (subTrimmed.length > 20) {
+            result.push({ type: 'paragraph', text: subTrimmed });
+          }
+        }
+        continue;
       }
-      return { type: 'paragraph' as const, text: trimmed };
-    });
+    }
+    
+    // Long paragraphs (500+ chars) should be split further for readability
+    if (trimmed.length > 500) {
+      const sentences = splitIntoSentences(trimmed);
+      const grouped = groupIntoParagraphs(sentences);
+      result.push(...grouped);
+      continue;
+    }
+    
+    // Regular paragraph
+    result.push({ type: 'paragraph', text: trimmed });
   }
   
-  // Otherwise, split by sentences and group
-  const sentences = splitIntoSentences(content);
-  console.log(`📝 Split into ${sentences.length} sentences`);
+  // If we still have very few blocks, fall back to sentence-based splitting
+  if (result.length < 5 && content.length > 1000) {
+    console.log(`⚠️ Only ${result.length} blocks from ${content.length} chars - falling back to sentence splitting`);
+    const sentences = splitIntoSentences(normalized);
+    console.log(`📝 Sentence fallback: ${sentences.length} sentences`);
+    return groupIntoParagraphs(sentences);
+  }
   
-  return groupIntoParagraphs(sentences);
+  console.log(`📝 Final result: ${result.length} blocks (${result.filter(b => b.type === 'heading').length} headings, ${result.filter(b => b.type === 'paragraph').length} paragraphs)`);
+  
+  return result;
 }
 
 /**
@@ -426,12 +505,18 @@ export function mapToComponents(
   
   const usedGroups = new Set<string>();
   const usedQuotes = new Set<number>();
+  const usedLists = new Set<number>();
   
   // Visual insertion points (after every N paragraphs)
   let paragraphCount = 0;
   let visualsInserted = 0;
+  const totalParagraphs = contentBlocks.filter(b => b.type === 'paragraph').length;
+  
+  // Calculate optimal visual insertion points
+  const visualInsertionInterval = Math.max(2, Math.floor(totalParagraphs / 8));
 
-  console.log(`📦 Mapping ${contentBlocks.length} blocks with ${extraction.stats.length} stats`);
+  console.log(`📦 Mapping ${contentBlocks.length} blocks (${totalParagraphs} paragraphs) with ${extraction.stats.length} stats`);
+  console.log(`📦 Visual insertion interval: every ${visualInsertionInterval} paragraphs`);
 
   // ─────────────────────────────────────────────────────────────────────────
   // 1. Opening stats
@@ -453,6 +538,19 @@ export function mapToComponents(
   // ─────────────────────────────────────────────────────────────────────────
   // 2. Content blocks with interleaved visuals
   // ─────────────────────────────────────────────────────────────────────────
+  
+  // Pre-calculate visual insertion schedule
+  const visualSchedule: Map<number, string> = new Map();
+  visualSchedule.set(2, 'process');      // After 2nd paragraph: process flow
+  visualSchedule.set(4, 'quote');        // After 4th: first quote
+  visualSchedule.set(6, 'timeline');     // After 6th: timeline
+  visualSchedule.set(9, 'quote');        // After 9th: second quote
+  visualSchedule.set(12, 'checklist');   // After 12th: checklist
+  visualSchedule.set(15, 'stats');       // After 15th: middle stats
+  visualSchedule.set(18, 'quote');       // After 18th: third quote
+  visualSchedule.set(22, 'list');        // After 22nd: bullet list
+  visualSchedule.set(26, 'stats');       // After 26th: closing stats
+  
   contentBlocks.forEach((block) => {
     // Headings
     if (block.type === 'heading') {
@@ -463,22 +561,23 @@ export function mapToComponents(
       return;
     }
     
-    // Paragraph
+    // Paragraph - apply inline highlighting
+    const highlightedText = applyInlineHighlighting(block.text);
     components.push({
       type: 'TextSection',
       props: {
-        content: `<p class="text-xl text-slate-300 leading-relaxed">${applyInlineHighlighting(block.text)}</p>`,
+        content: `<p>${highlightedText}</p>`,
       },
     });
     
     paragraphCount++;
     
     // ─────────────────────────────────────────────────────────────────────
-    // Insert visuals every 2-3 paragraphs
+    // Insert visuals at scheduled points
     // ─────────────────────────────────────────────────────────────────────
+    const scheduledVisual = visualSchedule.get(paragraphCount);
     
-    // After paragraph 2: Process flow
-    if (paragraphCount === 2 && extraction.processes.length > 0) {
+    if (scheduledVisual === 'process' && extraction.processes.length > 0) {
       const process = extraction.processes[0];
       components.push({
         type: 'NumberedProcessFlowV6',
@@ -487,8 +586,7 @@ export function mapToComponents(
       visualsInserted++;
     }
     
-    // After paragraph 4: Quote
-    if (paragraphCount === 4 && extraction.quotes.length > 0) {
+    if (scheduledVisual === 'quote') {
       const quote = extraction.quotes.find((_, i) => !usedQuotes.has(i));
       if (quote) {
         usedQuotes.add(extraction.quotes.indexOf(quote));
@@ -504,8 +602,7 @@ export function mapToComponents(
       }
     }
     
-    // After paragraph 6: Timeline
-    if (paragraphCount === 6 && extraction.timeline) {
+    if (scheduledVisual === 'timeline' && extraction.timeline) {
       components.push({
         type: 'TableTimeline',
         props: {
@@ -516,27 +613,10 @@ export function mapToComponents(
       visualsInserted++;
     }
     
-    // After paragraph 8: Another quote
-    if (paragraphCount === 8 && extraction.quotes.length > 1) {
-      const quote = extraction.quotes.find((_, i) => !usedQuotes.has(i));
-      if (quote) {
-        usedQuotes.add(extraction.quotes.indexOf(quote));
-        components.push({
-          type: 'QuoteCalloutV6',
-          props: {
-            text: quote.text,
-            attribution: quote.attribution,
-            accent: 'purple',
-          },
-        });
-        visualsInserted++;
-      }
-    }
-    
-    // After paragraph 10: Checklist
-    if (paragraphCount === 10) {
-      const checklist = extraction.lists.find(l => l.type === 'checklist');
+    if (scheduledVisual === 'checklist') {
+      const checklist = extraction.lists.find((l, i) => l.type === 'checklist' && !usedLists.has(i));
       if (checklist) {
+        usedLists.add(extraction.lists.indexOf(checklist));
         components.push({
           type: 'GridChecklist',
           props: {
@@ -552,22 +632,40 @@ export function mapToComponents(
       }
     }
     
-    // After paragraph 12: Middle stats
-    if (paragraphCount === 12) {
-      const middleStats = statGroups.get('middle') || statGroups.get('adjudicator') || [];
-      if (middleStats.length >= 2 && !usedGroups.has('middle')) {
-        usedGroups.add('middle');
-        usedGroups.add('adjudicator');
+    if (scheduledVisual === 'list') {
+      const bulletList = extraction.lists.find((l, i) => l.type === 'bullet' && !usedLists.has(i));
+      if (bulletList) {
+        usedLists.add(extraction.lists.indexOf(bulletList));
         components.push({
-          type: 'HorizontalStatRow',
+          type: 'BulletList',
           props: {
-            stats: middleStats.slice(0, 3).map(s => ({
-              metric: s.value, prefix: s.prefix, suffix: s.suffix,
-              label: s.label, sublabel: s.context, color: sentimentToColor(s.sentiment),
-            })),
+            title: bulletList.title,
+            items: bulletList.items.map(item => item.title),
           },
         });
         visualsInserted++;
+      }
+    }
+    
+    if (scheduledVisual === 'stats') {
+      // Try different stat groups
+      const statGroupNames = ['middle', 'adjudicator', 'closing', 'success', 'ungrouped'];
+      for (const groupName of statGroupNames) {
+        const stats = statGroups.get(groupName);
+        if (stats && stats.length >= 2 && !usedGroups.has(groupName)) {
+          usedGroups.add(groupName);
+          components.push({
+            type: 'HorizontalStatRow',
+            props: {
+              stats: stats.slice(0, 3).map(s => ({
+                metric: s.value, prefix: s.prefix, suffix: s.suffix,
+                label: s.label, sublabel: s.context, color: sentimentToColor(s.sentiment),
+              })),
+            },
+          });
+          visualsInserted++;
+          break;
+        }
       }
     }
   });

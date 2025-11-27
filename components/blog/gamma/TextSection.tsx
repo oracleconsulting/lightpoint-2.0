@@ -3,11 +3,28 @@
 import React from 'react';
 
 interface TextSectionProps {
-  readonly content: string;
+  readonly content?: string;
+  readonly paragraphs?: readonly string[];
   readonly style?: 'single-column' | 'two-column';
 }
 
-export default function TextSection({ content, style = 'single-column' }: TextSectionProps) {
+/**
+ * TextSection - Renders paragraph content with proper typography
+ * 
+ * Supports two formats:
+ * 1. content: Single HTML string (legacy)
+ * 2. paragraphs: Array of paragraph strings (preferred - creates visible breaks)
+ */
+export default function TextSection({ content, paragraphs, style = 'single-column' }: TextSectionProps) {
+  // Build the HTML content
+  const htmlContent = React.useMemo(() => {
+    if (paragraphs && paragraphs.length > 0) {
+      // Each paragraph gets its own <p> tag with spacing
+      return paragraphs.map(p => `<p>${p}</p>`).join('');
+    }
+    return content || '';
+  }, [content, paragraphs]);
+  
   return (
     <div 
       className={`
@@ -26,6 +43,7 @@ export default function TextSection({ content, style = 'single-column' }: TextSe
           [&>p]:mb-6 [&>p]:md:mb-8
           [&>p]:text-lg [&>p]:md:text-xl [&>p]:lg:text-[1.25rem]
           [&>p]:leading-[1.75] [&>p]:md:leading-[1.8]
+          [&>p:last-child]:mb-0
           
           [&>h2]:text-2xl [&>h2]:sm:text-3xl [&>h2]:md:text-4xl 
           [&>h2]:font-bold [&>h2]:text-white 
@@ -56,7 +74,7 @@ export default function TextSection({ content, style = 'single-column' }: TextSe
           [&>blockquote]:my-8 [&>blockquote]:md:my-12
           [&>blockquote]:text-xl [&>blockquote]:md:text-2xl
         "
-        dangerouslySetInnerHTML={{ __html: content }}
+        dangerouslySetInnerHTML={{ __html: htmlContent }}
       />
     </div>
   );
