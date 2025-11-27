@@ -7,7 +7,7 @@
  */
 
 import React, { useState } from 'react';
-import { Sparkles, Wand2, Loader2, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
+import { Sparkles, Wand2, Loader2, CheckCircle, XCircle, RefreshCw, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DynamicLayoutRenderer } from './DynamicLayoutRenderer';
 
@@ -28,6 +28,7 @@ export function VisualTransformer({
   const [error, setError] = useState<string | null>(null);
   const [transformedLayout, setTransformedLayout] = useState<any | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [useV6, setUseV6] = useState(true); // Default to V6 pipeline
 
   const handleTransform = async () => {
     if (!title || !content) {
@@ -39,8 +40,11 @@ export function VisualTransformer({
     setIsTransforming(true);
     setTransformedLayout(null);
 
+    // Use V6 or V5 pipeline based on toggle
+    const endpoint = useV6 ? '/api/blog/transform-visual-v6' : '/api/blog/transform-visual';
+
     try {
-      const response = await fetch('/api/blog/transform-visual', {
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -105,6 +109,30 @@ export function VisualTransformer({
                 Already have your content written? Let AI transform it into a stunning visual layout with
                 charts, stat cards, timelines, and professional formatting.
               </p>
+              
+              {/* V6 Toggle */}
+              <div className="flex items-center gap-2 mb-4">
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={useV6} 
+                    onChange={(e) => setUseV6(e.target.checked)}
+                    className="sr-only peer" 
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                </label>
+                <span className="text-sm font-medium text-gray-700">
+                  {useV6 ? (
+                    <span className="flex items-center gap-1">
+                      <Zap className="h-4 w-4 text-purple-600" />
+                      V6 Pipeline (Recommended)
+                    </span>
+                  ) : (
+                    'V5 Pipeline (Legacy)'
+                  )}
+                </span>
+              </div>
+              
               <div className="flex items-center gap-3">
                 <Button
                   onClick={handleTransform}
@@ -125,7 +153,10 @@ export function VisualTransformer({
                 </Button>
                 {isTransforming && (
                   <span className="text-sm text-gray-600">
-                    AI is analyzing your content and creating the perfect visual layout...
+                    {useV6 
+                      ? 'V6: Extracting content → Mapping components...' 
+                      : 'AI is analyzing your content and creating the perfect visual layout...'
+                    }
                   </span>
                 )}
               </div>

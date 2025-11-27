@@ -20,6 +20,19 @@ import NumberedProcessFlow from '@/components/blog/gamma/NumberedProcessFlow';
 import ThreeColumnCards from '@/components/blog/gamma/ThreeColumnCards';
 import QuoteCallout from '@/components/blog/gamma/QuoteCallout';
 import ChevronFlow from '@/components/blog/gamma/ChevronFlow';
+// V6 Gamma-parity components
+import {
+  GridChecklist,
+  ThreeColumnCardsV6,
+  QuoteCalloutV6,
+  NumberedProcessFlowV6,
+  ChevronFlowV6,
+  TeaserCallout,
+  HorizontalBarChart,
+  ContentImage,
+  BulletList,
+  NumberedList,
+} from '@/components/blog/gamma/GammaComponentsV6';
 // Theme system
 import { getTheme, defaultTheme, type ThemeConfig } from '@/lib/blog/themes';
 
@@ -320,6 +333,124 @@ function ComponentRenderer({ item, index }: ComponentRendererProps) {
             }))}
             accent={props?.accent}
           />
+        );
+
+      // ========== V6 GAMMA-PARITY COMPONENTS ==========
+      
+      case 'GridChecklist':
+        return (
+          <GridChecklist 
+            title={props?.title || 'Checklist'}
+            items={(props?.items || []).map((item: any, idx: number) => ({
+              number: item.number || idx + 1,
+              title: item.title || '',
+              description: item.description || ''
+            }))}
+          />
+        );
+
+      case 'ThreeColumnCardsV6':
+        return (
+          <ThreeColumnCardsV6 
+            title={props?.title}
+            cards={(props?.cards || []).map((c: any) => ({
+              title: c.title || '',
+              description: c.description || '',
+              accent: c.accent || 'cyan'
+            }))}
+          />
+        );
+
+      case 'QuoteCalloutV6':
+        return (
+          <QuoteCalloutV6 
+            text={props?.text || ''}
+            attribution={props?.attribution}
+            accent={props?.accent || 'cyan'}
+          />
+        );
+
+      case 'NumberedProcessFlowV6':
+        return (
+          <NumberedProcessFlowV6 
+            title={props?.title}
+            steps={(props?.steps || []).map((s: any, idx: number) => ({
+              number: s.number || String(idx + 1).padStart(2, '0'),
+              title: s.title || '',
+              description: s.description || ''
+            }))}
+          />
+        );
+
+      case 'ChevronFlowV6':
+        return (
+          <ChevronFlowV6 
+            steps={(props?.steps || []).map((s: any) => ({
+              icon: s.icon || 'document',
+              title: s.title || '',
+              description: s.description
+            }))}
+          />
+        );
+
+      case 'TeaserCallout':
+        return (
+          <TeaserCallout 
+            label={props?.label || 'Coming Soon'}
+            title={props?.title || ''}
+            description={props?.description || ''}
+          />
+        );
+
+      case 'HorizontalBarChart':
+        return (
+          <HorizontalBarChart 
+            title={props?.title}
+            data={(props?.data || []).map((d: any) => ({
+              label: d.label || '',
+              value: d.value || 0,
+              color: d.color
+            }))}
+            showValues={props?.showValues}
+            suffix={props?.suffix}
+          />
+        );
+
+      case 'ContentImage':
+        return (
+          <ContentImage 
+            src={props?.src || ''}
+            alt={props?.alt || ''}
+            caption={props?.caption}
+            position={props?.position}
+            aspectRatio={props?.aspectRatio}
+          />
+        );
+
+      case 'BulletList':
+        return (
+          <BulletList 
+            title={props?.title}
+            items={props?.items || []}
+            icon={props?.icon}
+            accent={props?.accent}
+          />
+        );
+
+      case 'NumberedList':
+        return (
+          <NumberedList 
+            title={props?.title}
+            items={props?.items || []}
+            accent={props?.accent}
+          />
+        );
+
+      case 'SectionHeading':
+        return (
+          <h2 className="text-3xl font-bold text-white mt-12 mb-6 max-w-4xl mx-auto px-4">
+            {props?.text || ''}
+          </h2>
         );
 
       // ========== EXISTING COMPONENTS ==========
