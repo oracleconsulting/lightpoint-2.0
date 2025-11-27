@@ -140,6 +140,55 @@ function postProcessLayout(layout: any[]): any[] {
   return result;
 }
 
+// Validation: Filter out broken components with placeholder/empty content
+function validateLayout(layout: any[]): any[] {
+  return layout.filter(item => {
+    // Filter out broken ChecklistCards with placeholder content
+    if (item.type === 'ChecklistCard') {
+      const items = item.props?.items || [];
+      if (items.length === 0) {
+        console.warn('⚠️ Removing ChecklistCard with no items');
+        return false;
+      }
+      const hasPlaceholders = items.some((i: any) => 
+        !i.title || 
+        i.title.match(/^(Step|Item|Action)\s*\d+$/i) ||
+        i.title.trim() === ''
+      );
+      if (hasPlaceholders) {
+        console.warn('⚠️ Removing ChecklistCard with placeholder content:', items.map((i: any) => i.title));
+        return false;
+      }
+    }
+    
+    // Filter out broken HorizontalStatRow with missing metrics
+    if (item.type === 'HorizontalStatRow') {
+      const stats = item.props?.stats || [];
+      if (stats.length === 0) {
+        console.warn('⚠️ Removing HorizontalStatRow with no stats');
+        return false;
+      }
+      const hasMissingMetrics = stats.some((s: any) => 
+        !s.metric || s.metric.toString().trim() === ''
+      );
+      if (hasMissingMetrics) {
+        console.warn('⚠️ Removing HorizontalStatRow with missing metrics:', stats.map((s: any) => ({ metric: s.metric, label: s.label })));
+        return false;
+      }
+    }
+    
+    // Filter out broken StatCards with missing metrics
+    if (item.type === 'StatCard') {
+      if (!item.props?.metric || item.props.metric.toString().trim() === '') {
+        console.warn('⚠️ Removing StatCard with missing metric');
+        return false;
+      }
+    }
+    
+    return true;
+  });
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { title, content, excerpt, themeName = 'lightpoint' } = await req.json();
@@ -369,6 +418,61 @@ RULE: If the source has a checklist/steps, use ChecklistCard.
 RULE: The LAST stats in the source are often the most important - DO NOT DROP THEM.
 
 ═══════════════════════════════════════════════════════════════════
+                    🚨 CHECKLIST EXTRACTION - CRITICAL 🚨
+═══════════════════════════════════════════════════════════════════
+
+When source text contains a list like:
+"Include: 
+- Itemised time records (date, duration, specific task)
+- Clear causation (why HMRC's failure created this work)
+- Professional hourly rate
+- Total calculation with invoice"
+
+You MUST extract the ACTUAL TEXT and output:
+{
+  "type": "ChecklistCard",
+  "props": {
+    "title": "Professional Fee Recovery Checklist",
+    "items": [
+      { "number": 1, "title": "Itemised time records", "description": "date, duration, specific task" },
+      { "number": 2, "title": "Clear causation", "description": "why HMRC's failure created this work" },
+      { "number": 3, "title": "Professional hourly rate", "description": "" },
+      { "number": 4, "title": "Total calculation with invoice", "description": "" }
+    ]
+  }
+}
+
+❌ NEVER use placeholder text like "Step 1", "Step 2", "Item 1", "Action 1"
+❌ NEVER output empty titles or generic numbered items
+✅ ALWAYS extract the actual item text from the source
+✅ Split parenthetical content into description field
+
+═══════════════════════════════════════════════════════════════════
+                    🚨 STAT VALUES - MANDATORY 🚨
+═══════════════════════════════════════════════════════════════════
+
+For HorizontalStatRow, EVERY stat MUST have a metric value:
+
+❌ WRONG (will render blank):
+{ "label": "Professional Costs", "sublabel": "Paid via Adjudicator" }
+
+✅ CORRECT:
+{ "metric": "6,174", "prefix": "£", "label": "Professional Costs", "sublabel": "Paid via Adjudicator", "color": "green" }
+
+RULES:
+1. EVERY stat MUST have a "metric" field with a number value
+2. If the number has £, put it in "prefix": "£"
+3. If the number has %, put it in "suffix": "%"
+4. NEVER create a stat without finding a specific number in the source
+5. If you can't find a number, use TextSection instead of a stat
+
+Example source: "Professional costs of £6,174 were paid out last year"
+→ metric: "6,174", prefix: "£", label: "Professional Costs"
+
+Example source: "67% success rate at Adjudicator level versus 41% average"
+→ Two stats: {metric: "67", suffix: "%"} and {metric: "41", suffix: "%"}
+
+═══════════════════════════════════════════════════════════════════
                     STAT GROUPING STRATEGY
 ═══════════════════════════════════════════════════════════════════
 
@@ -529,6 +633,15 @@ Return a single, complete, valid JSON object with this structure:
     const originalCount = transformedLayout.layout.length;
     transformedLayout.layout = postProcessLayout(transformedLayout.layout);
     console.log(`✅ Post-processing complete: ${originalCount} → ${transformedLayout.layout.length} sections`);
+    
+    // V5.1: Validate and filter broken components
+    console.log('🔍 Validating components...');
+    const preValidateCount = transformedLayout.layout.length;
+    transformedLayout.layout = validateLayout(transformedLayout.layout);
+    if (transformedLayout.layout.length < preValidateCount) {
+      console.warn(`⚠️ Removed ${preValidateCount - transformedLayout.layout.length} broken components`);
+    }
+    console.log(`✅ Validation complete: ${transformedLayout.layout.length} valid sections`);
 
     // Ensure theme is applied
     if (!transformedLayout.theme) {
