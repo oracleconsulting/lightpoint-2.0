@@ -583,15 +583,24 @@ function ComponentRenderer({ item, index }: ComponentRendererProps) {
       case 'ChecklistCard':
       case 'checklist':
         // Normalize items - AI might send different formats
-        const checklistItems = (props?.items || []).map((item: any, idx: number) => ({
-          number: item.number || item.step || idx + 1,
-          title: item.title || item.name || item.heading || `Step ${idx + 1}`,
-          description: item.description || item.text || item.content || ''
-        }));
+        const checklistItems = (props?.items || []).map((item: any, idx: number) => {
+          // Handle string items (V6 format from database)
+          if (typeof item === 'string') {
+            return {
+              number: idx + 1,
+              title: item,
+              description: ''
+            };
+          }
+          // Handle object items
+          return {
+            number: item.number || item.step || idx + 1,
+            title: item.title || item.name || item.heading || `Step ${idx + 1}`,
+            description: item.description || item.text || item.content || ''
+          };
+        });
         
-        if (process.env.NODE_ENV === 'development') {
-          console.log('ChecklistCard items:', checklistItems);
-        }
+        console.log('📋 ChecklistCard items:', checklistItems); // DEBUG LINE
         
         return (
           <div className="max-w-4xl mx-auto my-8 px-4">

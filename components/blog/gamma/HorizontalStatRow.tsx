@@ -68,6 +68,7 @@ export default function HorizontalStatRow({ stats, title }: HorizontalStatRowPro
       
       <div className={`grid ${gridCols} gap-6 md:gap-10`}>
         {stats.map((stat) => {
+          console.log('🔢 Rendering stat:', stat); // DEBUG LINE
           const safeColor = stat.color && colorClasses[stat.color] ? stat.color : 'blue';
           const colors = colorClasses[safeColor];
           const statKey = `${stat.metric}-${stat.label}`.replaceAll(/\s+/g, '-');
