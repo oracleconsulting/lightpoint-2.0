@@ -145,6 +145,13 @@ export const blogRouter = router({
         .select()
         .single();
 
+      // Debug: Log what we saved
+      if (input.structuredLayout) {
+        console.log('💾 [tRPC blog.create] Saved structured_layout:');
+        console.log('💾 Component count:', input.structuredLayout?.layout?.length || 0);
+        console.log('💾 TextSection count:', input.structuredLayout?.layout?.filter((c: any) => c.type === 'TextSection').length || 0);
+      }
+
       if (error) {
         console.error('❌ Error creating blog post:', {
           message: error.message,
@@ -202,7 +209,14 @@ export const blogRouter = router({
       }
       if (input.data.scheduledFor !== undefined) updateData.scheduled_for = input.data.scheduledFor;
       if (input.data.autoPublish !== undefined) updateData.auto_publish = input.data.autoPublish;
-      if (input.data.structuredLayout !== undefined) updateData.structured_layout = input.data.structuredLayout;
+      if (input.data.structuredLayout !== undefined) {
+        updateData.structured_layout = input.data.structuredLayout;
+        // Debug: Log what we're saving
+        console.log('💾 [tRPC blog.update] Saving structured_layout:');
+        console.log('💾 Component count:', input.data.structuredLayout?.layout?.length || 0);
+        console.log('💾 TextSection count:', input.data.structuredLayout?.layout?.filter((c: any) => c.type === 'TextSection').length || 0);
+        console.log('💾 Component types:', input.data.structuredLayout?.layout?.map((c: any) => c.type) || []);
+      }
 
       const { data, error } = await supabase
         .from('blog_posts')

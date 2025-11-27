@@ -98,9 +98,12 @@ export function VisualTransformer({
       console.log('📦 TextSection count:', 
         transformedLayout.layout?.filter((c: any) => c.type === 'TextSection').length || 0
       );
-      console.log('📦 Full layout being passed:', JSON.stringify(transformedLayout).substring(0, 500));
       
-      onTransformed(transformedLayout);
+      // CRITICAL: Make a deep copy to prevent any mutation issues
+      const layoutToSave = JSON.parse(JSON.stringify(transformedLayout));
+      console.log('📦 Deep copy component count:', layoutToSave.layout?.length || 0);
+      
+      onTransformed(layoutToSave);
       setShowPreview(false);
     }
   };
