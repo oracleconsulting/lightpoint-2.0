@@ -773,6 +773,38 @@
     color: rgba(255, 255, 255, 0.8);
   }
 
+  /* V5 Page-break handling for PDF rendering */
+  .gamma-blog-container > div > * {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Ensure stat rows have top padding when at page start */
+  .horizontal-stat-row,
+  .stat-card-group {
+    padding-top: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  /* First element after page break gets extra padding */
+  @media print {
+    .horizontal-stat-row,
+    .stat-card-group,
+    .stat-card {
+      padding-top: 2rem;
+      break-inside: avoid;
+    }
+  }
+
+  /* Ensure content doesn't clip into header area */
+  .gamma-blog-container {
+    padding-top: 1rem;
+  }
+
+  .gamma-blog-container > div:first-child {
+    padding-top: 0.5rem;
+  }
+
   /* ═══════════════════════════════════════════════════════════════════
      GAMMA V4 - CONFIGURABLE THEME SYSTEM
      ═══════════════════════════════════════════════════════════════════ */

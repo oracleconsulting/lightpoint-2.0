@@ -10,21 +10,26 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300; // 5 minutes for complex transformations
 
-// V5 Post-processor: Convert to HorizontalStatRow format
+// V5 Post-processor: Convert to HorizontalStatRow format with smart grouping
 function postProcessLayout(layout: any[]): any[] {
   const result: any[] = [];
   let statBuffer: any[] = [];
+  let textBuffer: any[] = []; // Track text between stats for smart grouping
   
-  const flushStatBuffer = () => {
+  const flushStatBuffer = (forceFlush = false) => {
     if (statBuffer.length >= 2) {
+      // First, add any accumulated text
+      textBuffer.forEach(t => result.push(t));
+      textBuffer = [];
+      
       // Convert to HorizontalStatRow (V5 preferred)
       result.push({
         type: 'HorizontalStatRow',
         props: {
-          stats: statBuffer.map(s => ({
+          stats: statBuffer.slice(0, 3).map(s => ({
             metric: s.metric,
             label: s.label,
-            sublabel: s.context,
+            sublabel: s.context || s.sublabel,
             prefix: s.prefix,
             suffix: s.suffix,
             color: s.color || 'blue',
@@ -32,44 +37,71 @@ function postProcessLayout(layout: any[]): any[] {
         },
         sourceText: statBuffer.map((s: any) => s?.sourceText || '').join(' ')
       });
+      // Handle overflow (more than 3 stats)
+      if (statBuffer.length > 3) {
+        result.push({
+          type: 'HorizontalStatRow',
+          props: {
+            stats: statBuffer.slice(3).map(s => ({
+              metric: s.metric,
+              label: s.label,
+              sublabel: s.context || s.sublabel,
+              prefix: s.prefix,
+              suffix: s.suffix,
+              color: s.color || 'blue',
+            }))
+          }
+        });
+      }
     } else if (statBuffer.length === 1) {
+      // Add text first, then the standalone stat
+      textBuffer.forEach(t => result.push(t));
+      textBuffer = [];
       result.push({
         type: 'StatCard',
         props: { ...statBuffer[0], standalone: true },
         sourceText: statBuffer[0]?.sourceText
       });
+    } else if (forceFlush) {
+      // Just flush text if no stats
+      textBuffer.forEach(t => result.push(t));
+      textBuffer = [];
     }
     statBuffer = [];
   };
   
-  for (const item of layout) {
+  for (let i = 0; i < layout.length; i++) {
+    const item = layout[i];
+    
     if (item.type === 'StatCard') {
       statBuffer.push(item.props);
-    } else if (item.type === 'StatCardGroup') {
-      // Convert StatCardGroup to HorizontalStatRow
-      flushStatBuffer();
-      result.push({
-        type: 'HorizontalStatRow',
-        props: {
-          stats: (item.props?.stats || []).map((s: any) => ({
-            metric: s.metric,
-            label: s.label,
-            sublabel: s.context,
-            prefix: s.prefix,
-            suffix: s.suffix,
-            color: s.color || 'blue',
-          })),
-          title: item.props?.title
-        },
-        sourceText: item.sourceText
-      });
-    } else if (item.type === 'HorizontalStatRow' || item.type === 'DonutChart' || item.type === 'TableTimeline') {
-      // V5 components - pass through as-is
-      flushStatBuffer();
+    } else if (item.type === 'StatCardGroup' || item.type === 'HorizontalStatRow') {
+      // Already grouped - flush any pending and add
+      flushStatBuffer(true);
+      if (item.type === 'StatCardGroup') {
+        result.push({
+          type: 'HorizontalStatRow',
+          props: {
+            stats: (item.props?.stats || []).map((s: any) => ({
+              metric: s.metric,
+              label: s.label,
+              sublabel: s.context || s.sublabel,
+              prefix: s.prefix,
+              suffix: s.suffix,
+              color: s.color || 'blue',
+            })),
+            title: item.props?.title
+          },
+          sourceText: item.sourceText
+        });
+      } else {
+        result.push(item);
+      }
+    } else if (item.type === 'DonutChart' || item.type === 'TableTimeline') {
+      flushStatBuffer(true);
       result.push(item);
     } else if (item.type === 'Timeline' && item.props?.events?.length > 0) {
-      // Convert Timeline to TableTimeline
-      flushStatBuffer();
+      flushStatBuffer(true);
       result.push({
         type: 'TableTimeline',
         props: {
@@ -83,13 +115,28 @@ function postProcessLayout(layout: any[]): any[] {
         },
         sourceText: item.sourceText
       });
+    } else if (item.type === 'TextSection') {
+      // Look ahead: if there's a stat within the next 2 items, buffer this text
+      const nextItems = layout.slice(i + 1, i + 3);
+      const hasUpcomingStat = nextItems.some(n => 
+        n.type === 'StatCard' || n.type === 'StatCardGroup' || n.type === 'HorizontalStatRow'
+      );
+      
+      if (statBuffer.length > 0 && hasUpcomingStat) {
+        // We have stats and more coming - buffer this text
+        textBuffer.push(item);
+      } else {
+        // No smart grouping needed
+        flushStatBuffer(true);
+        result.push(item);
+      }
     } else {
-      flushStatBuffer();
+      flushStatBuffer(true);
       result.push(item);
     }
   }
   
-  flushStatBuffer();
+  flushStatBuffer(true);
   return result;
 }
 
@@ -224,6 +271,58 @@ Available components:
 3. Alternate: Text → Visual → Text → Visual
 4. NEVER output consecutive StatCard components
 5. Every component must have sourceText field
+
+═══════════════════════════════════════════════════════════════════
+                    🚨 CONTENT PRESERVATION - CRITICAL 🚨
+═══════════════════════════════════════════════════════════════════
+
+YOU MUST INCLUDE ALL OF THE FOLLOWING FROM THE SOURCE:
+
+1. ALL STATISTICS - Every number/percentage mentioned must appear
+   - Opening stats (complaints, resolution rates)
+   - Middle stats (processing delays, compensation amounts)
+   - CLOSING STATS (success rates, final metrics) - DO NOT OMIT
+
+2. ALL CHECKLISTS - If source has action items/steps, use ChecklistCard
+   - Professional fee claim steps
+   - Evidence requirements
+   - Any numbered lists
+
+3. ALL QUOTES - Use CalloutBox for Charter quotes, key statements
+
+4. CLOSING SECTION - The final paragraph often has key stats:
+   - Success rates (e.g., "67% success rate")
+   - Comparison metrics (e.g., "vs 41% average")
+   - Call-to-action content
+
+RULE: If the source mentions a number, it MUST appear in your output.
+RULE: If the source has a checklist/steps, use ChecklistCard.
+RULE: The LAST stats in the source are often the most important - DO NOT DROP THEM.
+
+═══════════════════════════════════════════════════════════════════
+                    STAT GROUPING STRATEGY
+═══════════════════════════════════════════════════════════════════
+
+Group stats that are THEMATICALLY RELATED, even if separated by text:
+
+Example: These should be ONE HorizontalStatRow:
+- "35,000 processing delay cases"
+- "41% upheld at Adjudicator"  
+- "£103,063 compensation awarded"
+
+All relate to: ADJUDICATOR OUTCOMES
+
+Output:
+{
+  "type": "HorizontalStatRow",
+  "props": {
+    "stats": [
+      { "metric": "35,000", "label": "Processing Delays", "color": "red" },
+      { "metric": "41", "suffix": "%", "label": "Upheld", "color": "green" },
+      { "metric": "103K", "prefix": "£", "label": "Compensation", "color": "cyan" }
+    ]
+  }
+}
 
 ═══════════════════════════════════════════════════════════════════
                     UK STANDARDS
