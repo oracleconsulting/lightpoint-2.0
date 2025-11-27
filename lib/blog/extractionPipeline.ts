@@ -580,6 +580,99 @@ function sentimentToColor(sentiment: string): string {
 }
 
 /**
+ * Known section heading patterns that appear inline in text
+ * These should be split out as SectionHeading components
+ */
+const INLINE_HEADING_PATTERNS = [
+  // Specific known headings from HMRC content
+  /^(The internal resolution trap)\s+/i,
+  /^(Why most complaints fail(?:\s+at first contact)?)\s+/i,
+  /^(The October 2024 (?:change|game-?changer))\s+/i,
+  /^(Professional fee recovery(?:\s+that works)?)\s+/i,
+  /^(Making complaints worth the effort)\s+/i,
+  /^(The structure that actually works)\s+/i,
+  /^(Missing the target(?:\s+entirely)?)\s+/i,
+  /^(No evidence trail)\s+/i,
+  /^(Wrong resolution request)\s+/i,
+  // Generic patterns - heading followed by capital letter
+  /^(The\s+\w+(?:\s+\w+)?\s+(?:trap|change|problem|solution|resolution))\s+(?=[A-Z])/,
+  /^(Why\s+(?:most\s+)?\w+\s+fail(?:s)?(?:\s+\w+)*)\s+(?=[A-Z])/,
+  /^(\w+\s+fee\s+recovery(?:\s+that\s+works)?)\s+(?=[A-Z])/i,
+];
+
+/**
+ * Split a paragraph that contains an inline heading into separate components
+ * Returns array of components (SectionHeading + TextSection)
+ */
+function splitInlineHeading(text: string, headingCount: number): MappedComponent[] | null {
+  for (const pattern of INLINE_HEADING_PATTERNS) {
+    const match = text.match(pattern);
+    if (match && match.index === 0) {
+      const headingText = match[1].trim();
+      const remainingText = text.substring(match[0].length).trim();
+      
+      if (remainingText.length > 20) {
+        console.log(`🔀 Split inline heading: "${headingText}" from paragraph`);
+        
+        const components: MappedComponent[] = [];
+        
+        // Add section divider before heading (except first)
+        if (headingCount > 0) {
+          components.push({
+            type: 'SectionDivider',
+            props: { style: 'gradient', accent: 'cyan' },
+          });
+        }
+        
+        // Add the heading
+        components.push({
+          type: 'SectionHeading',
+          props: {
+            title: headingText,
+            icon: getHeadingIcon(headingText),
+            accent: headingCount % 2 === 0 ? 'cyan' : 'purple',
+          },
+        });
+        
+        // Add the remaining text
+        components.push({
+          type: 'TextSection',
+          props: {
+            content: `<p>${applyInlineHighlighting(remainingText)}</p>`,
+          },
+        });
+        
+        return components;
+      }
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Remove consumed content from text (content that's already in visual components)
+ */
+function removeConsumedContent(text: string, contentToRemove: Set<string>): string {
+  let result = text;
+  
+  for (const pattern of contentToRemove) {
+    if (pattern.length > 10) {
+      // Create regex that matches the pattern followed by optional whitespace
+      const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(escaped + '\\s*', 'gi');
+      const before = result;
+      result = result.replace(regex, '');
+      if (result !== before) {
+        console.log(`🧹 Removed consumed content: "${pattern.substring(0, 30)}..."`);
+      }
+    }
+  }
+  
+  return result.trim();
+}
+
+/**
  * Determine appropriate icon for a section heading based on content
  */
 function getHeadingIcon(text: string): string | undefined {
@@ -773,8 +866,26 @@ export function mapToComponents(
       return;
     }
     
-    // Paragraph - apply inline highlighting
-    const highlightedText = applyInlineHighlighting(block.text);
+    // FIRST: Remove any consumed content from the text
+    let cleanedText = removeConsumedContent(block.text, contentToSkip);
+    
+    // Skip if nothing left after cleaning
+    if (cleanedText.length < 20) {
+      console.log(`⏭️ Skipping empty/short block after cleaning`);
+      return;
+    }
+    
+    // SECOND: Check if paragraph starts with an inline heading
+    const inlineHeadingComponents = splitInlineHeading(cleanedText, headingCount);
+    if (inlineHeadingComponents) {
+      headingCount++;
+      components.push(...inlineHeadingComponents);
+      paragraphCount++;
+      return;
+    }
+    
+    // Regular paragraph - apply inline highlighting
+    const highlightedText = applyInlineHighlighting(cleanedText);
     components.push({
       type: 'TextSection',
       props: {

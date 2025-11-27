@@ -19,6 +19,7 @@ interface User {
 interface UserContextType {
   currentUser: User | null;
   setCurrentUser: (user: User | null) => void;
+  isLoading: boolean;         // Auth/profile still loading
   isAdmin: boolean;           // Practice-level admin
   isManager: boolean;         // Practice-level manager
   isSuperAdmin: boolean;      // Product-level superadmin (info@lightpoint.uk)
@@ -58,6 +59,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   }, [authUser, profile]);
 
+  // Loading state - true while auth or profile is loading
+  const isLoading = authLoading || (!!authUser && profileLoading);
+  
   const isAdmin = currentUser?.role === 'admin';
   const isManager = currentUser?.role === 'manager' || isAdmin;
   const isSuperAdmin = currentUser?.is_super_admin || false;
@@ -77,6 +81,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       value={{
         currentUser,
         setCurrentUser,
+        isLoading,
         isAdmin,
         isManager,
         isSuperAdmin,

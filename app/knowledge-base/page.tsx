@@ -32,7 +32,7 @@ import { logger } from '../../lib/logger';
 
 
 export default function KnowledgeBasePage() {
-  const { currentUser, isAdmin, isManager, isSuperAdmin, canManageKnowledgeBase } = useUser();
+  const { currentUser, isAdmin, isManager, isSuperAdmin, canManageKnowledgeBase, isLoading: isAuthLoading } = useUser();
   const [searchQuery, setSearchQuery] = useState('');
   const [uploadingFiles, setUploadingFiles] = useState<File[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<'CRG' | 'Charter' | 'Precedents' | 'Forms' | 'Legislation' | 'Other'>('CRG');
@@ -44,6 +44,18 @@ export default function KnowledgeBasePage() {
   const uploadForComparison = trpc.knowledge.uploadForComparison.useMutation();
   const approveStaged = trpc.knowledge.approveStaged.useMutation();
   const utils = trpc.useUtils();
+
+  // Show loading while checking auth/permissions
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          <p className="text-muted-foreground">Checking permissions...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Check permissions - now requires SUPERADMIN for KB management
   if (!canManageKnowledgeBase) {
