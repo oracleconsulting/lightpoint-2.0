@@ -611,6 +611,169 @@
   }
 
   /* ═══════════════════════════════════════════════════════════════════
+     GAMMA V5 - VISUAL PARITY SYSTEM
+     ═══════════════════════════════════════════════════════════════════ */
+
+  /* V5 Premium card styling */
+  .gamma-card {
+    background: linear-gradient(
+      135deg,
+      rgba(30, 41, 59, 0.8) 0%,
+      rgba(15, 23, 42, 0.9) 100%
+    );
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    box-shadow: 
+      0 4px 6px -1px rgba(0, 0, 0, 0.2),
+      0 2px 4px -1px rgba(0, 0, 0, 0.1),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(8px);
+    transition: all 0.3s ease;
+  }
+
+  .gamma-card:hover {
+    border-color: rgba(59, 130, 246, 0.3);
+    box-shadow: 
+      0 8px 25px -5px rgba(0, 0, 0, 0.3),
+      0 0 20px rgba(59, 130, 246, 0.1),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
+  }
+
+  /* V5 Metric glow effect */
+  .metric-glow {
+    text-shadow: 0 0 30px currentColor;
+  }
+
+  /* V5 Subtle gradient text */
+  .gradient-text {
+    background: linear-gradient(135deg, #60A5FA 0%, #34D399 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* V5 Accent bar */
+  .accent-bar {
+    position: relative;
+  }
+
+  .accent-bar::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(180deg, #3B82F6 0%, #06B6D4 100%);
+    border-radius: 2px;
+  }
+
+  /* V5 HorizontalStatRow styling */
+  .horizontal-stat-row {
+    display: grid;
+    gap: 2.5rem;
+    text-align: center;
+  }
+
+  .horizontal-stat-row .stat-metric {
+    font-size: 3rem;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+
+  .horizontal-stat-row .stat-label {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: white;
+    margin-top: 0.5rem;
+  }
+
+  .horizontal-stat-row .stat-divider {
+    width: 4rem;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    margin: 0.75rem auto;
+  }
+
+  .horizontal-stat-row .stat-sublabel {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.5);
+    max-width: 180px;
+    margin: 0 auto;
+    line-height: 1.5;
+  }
+
+  /* V5 DonutChart styling */
+  .donut-chart-container {
+    position: relative;
+  }
+
+  .donut-chart-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+
+  .donut-chart-center-value {
+    font-size: 2.5rem;
+    font-weight: 900;
+    color: white;
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+  }
+
+  .donut-chart-center-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(255, 255, 255, 0.6);
+    margin-top: 0.25rem;
+  }
+
+  /* V5 TableTimeline styling */
+  .table-timeline {
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(8px);
+  }
+
+  .table-timeline tr {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    transition: background-color 0.2s ease;
+  }
+
+  .table-timeline tr:last-child {
+    border-bottom: none;
+  }
+
+  .table-timeline tr:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+
+  .table-timeline td {
+    padding: 1rem 1.5rem;
+  }
+
+  .table-timeline .date-cell {
+    width: 140px;
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: #22D3EE; /* cyan-400 */
+  }
+
+  .table-timeline .content-cell {
+    color: rgba(255, 255, 255, 0.8);
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════
      GAMMA V4 - CONFIGURABLE THEME SYSTEM
      ═══════════════════════════════════════════════════════════════════ */
 
