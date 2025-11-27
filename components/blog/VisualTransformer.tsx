@@ -52,6 +52,17 @@ export function VisualTransformer({
         }),
       });
 
+      // Check if response is OK before parsing
+      if (!response.ok) {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `Server error: ${response.status}`);
+        } else {
+          throw new Error(`Server error: ${response.status} ${response.statusText}`);
+        }
+      }
+
       const result = await response.json();
 
       if (result.success && result.layout) {
@@ -61,6 +72,7 @@ export function VisualTransformer({
         setError(result.error || 'Failed to transform content');
       }
     } catch (err: any) {
+      console.error('Transform error:', err);
       setError(err.message || 'Failed to transform content');
     } finally {
       setIsTransforming(false);
