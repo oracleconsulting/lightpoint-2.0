@@ -48,23 +48,29 @@ export default function HeroGradient({
 
       {/* Content */}
       <div className="relative z-10 max-w-6xl mx-auto px-6 text-center">
-        {/* Headline */}
+        {/* Headline - Large, impactful, responsive */}
         <motion.h1
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-white via-cyan-100 to-blue-100 
-                     bg-clip-text text-transparent leading-tight"
+          className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl 
+                     font-bold mb-6 md:mb-8
+                     bg-gradient-to-r from-white via-cyan-100 to-blue-100 
+                     bg-clip-text text-transparent 
+                     leading-[1.1] tracking-tight"
         >
           {headline}
         </motion.h1>
 
-        {/* Subheadline */}
+        {/* Subheadline - Larger, more readable */}
         <motion.p
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.4 }}
-          className="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto leading-relaxed"
+          className="text-lg sm:text-xl md:text-2xl lg:text-[1.625rem]
+                     text-gray-300 mb-8 md:mb-10
+                     max-w-4xl mx-auto 
+                     leading-relaxed"
         >
           {subheadline}
         </motion.p>

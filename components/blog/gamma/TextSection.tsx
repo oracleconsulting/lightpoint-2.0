@@ -12,30 +12,49 @@ export default function TextSection({ content, style = 'single-column' }: TextSe
     <div 
       className={`
         w-full
-        ${style === 'two-column' ? 'md:columns-2 md:gap-12' : ''}
+        ${style === 'two-column' ? 'lg:columns-2 lg:gap-16' : ''}
       `}
     >
-      {/* Clean, flowing text - no background, generous line height */}
+      {/* Optimized typography - 18-20px body, generous line height */}
       <div 
         className="
-          text-lg md:text-xl leading-relaxed
+          text-lg md:text-xl lg:text-[1.25rem]
+          leading-[1.75] md:leading-[1.8]
+          tracking-[-0.01em]
           text-slate-300
-          [&>p]:mb-6
-          [&>p]:text-lg [&>p]:md:text-xl
-          [&>p]:leading-[1.85]
-          [&>h2]:text-2xl [&>h2]:md:text-3xl [&>h2]:font-bold [&>h2]:text-white [&>h2]:mt-10 [&>h2]:mb-5
-          [&>h3]:text-xl [&>h3]:md:text-2xl [&>h3]:font-semibold [&>h3]:text-white [&>h3]:mt-8 [&>h3]:mb-4
+          
+          [&>p]:mb-6 [&>p]:md:mb-8
+          [&>p]:text-lg [&>p]:md:text-xl [&>p]:lg:text-[1.25rem]
+          [&>p]:leading-[1.75] [&>p]:md:leading-[1.8]
+          
+          [&>h2]:text-2xl [&>h2]:sm:text-3xl [&>h2]:md:text-4xl 
+          [&>h2]:font-bold [&>h2]:text-white 
+          [&>h2]:mt-12 [&>h2]:md:mt-16 [&>h2]:mb-6 [&>h2]:md:mb-8
+          [&>h2]:leading-tight [&>h2]:tracking-tight
+          
+          [&>h3]:text-xl [&>h3]:sm:text-2xl [&>h3]:md:text-[1.75rem]
+          [&>h3]:font-semibold [&>h3]:text-white 
+          [&>h3]:mt-10 [&>h3]:md:mt-12 [&>h3]:mb-4 [&>h3]:md:mb-6
+          [&>h3]:leading-snug
+          
           [&>strong]:text-white [&>strong]:font-semibold
           [&_strong]:text-white [&_strong]:font-semibold
           [&>em]:text-cyan-300
           [&_em]:text-cyan-300
-          [&>a]:text-cyan-400 [&>a]:underline [&>a]:underline-offset-2 hover:[&>a]:text-cyan-300
-          [&_a]:text-cyan-400 [&_a]:underline [&_a]:underline-offset-2 hover:[&_a]:text-cyan-300
-          [&>ul]:list-disc [&>ul]:ml-6 [&>ul]:my-5
-          [&>ol]:list-decimal [&>ol]:ml-6 [&>ol]:my-5
-          [&>li]:mb-3 [&>li]:text-lg [&>li]:md:text-xl
-          [&_li]:mb-3 [&_li]:text-lg [&_li]:md:text-xl
-          [&>blockquote]:border-l-4 [&>blockquote]:border-cyan-500/60 [&>blockquote]:pl-5 [&>blockquote]:italic [&>blockquote]:text-slate-300 [&>blockquote]:my-8
+          
+          [&>a]:text-cyan-400 [&>a]:underline [&>a]:underline-offset-4 hover:[&>a]:text-cyan-300
+          [&_a]:text-cyan-400 [&_a]:underline [&_a]:underline-offset-4 hover:[&_a]:text-cyan-300
+          
+          [&>ul]:list-disc [&>ul]:ml-6 [&>ul]:my-6 [&>ul]:md:my-8
+          [&>ol]:list-decimal [&>ol]:ml-6 [&>ol]:my-6 [&>ol]:md:my-8
+          [&>li]:mb-3 [&>li]:md:mb-4 [&>li]:text-lg [&>li]:md:text-xl [&>li]:leading-relaxed
+          [&_li]:mb-3 [&_li]:md:mb-4 [&_li]:text-lg [&_li]:md:text-xl [&_li]:leading-relaxed
+          
+          [&>blockquote]:border-l-4 [&>blockquote]:border-cyan-500/60 
+          [&>blockquote]:pl-6 [&>blockquote]:md:pl-8
+          [&>blockquote]:italic [&>blockquote]:text-slate-300 
+          [&>blockquote]:my-8 [&>blockquote]:md:my-12
+          [&>blockquote]:text-xl [&>blockquote]:md:text-2xl
         "
         dangerouslySetInnerHTML={{ __html: content }}
       />

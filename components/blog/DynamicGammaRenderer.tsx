@@ -203,14 +203,15 @@ export default function DynamicGammaRenderer({
   const backgroundStyle = layoutTheme?.colors?.backgroundGradient || 
     resolvedTheme.colors.pageBgGradient;
 
-  // Component-specific width classes for better flow
+  // Component-specific width classes for optimal reading
   const getContainerClass = (type: string): string => {
     switch (type) {
       case 'HeroGradient':
       case 'hero':
-        return 'w-full'; // Full bleed for hero
+        return 'w-full px-4 sm:px-6 lg:px-8'; // Full bleed for hero
       case 'HorizontalStatRow':
       case 'StatCardGroup':
+        return 'max-w-6xl mx-auto px-4 sm:px-6 lg:px-8'; // Wide for stats
       case 'TableTimeline':
       case 'Timeline':
       case 'NumberedProcessFlowV6':
@@ -221,45 +222,46 @@ export default function DynamicGammaRenderer({
       case 'ComparisonChart':
       case 'DonutChart':
       case 'HorizontalBarChart':
-        return 'max-w-6xl mx-auto px-4 lg:px-8'; // Wide for visual elements
+        return 'max-w-5xl mx-auto px-4 sm:px-6 lg:px-8'; // Wide for visual elements
       case 'TextSection':
       case 'text':
+        return 'max-w-4xl mx-auto px-4 sm:px-6 lg:px-8'; // Optimal reading width (~896px)
       case 'QuoteCalloutV6':
       case 'QuoteCallout':
       case 'CalloutBox':
-        return 'max-w-4xl mx-auto px-6 lg:px-8'; // Comfortable reading width
+        return 'max-w-3xl mx-auto px-4 sm:px-6 lg:px-8'; // Narrower for emphasis
       case 'SectionHeading':
-        return 'max-w-5xl mx-auto px-6 lg:px-8'; // Slightly wider for headings
+        return 'max-w-4xl mx-auto px-4 sm:px-6 lg:px-8'; // Match text width
       default:
-        return 'max-w-5xl mx-auto px-6 lg:px-8'; // Default
+        return 'max-w-5xl mx-auto px-4 sm:px-6 lg:px-8'; // Default
     }
   };
 
-  // Component-specific spacing for natural flow
+  // Component-specific spacing for natural flow - MORE GENEROUS
   const getSpacingClass = (type: string, index: number): string => {
     switch (type) {
       case 'HeroGradient':
       case 'hero':
-        return 'mb-12'; // Big gap after hero
+        return 'mb-12 md:mb-16'; // Big gap after hero
       case 'SectionHeading':
-        return 'mt-14 mb-4'; // Space before new sections
+        return 'mt-12 md:mt-16 mb-4 md:mb-6'; // Space before new sections
       case 'HorizontalStatRow':
       case 'StatCardGroup':
-        return 'my-10'; // Medium gap around stats
+        return 'my-10 md:my-14'; // Medium gap around stats
       case 'TextSection':
       case 'text':
-        return index === 0 ? 'mb-6' : 'my-4'; // Tighter for text flow
+        return index === 0 ? 'mb-6 md:mb-8' : 'my-4 md:my-6'; // Tighter for text flow
       case 'QuoteCalloutV6':
       case 'QuoteCallout':
-        return 'my-8'; // Pull quotes get breathing room
+        return 'my-8 md:my-12'; // Pull quotes get breathing room
       case 'TableTimeline':
       case 'Timeline':
       case 'NumberedProcessFlowV6':
       case 'ProcessFlow':
       case 'GridChecklist':
-        return 'my-12'; // Special components get space
+        return 'my-10 md:my-14'; // Special components get space
       default:
-        return 'my-6';
+        return 'my-6 md:my-8';
     }
   };
 
@@ -513,7 +515,12 @@ function ComponentRenderer({ item, index }: ComponentRendererProps) {
 
       case 'SectionHeading':
         return (
-          <h2 className="text-3xl font-bold text-white mt-12 mb-6 max-w-4xl mx-auto px-4">
+          <h2 className="
+            text-2xl sm:text-3xl md:text-4xl lg:text-[2.5rem]
+            font-bold text-white 
+            leading-tight tracking-tight
+            w-full
+          ">
             {props?.text || ''}
           </h2>
         );

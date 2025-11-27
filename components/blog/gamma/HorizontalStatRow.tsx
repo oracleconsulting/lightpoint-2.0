@@ -67,7 +67,7 @@ export default function HorizontalStatRow({ stats, title }: HorizontalStatRowPro
       )}
       
       {/* Subtle background panel for visual grouping - very transparent */}
-      <div className={`grid ${gridCols} gap-8 lg:gap-12 py-8 px-4 rounded-2xl bg-white/[0.02]`}>
+      <div className={`grid ${gridCols} gap-8 md:gap-12 lg:gap-16 py-10 md:py-14 px-4 md:px-6 rounded-2xl bg-white/[0.02]`}>
         {stats.map((stat) => {
           const safeColor = stat.color && colorClasses[stat.color] ? stat.color : 'cyan';
           const colors = colorClasses[safeColor];
@@ -82,15 +82,16 @@ export default function HorizontalStatRow({ stats, title }: HorizontalStatRowPro
               viewport={{ once: true }}
               transition={{ duration: 0.4, delay: stats.indexOf(stat) * 0.1 }}
             >
-              {/* Large metric with glow */}
+              {/* Large metric with glow - BIGGER for impact */}
               <div 
                 className={`
-                  text-4xl md:text-5xl lg:text-6xl 
+                  text-4xl sm:text-5xl md:text-6xl lg:text-7xl
                   font-black 
                   ${colors.text}
                   ${colors.glow}
-                  mb-3
+                  mb-3 md:mb-4
                   tracking-tight
+                  leading-none
                 `}
               >
                 {stat.prefix}
@@ -98,14 +99,14 @@ export default function HorizontalStatRow({ stats, title }: HorizontalStatRowPro
                 {stat.suffix}
               </div>
               
-              {/* Primary label */}
-              <div className="text-base md:text-lg font-semibold text-white mb-3">
+              {/* Primary label - larger */}
+              <div className="text-base sm:text-lg md:text-xl font-semibold text-white mb-2 md:mb-3 uppercase tracking-wide">
                 {stat.label}
               </div>
               
-              {/* Sublabel / context - no divider line */}
+              {/* Sublabel / context */}
               {stat.sublabel && (
-                <div className="text-sm text-white/50 leading-relaxed max-w-[200px] mx-auto">
+                <div className="text-sm md:text-base text-white/50 leading-relaxed max-w-[220px] mx-auto">
                   {stat.sublabel}
                 </div>
               )}

@@ -184,23 +184,24 @@ export function QuoteCalloutV6({ text, attribution, accent = 'cyan', icon = true
       whileInView={{ opacity: 1, x: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.5 }}
-      className={`p-6 md:p-8 border-l-4 ${c.border} ${c.bg} rounded-r-lg w-full`}
+      className={`py-8 md:py-10 px-6 md:px-8 border-l-4 ${c.border} ${c.bg} rounded-r-lg w-full`}
     >
-      <div className="flex gap-4">
+      <div className="flex gap-4 md:gap-6">
         {icon && (
-          <div className={`${c.icon} text-2xl flex-shrink-0 mt-1`}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+          <div className={`${c.icon} text-3xl md:text-4xl flex-shrink-0 mt-1`}>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
               <path d="M4 4h6v6H4V4zm0 10h6v6H4v-6zm10-10h6v6h-6V4zm0 10h6v6h-6v-6z" opacity="0.3"/>
               <path d="M3 3v8h8V3H3zm6 6H5V5h4v4zm-6 4v8h8v-8H3zm6 6H5v-4h4v4zm4-16v8h8V3h-8zm6 6h-4V5h4v4zm-6 4v8h8v-8h-8zm6 6h-4v-4h4v4z"/>
             </svg>
           </div>
         )}
         <div>
-          <p className="text-slate-200 text-lg md:text-xl leading-relaxed">
+          {/* Larger quote text for impact */}
+          <p className="text-slate-200 text-xl md:text-2xl lg:text-[1.625rem] leading-relaxed italic">
             &ldquo;{text}&rdquo;
           </p>
           {attribution && (
-            <p className={`${c.text} text-sm mt-4 font-medium`}>
+            <p className={`${c.text} text-base md:text-lg mt-5 md:mt-6 font-medium not-italic`}>
               — {attribution}
             </p>
           )}
