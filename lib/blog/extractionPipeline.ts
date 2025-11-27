@@ -95,21 +95,21 @@ export interface ExtractionResult {
 function splitIntoSentences(text: string): string[] {
   // Handle common abbreviations that shouldn't be split
   const protectedText = text
-    .replaceAll('Mr.', 'Mr##')
-    .replaceAll('Mrs.', 'Mrs##')
-    .replaceAll('Dr.', 'Dr##')
-    .replaceAll('Ms.', 'Ms##')
-    .replaceAll('vs.', 'vs##')
-    .replaceAll('etc.', 'etc##')
-    .replaceAll('i.e.', 'i##e##')
-    .replaceAll('e.g.', 'e##g##')
-    .replaceAll('gov.uk', 'gov##uk');
+    .replace(/Mr\./g, 'Mr##')
+    .replace(/Mrs\./g, 'Mrs##')
+    .replace(/Dr\./g, 'Dr##')
+    .replace(/Ms\./g, 'Ms##')
+    .replace(/vs\./g, 'vs##')
+    .replace(/etc\./g, 'etc##')
+    .replace(/i\.e\./g, 'i##e##')
+    .replace(/e\.g\./g, 'e##g##')
+    .replace(/gov\.uk/g, 'gov##uk');
   
   // Split on sentence endings
   const sentences = protectedText
     .split(/(?<=[.!?])\s+(?=[A-Z"'])/)
     .map(s => s
-      .replaceAll('##', '.')
+      .replace(/##/g, '.')
       .trim()
     )
     .filter(s => s.length > 10);
@@ -141,11 +141,14 @@ function isLikelyHeading(sentence: string): boolean {
 }
 
 /**
- * Group sentences into paragraphs (2-4 sentences each)
+ * Group sentences into paragraphs (2-3 sentences each for readability)
+ * 
+ * CRITICAL: Creates smaller, more digestible paragraphs
  */
 function groupIntoParagraphs(sentences: string[]): { type: 'heading' | 'paragraph'; text: string }[] {
   const result: { type: 'heading' | 'paragraph'; text: string }[] = [];
   let currentParagraph: string[] = [];
+  let currentCharCount = 0;
   
   sentences.forEach((sentence, idx) => {
     // Check if this looks like a heading
@@ -154,23 +157,35 @@ function groupIntoParagraphs(sentences: string[]): { type: 'heading' | 'paragrap
       if (currentParagraph.length > 0) {
         result.push({ type: 'paragraph', text: currentParagraph.join(' ') });
         currentParagraph = [];
+        currentCharCount = 0;
       }
       result.push({ type: 'heading', text: sentence });
       return;
     }
     
     currentParagraph.push(sentence);
+    currentCharCount += sentence.length;
     
-    // Create paragraph every 3-4 sentences, or at natural break points
+    // Create paragraph based on multiple conditions:
     const nextSentence = sentences[idx + 1];
+    const isNaturalBreak = nextSentence && /^(But|However|Yet|So|The|This|That|If|When|After|Before|While|Although|Because|Since|Therefore|Meanwhile|Additionally|Furthermore|Moreover|In\s+fact|For\s+example|In\s+other\s+words)\s/i.test(nextSentence);
+    
     const shouldBreak = 
-      currentParagraph.length >= 4 ||
+      // Max 3 sentences per paragraph
+      currentParagraph.length >= 3 ||
+      // Or 2 sentences if char count is high
+      (currentParagraph.length >= 2 && currentCharCount > 300) ||
+      // Or at natural transition points
+      (currentParagraph.length >= 2 && isNaturalBreak) ||
+      // Or after a question
       (currentParagraph.length >= 2 && sentence.endsWith('?')) ||
-      (currentParagraph.length >= 3 && /\.$/.test(sentence) && nextSentence && /^(But|However|Yet|So|The|This|That|If|When)\s/.test(nextSentence));
+      // Or if single sentence is very long
+      (currentParagraph.length === 1 && sentence.length > 250);
     
     if (shouldBreak) {
       result.push({ type: 'paragraph', text: currentParagraph.join(' ') });
       currentParagraph = [];
+      currentCharCount = 0;
     }
   });
   
@@ -179,6 +194,8 @@ function groupIntoParagraphs(sentences: string[]): { type: 'heading' | 'paragrap
     result.push({ type: 'paragraph', text: currentParagraph.join(' ') });
   }
   
+  console.log(`📝 groupIntoParagraphs: ${sentences.length} sentences → ${result.length} blocks`);
+  
   return result;
 }
 
@@ -186,6 +203,7 @@ function groupIntoParagraphs(sentences: string[]): { type: 'heading' | 'paragrap
  * Smart paragraph splitting - handles ALL content formats
  * 
  * Key fix: Properly handles HTML content, markdown, and continuous text
+ * CRITICAL: Always splits long text into multiple paragraphs
  */
 function smartSplitContent(content: string): { type: 'heading' | 'paragraph'; text: string }[] {
   console.log(`📝 smartSplitContent input: ${content.length} chars`);
@@ -199,7 +217,7 @@ function smartSplitContent(content: string): { type: 'heading' | 'paragraph'; te
     .replace(/<\/p>\s*<p[^>]*>/gi, '\n\n')
     .replace(/<p[^>]*>/gi, '')
     .replace(/<\/p>/gi, '\n\n')
-    // Convert <br> tags to single newlines
+    // Convert <br> tags to newlines
     .replace(/<br\s*\/?>/gi, '\n')
     // Convert HTML headings to markdown-style
     .replace(/<h([1-6])[^>]*>(.*?)<\/h\1>/gi, (_, level, text) => `\n\n${'#'.repeat(parseInt(level))} ${text.trim()}\n\n`)
@@ -216,7 +234,18 @@ function smartSplitContent(content: string): { type: 'heading' | 'paragraph'; te
     .replace(/&#39;/g, "'")
     .trim();
   
-  console.log(`📝 After normalization: ${normalized.length} chars, ${(normalized.match(/\n\n/g) || []).length} paragraph breaks`);
+  const paragraphBreakCount = (normalized.match(/\n\n/g) || []).length;
+  console.log(`📝 After normalization: ${normalized.length} chars, ${paragraphBreakCount} paragraph breaks`);
+  
+  // CRITICAL: If content is long but has NO paragraph breaks, force sentence-based splitting
+  if (normalized.length > 500 && paragraphBreakCount < 3) {
+    console.log(`⚠️ Long content (${normalized.length} chars) with only ${paragraphBreakCount} breaks - forcing sentence split`);
+    const sentences = splitIntoSentences(normalized);
+    console.log(`📝 Sentence split: ${sentences.length} sentences`);
+    if (sentences.length >= 3) {
+      return groupIntoParagraphs(sentences);
+    }
+  }
   
   // Step 2: Split on paragraph boundaries
   const rawParts = normalized.split(/\n\n+/);
@@ -242,43 +271,51 @@ function smartSplitContent(content: string): { type: 'heading' | 'paragraph'; te
     }
     
     // Check if this "paragraph" is actually multiple paragraphs joined by single newlines
-    // This handles cases where source has single \n between paragraphs
-    if (trimmed.includes('\n') && trimmed.length > 400) {
-      // Split on single newlines and check if they look like separate paragraphs
+    if (trimmed.includes('\n') && trimmed.length > 200) {
       const subParts = trimmed.split(/\n/).filter(s => s.trim().length > 20);
       
-      // If we have multiple substantial parts, treat them as separate paragraphs
       if (subParts.length >= 2) {
         for (const subPart of subParts) {
           const subTrimmed = subPart.trim();
           if (isLikelyHeading(subTrimmed)) {
             result.push({ type: 'heading', text: subTrimmed });
           } else if (subTrimmed.length > 20) {
-            result.push({ type: 'paragraph', text: subTrimmed });
+            // If sub-part is still long, split it further
+            if (subTrimmed.length > 400) {
+              const sentences = splitIntoSentences(subTrimmed);
+              const grouped = groupIntoParagraphs(sentences);
+              result.push(...grouped);
+            } else {
+              result.push({ type: 'paragraph', text: subTrimmed });
+            }
           }
         }
         continue;
       }
     }
     
-    // Long paragraphs (500+ chars) should be split further for readability
-    if (trimmed.length > 500) {
+    // CRITICAL: Any paragraph over 300 chars should be split by sentences
+    if (trimmed.length > 300) {
       const sentences = splitIntoSentences(trimmed);
-      const grouped = groupIntoParagraphs(sentences);
-      result.push(...grouped);
-      continue;
+      if (sentences.length >= 2) {
+        const grouped = groupIntoParagraphs(sentences);
+        result.push(...grouped);
+        continue;
+      }
     }
     
     // Regular paragraph
     result.push({ type: 'paragraph', text: trimmed });
   }
   
-  // If we still have very few blocks, fall back to sentence-based splitting
-  if (result.length < 5 && content.length > 1000) {
-    console.log(`⚠️ Only ${result.length} blocks from ${content.length} chars - falling back to sentence splitting`);
+  // CRITICAL: If we still have very few blocks, ALWAYS fall back to sentence splitting
+  if (result.length < 8 && content.length > 800) {
+    console.log(`⚠️ Only ${result.length} blocks from ${content.length} chars - forcing sentence splitting`);
     const sentences = splitIntoSentences(normalized);
     console.log(`📝 Sentence fallback: ${sentences.length} sentences`);
-    return groupIntoParagraphs(sentences);
+    if (sentences.length >= 5) {
+      return groupIntoParagraphs(sentences);
+    }
   }
   
   console.log(`📝 Final result: ${result.length} blocks (${result.filter(b => b.type === 'heading').length} headings, ${result.filter(b => b.type === 'paragraph').length} paragraphs)`);
