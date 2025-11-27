@@ -113,10 +113,12 @@ export default function BlogPostPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900 relative overflow-hidden">
-      {/* Animated background gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-purple-600/10 to-pink-600/10 animate-gradient-shift pointer-events-none" />
-      
+    <div 
+      className="min-h-screen relative overflow-hidden"
+      style={{
+        background: 'linear-gradient(180deg, #0a0a1a 0%, #0f0f23 50%, #1a1a2e 100%)'
+      }}
+    >
       {/* Preview Banner */}
       {isPreview && (
         <div className="bg-amber-500 text-white py-3 px-4 text-center font-semibold z-50 relative">
@@ -124,13 +126,17 @@ export default function BlogPostPage() {
         </div>
       )}
 
-      {/* Hero/Header - Now blends with dark background */}
-      <div className="bg-gradient-to-br from-blue-600/90 to-indigo-700/90 text-white relative">
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#1a1a2e] opacity-50" />
-        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      {/* Hero/Header - V3 Dark Theme */}
+      <div 
+        className="text-white relative"
+        style={{
+          background: 'linear-gradient(135deg, rgba(10, 10, 26, 0.95) 0%, rgba(79, 134, 249, 0.15) 50%, rgba(0, 212, 255, 0.1) 100%)'
+        }}
+      >
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <Link
             href="/blog"
-            className="inline-flex items-center text-blue-100 hover:text-white mb-6 transition-colors"
+            className="inline-flex items-center text-blue-300 hover:text-white mb-6 transition-colors"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Blog
@@ -142,7 +148,7 @@ export default function BlogPostPage() {
               {post.tags.map((tag: string) => (
                 <span
                   key={tag}
-                  className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-white/20 text-white backdrop-blur-sm"
+                  className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-white/10 text-white backdrop-blur-sm border border-white/20"
                 >
                   <Tag className="h-3 w-3 mr-1" />
                   {tag}
@@ -152,7 +158,12 @@ export default function BlogPostPage() {
           )}
 
           {/* Title */}
-          <h1 className="text-4xl md:text-5xl font-extrabold mb-6 leading-tight">
+          <h1 
+            className="text-4xl md:text-5xl font-extrabold mb-6 leading-tight"
+            style={{
+              textShadow: '0 2px 20px rgba(0, 0, 0, 0.5)'
+            }}
+          >
             {post.title}
           </h1>
 

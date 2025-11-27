@@ -1,12 +1,15 @@
 'use client';
 
+import React from 'react';
 import HeroGradient from '@/components/blog/gamma/HeroGradient';
 import StatCard from '@/components/blog/gamma/StatCard';
+import StatCardGroup from '@/components/blog/gamma/StatCardGroup';
 import ProcessFlow from '@/components/blog/gamma/ProcessFlow';
 import Timeline from '@/components/blog/gamma/Timeline';
 import ComparisonChart from '@/components/blog/gamma/ComparisonChart';
 import CalloutBox from '@/components/blog/gamma/CalloutBox';
 import ChecklistCard from '@/components/blog/gamma/ChecklistCard';
+import SectionDivider from '@/components/blog/gamma/SectionDivider';
 
 interface GammaLayout {
   id?: string;
@@ -19,8 +22,20 @@ interface GammaLayout {
   props?: any;
 }
 
+interface GammaTheme {
+  mode: 'dark';
+  colors: {
+    background?: string;
+    backgroundGradient?: string;
+    primary?: string;
+    secondary?: string;
+    text?: string;
+    textSecondary?: string;
+  };
+}
+
 interface DynamicGammaRendererProps {
-  layout: GammaLayout[] | { layout: GammaLayout[]; theme?: any };
+  layout: GammaLayout[] | { layout: GammaLayout[]; theme?: GammaTheme };
 }
 
 export default function DynamicGammaRenderer({ layout }: DynamicGammaRendererProps) {
@@ -33,6 +48,11 @@ export default function DynamicGammaRenderer({ layout }: DynamicGammaRendererPro
   // Handle both direct array and wrapped object
   const layoutArray = Array.isArray(layout) ? layout : (layout?.layout || []);
   const theme = Array.isArray(layout) ? null : layout?.theme;
+
+  // Validate dark theme
+  if (theme && theme.mode !== 'dark') {
+    console.error('THEME VIOLATION: mode must be "dark"');
+  }
 
   // If no components to render, return null
   if (!layoutArray || layoutArray.length === 0) {
@@ -48,14 +68,6 @@ export default function DynamicGammaRenderer({ layout }: DynamicGammaRendererPro
 
     const type = section.type || section.layoutType;
     const props = section.props || {};
-    
-    // DEBUG: Log the actual type value and props
-    console.log(`🔍 Rendering component at index ${index}:`, {
-      rawType: section.type,
-      rawLayoutType: section.layoutType,
-      finalType: type,
-      props: props // Show full props to debug color issues
-    });
 
     try {
       switch (type) {
@@ -68,7 +80,7 @@ export default function DynamicGammaRenderer({ layout }: DynamicGammaRendererPro
           return (
             <div 
               key={index} 
-              className="prose prose-xl prose-invert max-w-4xl mx-auto my-6
+              className="prose prose-xl prose-invert max-w-4xl mx-auto my-6 px-4
                 prose-headings:font-bold prose-headings:text-white prose-headings:mb-4 prose-headings:text-2xl
                 prose-p:text-white prose-p:leading-relaxed prose-p:mb-4 prose-p:text-lg
                 prose-a:text-cyan-400 prose-a:no-underline hover:prose-a:underline
@@ -82,12 +94,21 @@ export default function DynamicGammaRenderer({ layout }: DynamicGammaRendererPro
           );
 
         case 'StatCard':
-          return <StatCard key={index} {...props} animationDelay={index * 0.05} />;
+          return (
+            <div key={index} className="max-w-4xl mx-auto px-4">
+              <StatCard {...props} animationDelay={index * 0.05} />
+            </div>
+          );
+
+        case 'StatCardGroup':
+          return (
+            <StatCardGroup key={index} {...props} />
+          );
 
         case 'grid':
           // Grid layout - constrained to content width
           return (
-            <div key={index} className={`max-w-4xl mx-auto grid grid-cols-1 gap-4 my-8`}>
+            <div key={index} className="max-w-4xl mx-auto grid grid-cols-1 gap-4 my-8 px-4">
               {section.components?.map((comp, i) => renderComponent(comp, i))}
             </div>
           );
@@ -95,7 +116,7 @@ export default function DynamicGammaRenderer({ layout }: DynamicGammaRendererPro
         case 'ProcessFlow':
         case 'process':
           return (
-            <div key={index} className="max-w-4xl mx-auto my-8">
+            <div key={index} className="max-w-4xl mx-auto my-8 px-4">
               <ProcessFlow {...props} />
             </div>
           );
@@ -103,7 +124,7 @@ export default function DynamicGammaRenderer({ layout }: DynamicGammaRendererPro
         case 'Timeline':
         case 'timeline':
           return (
-            <div key={index} className="max-w-4xl mx-auto my-8">
+            <div key={index} className="max-w-4xl mx-auto my-8 px-4">
               <Timeline {...props} />
             </div>
           );
@@ -111,7 +132,7 @@ export default function DynamicGammaRenderer({ layout }: DynamicGammaRendererPro
         case 'ComparisonChart':
         case 'chart':
           return (
-            <div key={index} className="max-w-4xl mx-auto my-8">
+            <div key={index} className="max-w-4xl mx-auto my-8 px-4">
               <ComparisonChart {...props} />
             </div>
           );
@@ -119,7 +140,7 @@ export default function DynamicGammaRenderer({ layout }: DynamicGammaRendererPro
         case 'CalloutBox':
         case 'callout':
           return (
-            <div key={index} className="max-w-4xl mx-auto my-6">
+            <div key={index} className="max-w-4xl mx-auto my-6 px-4">
               <CalloutBox {...props} />
             </div>
           );
@@ -127,69 +148,41 @@ export default function DynamicGammaRenderer({ layout }: DynamicGammaRendererPro
         case 'ChecklistCard':
         case 'checklist':
           return (
-            <div key={index} className="max-w-4xl mx-auto my-8">
+            <div key={index} className="max-w-4xl mx-auto my-8 px-4">
               <ChecklistCard {...props} />
             </div>
           );
 
-        case 'text':
-          // Plain text section
-          return (
-            <div key={index} className="my-8 max-w-4xl mx-auto">
-              <div 
-                className="text-gray-300 text-lg leading-relaxed prose prose-invert max-w-none"
-                dangerouslySetInnerHTML={{ __html: section.content || '' }}
-              />
-            </div>
-          );
+        case 'SectionDivider':
+        case 'divider':
+          return <SectionDivider key={index} />;
 
         default:
           // Unknown component - show warning in dev only
           if (process.env.NODE_ENV === 'development') {
             console.warn(`Unknown component type: ${type}`, section);
-            return (
-              <div key={index} className="my-8 p-6 bg-yellow-500/10 border border-yellow-500/30 rounded-xl">
-                <p className="text-yellow-400">
-                  Unknown section type: <code className="font-mono">{type}</code>
-                </p>
-              </div>
-            );
           }
           return null;
       }
     } catch (error) {
       console.error(`Error rendering component ${type}:`, error);
-      // Silent failure in production
-      if (process.env.NODE_ENV === 'development') {
-        return (
-          <div key={index} className="my-8 p-6 bg-red-500/10 border border-red-500/30 rounded-xl">
-            <p className="text-red-400">
-              Error rendering: <code className="font-mono">{type}</code>
-            </p>
-            <p className="text-sm text-gray-400 mt-2">{String(error)}</p>
-          </div>
-        );
-      }
       return null;
     }
   };
 
-  return (
-    <div className="w-full">
-      {/* Apply theme if provided */}
-      {theme && (
-        <style jsx>{`
-          .gamma-blog-content {
-            --primary: ${theme.colors?.primary || '#4F86F9'};
-            --secondary: ${theme.colors?.secondary || '#00D4FF'};
-            --success: ${theme.colors?.success || '#00FF88'};
-          }
-        `}</style>
-      )}
+  // V3: Enforce dark theme background
+  const backgroundStyle = theme?.colors?.backgroundGradient || 
+    'linear-gradient(180deg, #0a0a1a 0%, #0f0f23 50%, #1a1a2e 100%)';
 
-      {/* Render all sections - no extra wrapper padding */}
+  return (
+    <div 
+      className="gamma-blog-container w-full min-h-screen"
+      style={{
+        background: backgroundStyle,
+        color: theme?.colors?.text || '#FFFFFF'
+      }}
+    >
       {layoutArray.map((section, index) => renderComponent(section, index))}
     </div>
   );
 }
-
