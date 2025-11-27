@@ -13,14 +13,17 @@ interface User {
   job_title?: string;
   phone?: string;
   is_active: boolean;
+  is_super_admin?: boolean; // Product-level superadmin
 }
 
 interface UserContextType {
   currentUser: User | null;
   setCurrentUser: (user: User | null) => void;
-  isAdmin: boolean;
-  isManager: boolean;
+  isAdmin: boolean;           // Practice-level admin
+  isManager: boolean;         // Practice-level manager
+  isSuperAdmin: boolean;      // Product-level superadmin (info@lightpoint.uk)
   canManageUsers: boolean;
+  canManageKnowledgeBase: boolean;  // Super admin only
   canEditComplaint: (complaint: any) => boolean;
 }
 
@@ -32,6 +35,11 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
   // Fetch user profile from lightpoint_users when auth user changes
   const { data: userProfile, isLoading: profileLoading } = trpc.users.list.useQuery(undefined, {
+    enabled: !!authUser,
+  });
+
+  // Fetch super_admin status from user_roles table
+  const { data: superAdminStatus } = trpc.users.checkSuperAdmin.useQuery(undefined, {
     enabled: !!authUser,
   });
 
@@ -49,16 +57,19 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
           job_title: profile.job_title,
           phone: profile.phone,
           is_active: profile.is_active,
+          is_super_admin: superAdminStatus?.isSuperAdmin || false,
         });
       }
     } else if (!authUser) {
       setCurrentUser(null);
     }
-  }, [authUser, userProfile]);
+  }, [authUser, userProfile, superAdminStatus]);
 
   const isAdmin = currentUser?.role === 'admin';
   const isManager = currentUser?.role === 'manager' || isAdmin;
+  const isSuperAdmin = currentUser?.is_super_admin || false;
   const canManageUsers = isAdmin || isManager;
+  const canManageKnowledgeBase = isSuperAdmin; // Only super admin can manage KB
 
   const canEditComplaint = (complaint: any) => {
     if (!currentUser) return false;
@@ -75,7 +86,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         setCurrentUser,
         isAdmin,
         isManager,
+        isSuperAdmin,
         canManageUsers,
+        canManageKnowledgeBase,
         canEditComplaint,
       }}
     >

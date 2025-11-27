@@ -32,7 +32,7 @@ import { logger } from '../../lib/logger';
 
 
 export default function KnowledgeBasePage() {
-  const { currentUser, isAdmin, isManager } = useUser();
+  const { currentUser, isAdmin, isManager, isSuperAdmin, canManageKnowledgeBase } = useUser();
   const [searchQuery, setSearchQuery] = useState('');
   const [uploadingFiles, setUploadingFiles] = useState<File[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<'CRG' | 'Charter' | 'Precedents' | 'Forms' | 'Legislation' | 'Other'>('CRG');
@@ -45,8 +45,8 @@ export default function KnowledgeBasePage() {
   const approveStaged = trpc.knowledge.approveStaged.useMutation();
   const utils = trpc.useUtils();
 
-  // Check permissions
-  if (!isAdmin && !isManager) {
+  // Check permissions - now requires SUPERADMIN for KB management
+  if (!canManageKnowledgeBase) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Card className="max-w-md">
@@ -58,7 +58,10 @@ export default function KnowledgeBasePage() {
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground mb-4">
-              Only administrators and managers can access the Knowledge Base management portal.
+              Knowledge Base management is restricted to Lightpoint super administrators only.
+            </p>
+            <p className="text-sm text-muted-foreground mb-4">
+              Contact info@lightpoint.uk if you need access.
             </p>
             <Link href="/dashboard">
               <Button variant="outline" className="w-full">

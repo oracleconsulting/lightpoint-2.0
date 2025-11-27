@@ -29,7 +29,12 @@ CREATE INDEX precedents_embedding_hnsw_idx
   USING hnsw (embedding vector_cosine_ops)
   WITH (m = 16, ef_construction = 64);
 
--- Step 4: Update the filtered search RPC function
+-- Step 4: Drop existing functions (required when changing vector dimensions in signature)
+DROP FUNCTION IF EXISTS match_knowledge_base(vector, double precision, integer);
+DROP FUNCTION IF EXISTS match_knowledge_base_filtered(vector, float, int, text[], text[], boolean);
+DROP FUNCTION IF EXISTS match_precedents(vector, double precision, integer);
+
+-- Step 5: Recreate the filtered search RPC function
 CREATE OR REPLACE FUNCTION match_knowledge_base_filtered(
   query_embedding vector(1536),
   match_threshold float DEFAULT 0.7,
@@ -77,7 +82,7 @@ AS $$
   LIMIT match_count;
 $$;
 
--- Step 5: Update the original match_knowledge_base function
+-- Step 6: Recreate the original match_knowledge_base function
 CREATE OR REPLACE FUNCTION match_knowledge_base(
   query_embedding vector(1536),
   match_threshold float,
@@ -104,7 +109,7 @@ AS $$
   LIMIT match_count;
 $$;
 
--- Step 6: Update match_precedents function
+-- Step 7: Recreate match_precedents function
 CREATE OR REPLACE FUNCTION match_precedents(
   query_embedding vector(1536),
   match_threshold float,
@@ -135,7 +140,7 @@ AS $$
   LIMIT match_count;
 $$;
 
--- Step 7: Grant permissions
+-- Step 8: Grant permissions
 GRANT EXECUTE ON FUNCTION match_knowledge_base_filtered TO authenticated;
 GRANT EXECUTE ON FUNCTION match_knowledge_base_filtered TO service_role;
 GRANT EXECUTE ON FUNCTION match_knowledge_base TO authenticated;

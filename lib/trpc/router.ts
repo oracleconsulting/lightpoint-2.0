@@ -1754,6 +1754,27 @@ export const appRouter = router({
         logger.info('✅ User invited successfully');
         return profile;
       }),
+
+    // Check if current user is a super_admin (product-level)
+    checkSuperAdmin: protectedProcedure
+      .query(async ({ ctx }) => {
+        const userId = ctx.userId;
+        if (!userId) {
+          return { isSuperAdmin: false };
+        }
+
+        const { data, error } = await (supabaseAdmin as any)
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', userId)
+          .eq('role', 'super_admin')
+          .is('revoked_at', null)
+          .single();
+
+        return { 
+          isSuperAdmin: !error && data?.role === 'super_admin',
+        };
+      }),
   }),
 
   // Tickets
