@@ -1756,13 +1756,34 @@ export const appRouter = router({
       }),
 
     // Check if current user is a super_admin (product-level)
-    checkSuperAdmin: protectedProcedure
-      .query(async ({ ctx }) => {
-        const userId = ctx.userId;
+    // Uses publicProcedure because superadmin check shouldn't require organization
+    checkSuperAdmin: publicProcedure
+      .query(async () => {
+        // Get user from cookies/session
+        const cookieStore = await import('next/headers').then(m => m.cookies());
+        const { createServerClient } = await import('@supabase/ssr');
+        
+        const supabase = createServerClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          {
+            cookies: {
+              getAll() {
+                return cookieStore.getAll();
+              },
+              setAll() {},
+            },
+          }
+        );
+
+        const { data: { session } } = await supabase.auth.getSession();
+        const userId = session?.user?.id;
+
         if (!userId) {
           return { isSuperAdmin: false };
         }
 
+        // Check user_roles table for super_admin
         const { data, error } = await (supabaseAdmin as any)
           .from('user_roles')
           .select('role')
@@ -1770,6 +1791,8 @@ export const appRouter = router({
           .eq('role', 'super_admin')
           .is('revoked_at', null)
           .single();
+
+        logger.info('🔑 Super admin check:', { userId, data, error: error?.message });
 
         return { 
           isSuperAdmin: !error && data?.role === 'super_admin',
