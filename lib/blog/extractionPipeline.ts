@@ -738,12 +738,18 @@ export function mapToComponents(
   // Build a set of content to skip (titles/text that will be rendered as components)
   const contentToSkip = new Set<string>();
   
-  // Add process titles to skip list
+  // Add process titles to skip list - CRITICAL for avoiding duplication
   extraction.processes.forEach(p => {
     if (p.title) {
-      contentToSkip.add(p.title.toLowerCase().trim());
-      // Also add variations
-      contentToSkip.add(p.title.toLowerCase().replace(/[^\w\s]/g, '').trim());
+      const title = p.title.toLowerCase().trim();
+      contentToSkip.add(title);
+      // Also add variations without punctuation
+      contentToSkip.add(title.replace(/[^\w\s]/g, '').trim());
+      // Add first few words as pattern
+      const words = title.split(/\s+/).slice(0, 5).join(' ');
+      if (words.length > 10) {
+        contentToSkip.add(words);
+      }
     }
     // Add step titles too
     p.steps.forEach(s => {
@@ -765,9 +771,42 @@ export function mapToComponents(
     if (l.title) {
       contentToSkip.add(l.title.toLowerCase().trim());
     }
+    // Add list item titles too
+    l.items.forEach(item => {
+      if (item.title && item.title.length > 15) {
+        contentToSkip.add(item.title.toLowerCase().trim());
+      }
+    });
   });
   
+  // Add timeline event descriptions to skip list
+  if (extraction.timeline) {
+    extraction.timeline.events.forEach(e => {
+      if (e.description && e.description.length > 20) {
+        contentToSkip.add(e.description.toLowerCase().substring(0, 40));
+      }
+    });
+  }
+  
+  // Add known section headings that should NOT appear inline
+  const knownHeadings = [
+    'the internal resolution trap',
+    'why most complaints fail',
+    'why most complaints fail at first contact',
+    'the structure that actually works',
+    'the october 2024 change',
+    'the october 2024 game-changer',
+    'professional fee recovery that works',
+    'professional fee recovery',
+    'making complaints worth the effort',
+    'missing the target entirely',
+    'no evidence trail',
+    'wrong resolution request',
+  ];
+  knownHeadings.forEach(h => contentToSkip.add(h));
+  
   console.log(`📦 Content to skip: ${contentToSkip.size} patterns`);
+  console.log(`📦 Sample patterns:`, Array.from(contentToSkip).slice(0, 5));
   
   // Visual insertion points (after every N paragraphs)
   let paragraphCount = 0;
