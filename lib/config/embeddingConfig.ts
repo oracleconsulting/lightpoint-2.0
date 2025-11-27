@@ -8,37 +8,39 @@
  */
 
 export const EMBEDDING_CONFIG = {
-  // Primary model for all knowledge base content - HIGHEST QUALITY
+  // Primary model - text-embedding-3-large at reduced dimensions
+  // Uses Matryoshka representation: 1536 dims = ~98% quality of full 3072
+  // Better than ada-002, HNSW index compatible (max 2000 dims)
   primary: {
     model: 'text-embedding-3-large',
     provider: 'openai' as const,
-    dimensions: 3072,
+    dimensions: 1536, // Reduced from 3072 for HNSW compatibility
     maxTokens: 8191,
-    maxChars: 30000, // Conservative estimate (~4 chars per token)
-    costPer1M: 0.13, // USD per 1M tokens
-    notes: 'Best retrieval performance, aligns with schema VECTOR(3072)',
+    maxChars: 30000,
+    costPer1M: 0.13,
+    notes: 'Best quality at HNSW-compatible dimensions',
   },
   
-  // Cost-efficient alternative (for staging/testing environments)
-  costEfficient: {
+  // Cost-efficient alternative
+  small: {
     model: 'text-embedding-3-small',
     provider: 'openai' as const,
     dimensions: 1536,
     maxTokens: 8191,
     maxChars: 30000,
-    costPer1M: 0.02, // USD per 1M tokens
-    notes: '6.5x cheaper, use with reranker for acceptable quality',
+    costPer1M: 0.02,
+    notes: '6.5x cheaper, ~90% quality of large',
   },
   
-  // Domain-specific for legal content (consider for case law)
+  // Domain-specific for legal content (future use)
   legal: {
     model: 'voyage-law-2',
     provider: 'voyage' as const,
     dimensions: 1024,
     maxTokens: 16000,
     maxChars: 60000,
-    costPer1M: 0.12, // USD per 1M tokens
-    notes: 'Legal-tuned, tops legal retrieval benchmarks (requires Voyage API)',
+    costPer1M: 0.12,
+    notes: 'Legal-tuned for case law (requires Voyage API)',
   },
 } as const;
 
