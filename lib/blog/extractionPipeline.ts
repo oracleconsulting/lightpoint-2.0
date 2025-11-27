@@ -615,7 +615,8 @@ export async function transformContentV6(
   // Stage 1: Extract content
   console.log('📊 Stage 1: Extracting content...');
   const extraction = await extractContent(content, apiKey);
-  console.log(`✅ Extracted: ${extraction.metadata.statCount} stats, ${extraction.lists.length} lists`);
+  console.log(`✅ Extracted: ${extraction.metadata.statCount} stats, ${extraction.lists.length} lists, ${extraction.sections.length} sections`);
+  console.log('📝 Sections:', extraction.sections.map(s => ({ heading: s.heading?.substring(0, 50), words: s.wordCount, pos: s.position })));
   
   // Stage 2: Map to components (deterministic)
   console.log('🔧 Stage 2: Mapping to components...');
