@@ -26,10 +26,11 @@ import { logger } from '../logger';
 // Initialize Supabase client
 function getSupabaseClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  // Check both possible env var names for service role key
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
   
   if (!url || !key) {
-    throw new Error('Supabase credentials not configured');
+    throw new Error('Supabase credentials not configured (need NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_KEY)');
   }
   
   return createClient(url, key);

@@ -211,8 +211,9 @@ CREATE INDEX IF NOT EXISTS idx_ingestion_log_source
 -- Enable RLS on ingestion log
 ALTER TABLE knowledge_ingestion_log ENABLE ROW LEVEL SECURITY;
 
--- Admin/Manager access only
-CREATE POLICY IF NOT EXISTS "Admin/Manager can manage ingestion log" ON knowledge_ingestion_log
+-- Admin/Manager access only (drop first to avoid errors on re-run)
+DROP POLICY IF EXISTS "Admin/Manager can manage ingestion log" ON knowledge_ingestion_log;
+CREATE POLICY "Admin/Manager can manage ingestion log" ON knowledge_ingestion_log
   FOR ALL USING (
     EXISTS (
       SELECT 1 FROM lightpoint_users

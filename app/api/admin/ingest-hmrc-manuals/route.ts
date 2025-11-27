@@ -34,9 +34,10 @@ async function verifyAdminAuth(request: NextRequest): Promise<{ authorized: bool
   // Check for service role key (for scripts/automation)
   if (authHeader?.startsWith('Bearer ')) {
     const token = authHeader.substring(7);
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    // Check both possible env var names for service role key
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
     
-    if (token === serviceRoleKey) {
+    if (serviceRoleKey && token === serviceRoleKey) {
       return { authorized: true };
     }
     
