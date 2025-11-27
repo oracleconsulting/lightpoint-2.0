@@ -10,10 +10,8 @@ import Timeline from '@/components/blog/gamma/Timeline';
 import ComparisonChart from '@/components/blog/gamma/ComparisonChart';
 import CalloutBox from '@/components/blog/gamma/CalloutBox';
 import ChecklistCard from '@/components/blog/gamma/ChecklistCard';
-import SectionDivider from '@/components/blog/gamma/SectionDivider';
 // V5 New components
 import HorizontalStatRow from '@/components/blog/gamma/HorizontalStatRow';
-import DonutChart from '@/components/blog/gamma/DonutChart';
 import TableTimeline from '@/components/blog/gamma/TableTimeline';
 // V5.1 Additional components
 import NumberedProcessFlow from '@/components/blog/gamma/NumberedProcessFlow';
@@ -30,9 +28,15 @@ import {
   TeaserCallout,
   HorizontalBarChart,
   ContentImage,
-  BulletList,
+  BulletList as BulletListV6,
   NumberedList,
 } from '@/components/blog/gamma/GammaComponentsV6';
+// V7 New visual parity components
+import SectionHeading from '@/components/blog/gamma/SectionHeading';
+import SectionDivider from '@/components/blog/gamma/SectionDivider';
+import ComparisonCards from '@/components/blog/gamma/ComparisonCards';
+import BulletList from '@/components/blog/gamma/BulletList';
+import DonutChart from '@/components/blog/gamma/DonutChart';
 // Theme system
 import { getTheme, defaultTheme, type ThemeConfig } from '@/lib/blog/themes';
 
@@ -232,6 +236,12 @@ export default function DynamicGammaRenderer({
         return 'max-w-3xl mx-auto px-4 sm:px-6 lg:px-8'; // Narrower for emphasis
       case 'SectionHeading':
         return 'max-w-4xl mx-auto px-4 sm:px-6 lg:px-8'; // Match text width
+      case 'SectionDivider':
+        return 'max-w-5xl mx-auto px-4 sm:px-6 lg:px-8'; // Wide for visual break
+      case 'ComparisonCards':
+        return 'max-w-6xl mx-auto px-4 sm:px-6 lg:px-8'; // Wide for cards
+      case 'BulletList':
+        return 'max-w-4xl mx-auto px-4 sm:px-6 lg:px-8'; // Match text width
       default:
         return 'max-w-5xl mx-auto px-4 sm:px-6 lg:px-8'; // Default
     }
@@ -259,7 +269,13 @@ export default function DynamicGammaRenderer({
       case 'NumberedProcessFlowV6':
       case 'ProcessFlow':
       case 'GridChecklist':
+      case 'ComparisonCards':
+      case 'DonutChart':
         return 'my-10 md:my-14'; // Special components get space
+      case 'SectionDivider':
+        return ''; // Divider has its own padding
+      case 'BulletList':
+        return 'my-6 md:my-8'; // Lists get moderate spacing
       default:
         return 'my-6 md:my-8';
     }
@@ -330,14 +346,18 @@ function ComponentRenderer({ item, index }: ComponentRendererProps) {
         );
       
       case 'DonutChart':
+        // Handle both old format (data) and new format (segments)
+        const segments = props?.segments || (props?.data || []).map((d: any) => ({
+          label: d.label || d.name || '',
+          value: d.value || 0,
+          color: d.color,
+        }));
         return (
           <DonutChart 
             title={props?.title}
-            data={props?.data || []}
-            centerValue={props?.centerValue}
-            centerLabel={props?.centerLabel}
-            showLegend={props?.showLegend}
-            showTooltip={props?.showTooltip}
+            segments={segments}
+            centerLabel={props?.centerLabel || props?.centerValue}
+            centerSubtext={props?.centerSubtext}
             size={props?.size}
           />
         );
@@ -499,8 +519,9 @@ function ComponentRenderer({ item, index }: ComponentRendererProps) {
           <BulletList 
             title={props?.title}
             items={props?.items || []}
-            icon={props?.icon}
+            style={props?.style || props?.icon || 'check'}
             accent={props?.accent}
+            columns={props?.columns}
           />
         );
 
@@ -515,14 +536,29 @@ function ComponentRenderer({ item, index }: ComponentRendererProps) {
 
       case 'SectionHeading':
         return (
-          <h2 className="
-            text-2xl sm:text-3xl md:text-4xl lg:text-[2.5rem]
-            font-bold text-white 
-            leading-tight tracking-tight
-            w-full
-          ">
-            {props?.text || ''}
-          </h2>
+          <SectionHeading 
+            title={props?.text || props?.title || ''}
+            subtitle={props?.subtitle}
+            icon={props?.icon}
+            accent={props?.accent}
+          />
+        );
+
+      case 'SectionDivider':
+        return (
+          <SectionDivider 
+            style={props?.style}
+            accent={props?.accent}
+          />
+        );
+
+      case 'ComparisonCards':
+        return (
+          <ComparisonCards 
+            title={props?.title}
+            cards={props?.cards || []}
+            columns={props?.columns}
+          />
         );
 
       // ========== EXISTING COMPONENTS ==========

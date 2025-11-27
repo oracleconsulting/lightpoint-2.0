@@ -119,25 +119,67 @@ function splitIntoSentences(text: string): string[] {
 
 /**
  * Detect if a sentence looks like a heading
+ * 
+ * EXPANDED: More patterns to catch section headings
  */
 function isLikelyHeading(sentence: string): boolean {
-  // Short, no period at end, starts with capital
-  if (sentence.length > 80) return false;
-  if (sentence.endsWith('.')) return false;
+  const trimmed = sentence.trim();
   
-  // Common heading patterns
+  // Length constraints
+  if (trimmed.length > 80) return false;
+  if (trimmed.length < 8) return false;
+  
+  // Sentences ending with period are usually not headings
+  if (trimmed.endsWith('.') && !trimmed.match(/\d{4}\.$/)) return false;
+  
+  // Common heading patterns - EXPANDED
   const headingPatterns = [
-    /^The\s+\w+\s+(trap|problem|solution|answer|question)/i,
+    // "The X trap/problem/solution" patterns
+    /^The\s+\w+\s+(trap|problem|solution|answer|question|approach|reality|truth|difference|key|secret)/i,
+    // Question words
     /^Why\s+/i,
     /^How\s+to\s+/i,
-    /^What\s+/i,
-    /^(Making|Building|Creating|Getting)\s+/i,
-    /\s+(that works|that fails|you need)/i,
+    /^How\s+\w+\s+(work|fail|succeed)/i,
+    /^What\s+(is|are|makes|happens|you)/i,
+    /^When\s+to\s+/i,
+    /^Where\s+/i,
+    // Action words
+    /^(Making|Building|Creating|Getting|Understanding|Avoiding|Maximising|Winning)\s+/i,
+    // "X that works/fails" patterns
+    /\s+(that (actually )?works|that fails?|you need|worth the effort)/i,
+    // Specific domain patterns
     /^Professional\s+fee/i,
-    /^The\s+October\s+\d{4}/i,
+    /^The\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}/i,
+    // Structure patterns
+    /^(Step|Stage|Phase|Part)\s+\d+/i,
+    /^(First|Second|Third|Final)\s+/i,
+    // Common blog heading patterns
+    /^(Key|Critical|Essential|Important|Common|Top)\s+/i,
+    /^The\s+(internal|external|real|hidden|true|main)/i,
+    // Colon patterns (often indicate headings)
+    /^[A-Z][^.]{10,50}:$/,
+    // All caps short phrases
+    /^[A-Z\s]{10,40}$/,
   ];
   
-  return headingPatterns.some(p => p.test(sentence));
+  // Check patterns
+  if (headingPatterns.some(p => p.test(trimmed))) {
+    return true;
+  }
+  
+  // Additional heuristic: Short, starts with capital, mostly title case
+  if (trimmed.length < 60) {
+    const words = trimmed.split(/\s+/);
+    if (words.length >= 3 && words.length <= 10) {
+      const capitalizedWords = words.filter(w => /^[A-Z]/.test(w));
+      // If most words are capitalized and no ending punctuation
+      if (capitalizedWords.length >= words.length * 0.6 && !trimmed.match(/[.!?,;]$/)) {
+        return true;
+      }
+    }
+  }
+  
+  return false;
 }
 
 /**
@@ -526,6 +568,51 @@ function sentimentToColor(sentiment: string): string {
   return sentiment === 'positive' ? 'green' : sentiment === 'negative' ? 'red' : 'blue';
 }
 
+/**
+ * Determine appropriate icon for a section heading based on content
+ */
+function getHeadingIcon(text: string): string | undefined {
+  const lowerText = text.toLowerCase();
+  
+  // Problem/failure patterns
+  if (/fail|problem|trap|wrong|mistake|error/i.test(lowerText)) {
+    return 'alert-triangle';
+  }
+  
+  // Success/solution patterns
+  if (/work|success|solution|win|recover|result/i.test(lowerText)) {
+    return 'check-circle';
+  }
+  
+  // Process/structure patterns
+  if (/structure|process|step|how to|approach/i.test(lowerText)) {
+    return 'target';
+  }
+  
+  // Time/date patterns
+  if (/\d{4}|october|change|update|new/i.test(lowerText)) {
+    return 'clock';
+  }
+  
+  // Money/fee patterns
+  if (/fee|cost|money|£|recover|compensation/i.test(lowerText)) {
+    return 'trending-up';
+  }
+  
+  // Legal/charter patterns
+  if (/charter|legal|right|law|adjudicator/i.test(lowerText)) {
+    return 'scale';
+  }
+  
+  // Evidence/documentation patterns
+  if (/evidence|document|record|file|trail/i.test(lowerText)) {
+    return 'file-text';
+  }
+  
+  // Default - no icon
+  return undefined;
+}
+
 export function mapToComponents(
   extraction: ExtractionResult,
   contentBlocks: { type: 'heading' | 'paragraph'; text: string }[]
@@ -588,12 +675,31 @@ export function mapToComponents(
   visualSchedule.set(22, 'list');        // After 22nd: bullet list
   visualSchedule.set(26, 'stats');       // After 26th: closing stats
   
-  contentBlocks.forEach((block) => {
-    // Headings
+  let headingCount = 0;
+  
+  contentBlocks.forEach((block, blockIndex) => {
+    // Headings - add divider before (except first heading)
     if (block.type === 'heading') {
+      headingCount++;
+      
+      // Add section divider before headings (except the first one)
+      if (headingCount > 1 && paragraphCount > 2) {
+        components.push({
+          type: 'SectionDivider',
+          props: { style: 'gradient', accent: 'cyan' },
+        });
+      }
+      
+      // Determine icon based on heading text
+      const icon = getHeadingIcon(block.text);
+      
       components.push({
         type: 'SectionHeading',
-        props: { text: block.text },
+        props: { 
+          title: block.text,
+          icon: icon,
+          accent: headingCount % 2 === 0 ? 'purple' : 'cyan',
+        },
       });
       return;
     }

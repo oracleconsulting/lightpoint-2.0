@@ -1,147 +1,180 @@
 'use client';
 
 import React from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { motion } from 'framer-motion';
 
-interface DataPoint {
-  readonly name: string;
-  readonly value: number;
-  readonly color: string;
+interface DonutSegment {
+  label: string;
+  value: number;
+  color?: 'cyan' | 'purple' | 'amber' | 'emerald' | 'red' | 'blue' | 'slate';
 }
 
 interface DonutChartProps {
   readonly title?: string;
-  readonly data: readonly DataPoint[];
-  readonly centerValue?: string;
+  readonly segments: readonly DonutSegment[];
   readonly centerLabel?: string;
-  readonly showLegend?: boolean;
-  readonly showTooltip?: boolean;
+  readonly centerSubtext?: string;
   readonly size?: 'sm' | 'md' | 'lg';
 }
 
-const sizeConfig = {
-  sm: { height: 200, inner: 50, outer: 70 },
-  md: { height: 280, inner: 70, outer: 100 },
-  lg: { height: 350, inner: 90, outer: 130 },
-};
-
+/**
+ * DonutChart - Percentage breakdown visualization
+ * 
+ * Displays proportional data in a donut/pie chart format.
+ * Perfect for showing breakdowns like "98% internal / 2% escalated".
+ */
 export default function DonutChart({ 
   title, 
-  data, 
-  centerValue, 
-  centerLabel,
-  showLegend = true,
-  showTooltip = true,
+  segments, 
+  centerLabel, 
+  centerSubtext,
   size = 'md'
 }: DonutChartProps) {
-  const config = sizeConfig[size];
+  const colorMap: Record<string, string> = {
+    cyan: '#22d3ee',
+    purple: '#a78bfa',
+    amber: '#fbbf24',
+    emerald: '#34d399',
+    red: '#f87171',
+    blue: '#60a5fa',
+    slate: '#64748b',
+  };
+
+  const sizeMap = {
+    sm: { chart: 160, stroke: 24, text: 'text-2xl' },
+    md: { chart: 200, stroke: 28, text: 'text-4xl' },
+    lg: { chart: 240, stroke: 32, text: 'text-5xl' },
+  };
+
+  const { chart: chartSize, stroke: strokeWidth, text: textSize } = sizeMap[size];
+  const radius = (chartSize - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
   
+  // Calculate total for percentages
+  const total = segments.reduce((sum, seg) => sum + seg.value, 0);
+  
+  // Calculate stroke dasharray for each segment
+  let accumulatedOffset = 0;
+  const segmentData = segments.map((segment) => {
+    const percentage = segment.value / total;
+    const dashLength = circumference * percentage;
+    const dashOffset = circumference - accumulatedOffset;
+    accumulatedOffset += dashLength;
+    
+    return {
+      ...segment,
+      percentage,
+      dashLength,
+      dashOffset,
+      color: colorMap[segment.color || 'cyan'],
+    };
+  });
+
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       whileInView={{ opacity: 1, scale: 1 }}
       viewport={{ once: true, margin: '-50px' }}
       transition={{ duration: 0.5 }}
-      className="max-w-md mx-auto my-10"
+      className="w-full"
     >
       {title && (
-        <h3 className="text-xl font-bold text-white text-center mb-6">
+        <h3 className="text-lg md:text-xl font-semibold text-white mb-6 text-center">
           {title}
         </h3>
       )}
       
-      <div className="relative" style={{ height: config.height }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={data.map(d => ({ name: d.name, value: d.value, color: d.color }))}
-              cx="50%"
-              cy="50%"
-              innerRadius={config.inner}
-              outerRadius={config.outer}
-              paddingAngle={2}
-              dataKey="value"
-              strokeWidth={0}
-            >
-              {data.map((entry, index) => (
-                <Cell 
-                  key={`cell-${entry.name}-${index}`} 
-                  fill={entry.color}
-                  style={{
-                    filter: `drop-shadow(0 0 8px ${entry.color}40)`,
-                  }}
-                />
-              ))}
-            </Pie>
-            
-            {showTooltip && (
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '8px',
-                  color: 'white',
-                }}
-                formatter={(value: number) => [`${value}%`, '']}
-              />
-            )}
-            
-            {showLegend && (
-              <Legend 
-                verticalAlign="bottom"
-                wrapperStyle={{ paddingTop: '20px' }}
-                formatter={(value) => (
-                  <span className="text-white/80 text-sm ml-2">{value}</span>
-                )}
-              />
-            )}
-          </PieChart>
-        </ResponsiveContainer>
-        
-        {/* Center label overlay */}
-        {centerValue && (
-          <div 
-            className="absolute inset-0 flex items-center justify-center flex-col pointer-events-none"
-            style={{ marginTop: showLegend ? '-20px' : 0 }}
+      <div className="flex flex-col md:flex-row items-center justify-center gap-8">
+        {/* Donut Chart */}
+        <div className="relative" style={{ width: chartSize, height: chartSize }}>
+          <svg
+            width={chartSize}
+            height={chartSize}
+            viewBox={`0 0 ${chartSize} ${chartSize}`}
+            className="transform -rotate-90"
           >
-            <div className="text-4xl font-black text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.3)]">
-              {centerValue}
+            {/* Background circle */}
+            <circle
+              cx={chartSize / 2}
+              cy={chartSize / 2}
+              r={radius}
+              fill="none"
+              stroke="rgba(255,255,255,0.05)"
+              strokeWidth={strokeWidth}
+            />
+            
+            {/* Segments */}
+            {segmentData.map((segment, index) => (
+              <motion.circle
+                key={`${segment.label}-${index}`}
+                cx={chartSize / 2}
+                cy={chartSize / 2}
+                r={radius}
+                fill="none"
+                stroke={segment.color}
+                strokeWidth={strokeWidth}
+                strokeDasharray={`${segment.dashLength} ${circumference - segment.dashLength}`}
+                strokeDashoffset={segment.dashOffset}
+                strokeLinecap="round"
+                initial={{ strokeDasharray: `0 ${circumference}` }}
+                whileInView={{ strokeDasharray: `${segment.dashLength} ${circumference - segment.dashLength}` }}
+                viewport={{ once: true }}
+                transition={{ duration: 1, delay: index * 0.2, ease: 'easeOut' }}
+                style={{ filter: `drop-shadow(0 0 8px ${segment.color}40)` }}
+              />
+            ))}
+          </svg>
+          
+          {/* Center label */}
+          {(centerLabel || centerSubtext) && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              {centerLabel && (
+                <motion.span 
+                  className={`${textSize} font-bold text-white`}
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: 0.5 }}
+                >
+                  {centerLabel}
+                </motion.span>
+              )}
+              {centerSubtext && (
+                <span className="text-sm text-slate-400 uppercase tracking-wider">
+                  {centerSubtext}
+                </span>
+              )}
             </div>
-            {centerLabel && (
-              <div className="text-xs text-white/60 uppercase tracking-wider mt-1">
-                {centerLabel}
+          )}
+        </div>
+        
+        {/* Legend */}
+        <div className="flex flex-col gap-3">
+          {segmentData.map((segment, index) => (
+            <motion.div
+              key={`legend-${segment.label}-${index}`}
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.3, delay: 0.5 + index * 0.1 }}
+              className="flex items-center gap-3"
+            >
+              <div 
+                className="w-4 h-4 rounded-sm"
+                style={{ backgroundColor: segment.color }}
+              />
+              <div className="flex flex-col">
+                <span className="text-white font-medium">
+                  {Math.round(segment.percentage * 100)}%
+                </span>
+                <span className="text-slate-400 text-sm">
+                  {segment.label}
+                </span>
               </div>
-            )}
-          </div>
-        )}
+            </motion.div>
+          ))}
+        </div>
       </div>
     </motion.div>
   );
 }
-
-// Pre-configured version for common use case: resolution breakdown
-export function ResolutionDonut({ 
-  resolvedPercent = 98,
-  resolvedLabel = 'Resolved Internally',
-  escalatedLabel = 'Escalated Further'
-}: {
-  readonly resolvedPercent?: number;
-  readonly resolvedLabel?: string;
-  readonly escalatedLabel?: string;
-}) {
-  const data = [
-    { name: resolvedLabel, value: resolvedPercent, color: '#3B82F6' },
-    { name: escalatedLabel, value: 100 - resolvedPercent, color: '#06B6D4' },
-  ];
-  
-  return (
-    <DonutChart
-      title="Complaint Resolution Breakdown"
-      data={data}
-      centerValue={`${resolvedPercent}%`}
-      centerLabel="Internal"
-    />
-  );
-}
-
