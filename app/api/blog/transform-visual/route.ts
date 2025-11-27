@@ -70,22 +70,18 @@ Return ONLY valid JSON, no markdown code blocks.`
           },
           {
             role: 'user',
-            content: `Transform this blog post into a Gamma-style visual layout.
+            content: `Transform this blog post into a visual layout. Return ONLY a valid JSON object.
 
-**Title:** ${title}
-${excerpt ? `**Excerpt:** ${excerpt}` : ''}
+TITLE: ${title}
+${excerpt ? `EXCERPT: ${excerpt}` : ''}
 
-**Content:**
+CONTENT:
 ${content}
 
-Return JSON:
-{
-  "theme": {"mode": "dark", "colors": {"background": "#0a0a1a", "primary": "#4F86F9", "secondary": "#00D4FF"}},
-  "layout": [
-    {"type": "TextSection", "props": {"content": "<p>...</p>"}, "sourceText": "..."},
-    {"type": "StatCardGroup", "props": {"stats": [{"metric": "92,000", "label": "...", "color": "blue"}]}, "sourceText": "..."}
-  ]
-}`
+IMPORTANT: Return a single, complete, valid JSON object. Do not include any text before or after the JSON.
+
+Example structure:
+{"theme":{"mode":"dark","colors":{"background":"#0a0a1a","primary":"#4F86F9"}},"layout":[{"type":"TextSection","props":{"content":"<p>Text here</p>"},"sourceText":"source"},{"type":"StatCardGroup","props":{"stats":[{"metric":"92000","label":"Complaints","color":"blue"}]},"sourceText":"source"}]}`
           },
         ],
         temperature: 0.5,
@@ -112,27 +108,52 @@ Return JSON:
     try {
       // Try to extract JSON from markdown code blocks first
       const jsonMatch = aiOutput.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
-      if (jsonMatch) {
-        console.log('✅ Found JSON in markdown code block');
-        transformedLayout = JSON.parse(jsonMatch[1].trim());
-      } else {
-        // Try parsing directly (AI should return raw JSON)
-        console.log('⚠️ No code block found, parsing raw response');
-        // Clean up any leading/trailing whitespace or text
-        const cleanedOutput = aiOutput.trim().replace(/^[^{]*/, '').replace(/[^}]*$/, '');
-        transformedLayout = JSON.parse(cleanedOutput);
-      }
+      let jsonString = jsonMatch ? jsonMatch[1].trim() : aiOutput.trim();
+      
+      // Clean up common issues
+      jsonString = jsonString
+        .replace(/^[^{]*/, '') // Remove anything before first {
+        .replace(/[^}]*$/, '') // Remove anything after last }
+        .replace(/,\s*}/g, '}') // Remove trailing commas before }
+        .replace(/,\s*]/g, ']') // Remove trailing commas before ]
+        .replace(/}\s*{/g, '},{') // Fix missing commas between objects
+        .replace(/]\s*{/g, '],{') // Fix missing commas after arrays
+        .replace(/}\s*"/g, '},"') // Fix missing commas before strings
+        .replace(/"\s*{/g, '",{'); // Fix missing commas after strings
+      
+      console.log('🔧 Attempting to parse cleaned JSON...');
+      transformedLayout = JSON.parse(jsonString);
+      console.log('✅ JSON parsed successfully');
+      
     } catch (parseError: any) {
       console.error('❌ Failed to parse AI response:', parseError.message);
-      console.error('📄 Full AI output:', aiOutput);
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'AI returned invalid JSON. Please try again.',
-          details: parseError.message,
-        },
-        { status: 500 }
-      );
+      console.error('📄 Full AI output:', aiOutput.substring(0, 2000));
+      
+      // Try a more aggressive fix - extract just the layout array
+      try {
+        console.log('🔧 Attempting aggressive JSON repair...');
+        const layoutMatch = aiOutput.match(/"layout"\s*:\s*\[([\s\S]*)\]/);
+        if (layoutMatch) {
+          const layoutArray = JSON.parse(`[${layoutMatch[1]}]`);
+          transformedLayout = {
+            theme: { mode: 'dark', colors: { background: '#0a0a1a', primary: '#4F86F9', secondary: '#00D4FF' } },
+            layout: layoutArray
+          };
+          console.log('✅ Recovered layout array with', layoutArray.length, 'items');
+        } else {
+          throw new Error('Could not extract layout array');
+        }
+      } catch (recoveryError: any) {
+        console.error('❌ Recovery failed:', recoveryError.message);
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'AI returned malformed JSON. Please try again.',
+            details: parseError.message,
+          },
+          { status: 500 }
+        );
+      }
     }
 
     // Validate the structure
