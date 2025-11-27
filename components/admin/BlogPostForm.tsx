@@ -134,6 +134,14 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
     }
 
     setSaving(true);
+    
+    // Debug: Log what we're about to save
+    console.log('💾 [BlogPostForm] Saving blog post...');
+    console.log('💾 structuredLayout exists:', !!structuredLayout);
+    console.log('💾 structuredLayout component count:', structuredLayout?.layout?.length || 0);
+    console.log('💾 TextSection count:', structuredLayout?.layout?.filter((c: any) => c.type === 'TextSection').length || 0);
+    console.log('💾 Component types:', structuredLayout?.layout?.map((c: any) => c.type) || []);
+    
     try {
       const postData = {
         title,
@@ -152,6 +160,8 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
         autoPublish: autoPublish || undefined,
         structuredLayout: structuredLayout || undefined, // Include AI-generated layout
       };
+      
+      console.log('💾 postData.structuredLayout component count:', postData.structuredLayout?.layout?.length || 0);
 
       if (postId) {
         // Update existing post
@@ -395,7 +405,10 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
               content={content}
               excerpt={excerpt}
               onTransformed={(layout) => {
-                console.log('✅ Visual layout transformed:', layout);
+                console.log('📥 [BlogPostForm] Received layout from VisualTransformer');
+                console.log('📥 Layout component count:', layout?.layout?.length || 0);
+                console.log('📥 TextSection count:', layout?.layout?.filter((c: any) => c.type === 'TextSection').length || 0);
+                console.log('📥 All component types:', layout?.layout?.map((c: any) => c.type) || []);
                 setStructuredLayout(layout);
                 alert('✨ Layout applied! You can now fine-tune the placement below, or save the post to keep this visual layout.');
               }}

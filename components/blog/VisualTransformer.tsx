@@ -85,6 +85,21 @@ export function VisualTransformer({
 
   const handleAccept = () => {
     if (transformedLayout) {
+      // Debug: Log what we're passing to the parent
+      console.log('📦 [VisualTransformer] Applying layout...');
+      console.log('📦 Layout structure:', {
+        hasTheme: !!transformedLayout.theme,
+        hasLayout: !!transformedLayout.layout,
+        layoutLength: transformedLayout.layout?.length || 0,
+      });
+      console.log('📦 First 5 component types:', 
+        transformedLayout.layout?.slice(0, 5).map((c: any) => c.type) || []
+      );
+      console.log('📦 TextSection count:', 
+        transformedLayout.layout?.filter((c: any) => c.type === 'TextSection').length || 0
+      );
+      console.log('📦 Full layout being passed:', JSON.stringify(transformedLayout).substring(0, 500));
+      
       onTransformed(transformedLayout);
       setShowPreview(false);
     }
