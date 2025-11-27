@@ -129,13 +129,15 @@ function isLikelyHeading(sentence: string): boolean {
   if (trimmed.length > 80) return false;
   if (trimmed.length < 8) return false;
   
-  // Sentences ending with period are usually not headings
-  if (trimmed.endsWith('.') && !trimmed.match(/\d{4}\.$/)) return false;
+  // Sentences ending with period are usually not headings (unless year)
+  if (trimmed.endsWith('.') && !trimmed.match(/\d{4}\.?$/)) return false;
   
-  // Common heading patterns - EXPANDED
+  // Common heading patterns - EXPANDED for HMRC blog content
   const headingPatterns = [
     // "The X trap/problem/solution" patterns
-    /^The\s+\w+\s+(trap|problem|solution|answer|question|approach|reality|truth|difference|key|secret)/i,
+    /^The\s+\w+\s+(trap|problem|solution|answer|question|approach|reality|truth|difference|key|secret|resolution)/i,
+    // Internal resolution patterns
+    /^The\s+internal\s+/i,
     // Question words
     /^Why\s+/i,
     /^How\s+to\s+/i,
@@ -160,20 +162,29 @@ function isLikelyHeading(sentence: string): boolean {
     /^[A-Z][^.]{10,50}:$/,
     // All caps short phrases
     /^[A-Z\s]{10,40}$/,
+    // Specific HMRC complaint patterns
+    /^(Missing|No evidence|Wrong resolution)/i,
+    /complaint.*(fail|work|succeed)/i,
+    /^The structure/i,
+    /game.?changer/i,
+    /fee recovery/i,
   ];
   
   // Check patterns
-  if (headingPatterns.some(p => p.test(trimmed))) {
+  const matchedPattern = headingPatterns.find(p => p.test(trimmed));
+  if (matchedPattern) {
+    console.log(`🏷️ Heading detected: "${trimmed.substring(0, 40)}..." matched pattern`);
     return true;
   }
   
   // Additional heuristic: Short, starts with capital, mostly title case
-  if (trimmed.length < 60) {
+  if (trimmed.length < 60 && trimmed.length > 15) {
     const words = trimmed.split(/\s+/);
     if (words.length >= 3 && words.length <= 10) {
       const capitalizedWords = words.filter(w => /^[A-Z]/.test(w));
       // If most words are capitalized and no ending punctuation
       if (capitalizedWords.length >= words.length * 0.6 && !trimmed.match(/[.!?,;]$/)) {
+        console.log(`🏷️ Heading detected (title case): "${trimmed.substring(0, 40)}..."`);
         return true;
       }
     }
@@ -631,6 +642,40 @@ export function mapToComponents(
   const usedQuotes = new Set<number>();
   const usedLists = new Set<number>();
   
+  // Build a set of content to skip (titles/text that will be rendered as components)
+  const contentToSkip = new Set<string>();
+  
+  // Add process titles to skip list
+  extraction.processes.forEach(p => {
+    if (p.title) {
+      contentToSkip.add(p.title.toLowerCase().trim());
+      // Also add variations
+      contentToSkip.add(p.title.toLowerCase().replace(/[^\w\s]/g, '').trim());
+    }
+    // Add step titles too
+    p.steps.forEach(s => {
+      if (s.title) {
+        contentToSkip.add(s.title.toLowerCase().trim());
+      }
+    });
+  });
+  
+  // Add quote text to skip list
+  extraction.quotes.forEach(q => {
+    if (q.text && q.text.length < 200) {
+      contentToSkip.add(q.text.toLowerCase().substring(0, 50));
+    }
+  });
+  
+  // Add list titles to skip list
+  extraction.lists.forEach(l => {
+    if (l.title) {
+      contentToSkip.add(l.title.toLowerCase().trim());
+    }
+  });
+  
+  console.log(`📦 Content to skip: ${contentToSkip.size} patterns`);
+  
   // Visual insertion points (after every N paragraphs)
   let paragraphCount = 0;
   let visualsInserted = 0;
@@ -677,7 +722,31 @@ export function mapToComponents(
   
   let headingCount = 0;
   
+  // Helper to check if content should be skipped
+  const shouldSkipContent = (text: string): boolean => {
+    const lowerText = text.toLowerCase().trim();
+    const shortText = lowerText.substring(0, 50);
+    
+    // Check exact matches
+    if (contentToSkip.has(lowerText)) return true;
+    if (contentToSkip.has(shortText)) return true;
+    
+    // Check if text starts with a skipped pattern
+    for (const pattern of contentToSkip) {
+      if (lowerText.startsWith(pattern) && pattern.length > 15) return true;
+      if (pattern.startsWith(shortText) && shortText.length > 15) return true;
+    }
+    
+    return false;
+  };
+  
   contentBlocks.forEach((block, blockIndex) => {
+    // Skip content that's already been extracted as a component
+    if (shouldSkipContent(block.text)) {
+      console.log(`⏭️ Skipping duplicate content: "${block.text.substring(0, 40)}..."`);
+      return;
+    }
+    
     // Headings - add divider before (except first heading)
     if (block.type === 'heading') {
       headingCount++;
@@ -839,21 +908,37 @@ export function mapToComponents(
     });
   }
   
-  // Closing stats
+  // Closing stats - only if not already used
   const closingStats = statGroups.get('closing') || statGroups.get('success') || [];
-  if (closingStats.length >= 2 && !usedGroups.has('closing')) {
-    components.push({
-      type: 'HorizontalStatRow',
-      props: {
-        stats: closingStats.slice(0, 3).map(s => ({
-          metric: s.value, prefix: s.prefix, suffix: s.suffix,
-          label: s.label, sublabel: s.context, color: 'green',
-        })),
-      },
-    });
+  if (closingStats.length >= 2 && !usedGroups.has('closing') && !usedGroups.has('success')) {
+    // Check we haven't already added too many stat rows
+    const existingStatRows = components.filter(c => c.type === 'HorizontalStatRow').length;
+    if (existingStatRows < 3) {
+      usedGroups.add('closing');
+      usedGroups.add('success');
+      components.push({
+        type: 'HorizontalStatRow',
+        props: {
+          stats: closingStats.slice(0, 3).map(s => ({
+            metric: s.value, prefix: s.prefix, suffix: s.suffix,
+            label: s.label, sublabel: s.context, color: 'green',
+          })),
+        },
+      });
+    }
   }
 
-  console.log(`✅ Generated ${components.length} components (${paragraphCount} paragraphs, ${visualsInserted} visuals)`);
+  // Log component breakdown
+  const componentCounts: Record<string, number> = {};
+  components.forEach(c => {
+    componentCounts[c.type] = (componentCounts[c.type] || 0) + 1;
+  });
+  
+  console.log(`✅ Generated ${components.length} components:`);
+  Object.entries(componentCounts).sort((a, b) => b[1] - a[1]).forEach(([type, count]) => {
+    console.log(`   - ${type}: ${count}`);
+  });
+  console.log(`   (${paragraphCount} paragraphs processed, ${visualsInserted} visuals inserted, ${headingCount} headings)`);
   
   return components;
 }
