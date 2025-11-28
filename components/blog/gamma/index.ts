@@ -26,3 +26,6 @@ export { default as SectionHeading } from './SectionHeading';
 export { default as SectionDivider } from './SectionDivider';
 export { default as ComparisonCards } from './ComparisonCards';
 export { default as BulletList } from './BulletList';
+
+// V8 Navigation components
+export { default as TableOfContents, generateTocItems } from './TableOfContents';

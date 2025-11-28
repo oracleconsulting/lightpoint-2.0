@@ -1,11 +1,41 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc/Provider';
 import { ArrowLeft, Calendar, Clock, Tag, Share2, User } from 'lucide-react';
 import DynamicGammaRenderer from '@/components/blog/DynamicGammaRenderer';
+import TableOfContents, { generateTocItems } from '@/components/blog/gamma/TableOfContents';
+
+/**
+ * Table of Contents Section - extracts headings from structured layout
+ */
+function TableOfContentsSection({ layout }: { layout: any }) {
+  const tocItems = useMemo(() => {
+    if (!layout || typeof layout !== 'object') return [];
+    
+    const layoutArray = Array.isArray(layout) ? layout : (layout?.layout || []);
+    if (!layoutArray || layoutArray.length === 0) return [];
+    
+    return generateTocItems(layoutArray);
+  }, [layout]);
+
+  // Only show TOC if we have 3+ sections
+  if (tocItems.length < 3) {
+    return null;
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-12">
+      <TableOfContents 
+        items={tocItems} 
+        variant="collapsible"
+        accent="cyan"
+      />
+    </div>
+  );
+}
 
 export default function BlogPostPage() {
   const params = useParams();
@@ -225,6 +255,9 @@ export default function BlogPostPage() {
           </p>
         </div>
       )}
+
+      {/* Table of Contents - AUDIT FIX: Add TOC for long articles */}
+      <TableOfContentsSection layout={post.structured_layout} />
 
       {/* Content */}
       <article className="w-full">

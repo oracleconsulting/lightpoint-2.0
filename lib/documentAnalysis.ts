@@ -44,6 +44,10 @@ CRITICAL: Do NOT summarize or lose any details. Extract:
 8. ALL direct quotes from HMRC (use exact wording)
 9. Key chronological events
 10. Any Charter violations or CRG-relevant issues
+11. Payment allocation statements (how HMRC applied/allocated payments - DMBM cases)
+12. Statutory time limit references (TMA 1970, VATA 1994, FA sections)
+13. Inter-departmental references (when one HMRC department cites another's actions)
+14. Process status (is there an existing complaint, appeal, or review in progress?)
 
 Return ONLY valid JSON:
 {
@@ -55,6 +59,16 @@ Return ONLY valid JSON:
   "hmrcQuotes": ["not made in the correct way", "submit using SEIS3 form"],
   "deadlines": [{ "date": "...", "description": "..." }],
   "charterViolations": ["Being Responsive - 13 month delay", "Getting Things Right - contradictory guidance"],
+  "paymentAllocations": [{ "paymentDate": "...", "paymentAmount": "...", "allocatedTo": "...", "allocatedBy": "HMRC|client|unclear" }],
+  "statutoryReferences": [{ "act": "TMA 1970", "section": "s.59B", "context": "Payment deadline" }],
+  "interDepartmentalRefs": [{ "fromDept": "...", "toDept": "...", "context": "..." }],
+  "processStatus": { 
+    "existingComplaint": false, 
+    "existingComplaintRef": null,
+    "appealInProgress": false, 
+    "reviewRequested": false,
+    "tier": "none|tier1|tier2|adjudicator"
+  },
   "summary": "Brief overall summary of document content"
 }`
       },
@@ -197,6 +211,16 @@ export interface DocumentAnalysis {
   hmrcQuotes: string[];
   deadlines: Array<{ date: string; description: string }>;
   charterViolations: string[];
+  paymentAllocations?: Array<{ paymentDate: string; paymentAmount: string; allocatedTo: string; allocatedBy: string }>;
+  statutoryReferences?: Array<{ act: string; section: string; context: string }>;
+  interDepartmentalRefs?: Array<{ fromDept: string; toDept: string; context: string }>;
+  processStatus?: {
+    existingComplaint: boolean;
+    existingComplaintRef: string | null;
+    appealInProgress: boolean;
+    reviewRequested: boolean;
+    tier: 'none' | 'tier1' | 'tier2' | 'adjudicator';
+  };
   summary: string;
 }
 
