@@ -35,7 +35,7 @@ export const adminRouter = router({
       organizationName: z.string().min(1),
       contactName: z.string().optional(),
       notes: z.string().optional(),
-      trialDays: z.number().min(7).max(90).default(30),
+      trialDays: z.number().min(7).max(365).default(90), // 90 days for pilot users
       tierId: z.string().uuid().optional(),
     }))
     .mutation(async ({ input }) => {

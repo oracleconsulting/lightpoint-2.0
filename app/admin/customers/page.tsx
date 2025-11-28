@@ -30,7 +30,7 @@ export default function CustomersPage() {
     organizationName: '',
     contactName: '',
     notes: '',
-    trialDays: 30,
+    trialDays: 90, // 90 days (3 months) for pilot users
   });
 
   const utils = trpc.useUtils();
@@ -54,7 +54,7 @@ export default function CustomersPage() {
         organizationName: '',
         contactName: '',
         notes: '',
-        trialDays: 30,
+        trialDays: 90,
       });
       if (data.emailSent) {
         alert('✅ Invite created and email sent successfully!');
