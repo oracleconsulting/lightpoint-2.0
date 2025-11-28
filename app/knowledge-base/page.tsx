@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import KnowledgeBaseChat from '@/components/kb/KnowledgeBaseChat';
 import DocumentComparison from '@/components/kb/DocumentComparison';
 import { processMultipleDocuments } from '@/lib/kbDocumentProcessor';
@@ -40,6 +42,7 @@ export default function KnowledgeBasePage() {
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, filename: '' });
   const [comparisonResults, setComparisonResults] = useState<any[]>([]);
   const [processingDoc, setProcessingDoc] = useState<string | null>(null);
+  const [previewEntry, setPreviewEntry] = useState<any | null>(null);
 
   const uploadForComparison = trpc.knowledge.uploadForComparison.useMutation();
   const approveStaged = trpc.knowledge.approveStaged.useMutation();
@@ -467,10 +470,15 @@ export default function KnowledgeBasePage() {
                             </div>
                           </div>
                           <div className="flex gap-2 ml-4">
-                            <Button variant="ghost" size="sm">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => setPreviewEntry(entry)}
+                              title="Preview"
+                            >
                               <Eye className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" title="Delete">
                               <Trash2 className="h-4 w-4 text-red-600" />
                             </Button>
                           </div>
@@ -574,6 +582,44 @@ export default function KnowledgeBasePage() {
           </TabsContent>
         </Tabs>
       </main>
+
+      {/* Preview Dialog */}
+      <Dialog open={!!previewEntry} onOpenChange={() => setPreviewEntry(null)}>
+        <DialogContent className="max-w-3xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {previewEntry?.title}
+              <Badge variant="outline">{previewEntry?.category}</Badge>
+            </DialogTitle>
+            <DialogDescription className="flex items-center gap-4 text-xs">
+              <span>Source: {previewEntry?.source || previewEntry?.source_url || 'Manual Upload'}</span>
+              {previewEntry?.section_reference && (
+                <span>Section: {previewEntry.section_reference}</span>
+              )}
+              <span>Added: {previewEntry?.created_at && new Date(previewEntry.created_at).toLocaleDateString()}</span>
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[60vh] pr-4">
+            <div className="prose prose-sm max-w-none">
+              <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                {previewEntry?.content}
+              </div>
+            </div>
+            {previewEntry?.source_url && (
+              <div className="mt-4 pt-4 border-t">
+                <a 
+                  href={previewEntry.source_url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-600 hover:underline"
+                >
+                  View original source →
+                </a>
+              </div>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
