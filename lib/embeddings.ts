@@ -241,9 +241,10 @@ async function generateOpenAIEmbeddingsBatch(
     // Sort by index to ensure correct order
     const sorted = data.data.sort((a: { index: number }, b: { index: number }) => a.index - b.index);
     return sorted.map((item: { embedding: number[] }) => item.embedding);
-  } catch (error) {
-    logger.error('Error generating batch embeddings:', error);
-    throw new Error('Failed to generate batch embeddings');
+  } catch (error: any) {
+    const errorMessage = error?.message || String(error);
+    logger.error('Error generating batch embeddings:', errorMessage);
+    throw new Error(`Failed to generate batch embeddings: ${errorMessage}`);
   }
 }
 
