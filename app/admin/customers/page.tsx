@@ -41,9 +41,12 @@ export default function CustomersPage() {
   // Get all organizations (customers)
   const { data: organizations, isLoading: orgsLoading } = trpc.admin.listOrganizations.useQuery();
   
+  // Check if email is configured
+  const { data: emailConfig } = trpc.admin.isEmailConfigured.useQuery();
+  
   // Create invite mutation
   const createInvite = trpc.admin.createOrganizationInvite.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
       utils.admin.listOrganizationInvites.invalidate();
       setShowInviteDialog(false);
       setInviteForm({
@@ -53,7 +56,11 @@ export default function CustomersPage() {
         notes: '',
         trialDays: 30,
       });
-      alert('Invite sent successfully!');
+      if (data.emailSent) {
+        alert('✅ Invite created and email sent successfully!');
+      } else {
+        alert(`⚠️ Invite created but email not sent: ${data.emailError || 'Email service not configured'}\n\nYou can copy the invite link manually.`);
+      }
     },
     onError: (error) => {
       alert(`Failed to send invite: ${error.message}`);
@@ -62,9 +69,13 @@ export default function CustomersPage() {
 
   // Resend invite mutation
   const resendInvite = trpc.admin.resendOrganizationInvite.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
       utils.admin.listOrganizationInvites.invalidate();
-      alert('Invite resent successfully!');
+      if (data.emailSent) {
+        alert('✅ Invite resent successfully!');
+      } else {
+        alert(`⚠️ Invite updated but email not sent: ${data.emailError || 'Email service not configured'}`);
+      }
     },
   });
 
@@ -107,6 +118,32 @@ export default function CustomersPage() {
 
   return (
     <div className="space-y-6">
+      {/* Email Status Banner */}
+      {emailConfig && !emailConfig.configured && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-center gap-3">
+          <Mail className="h-5 w-5 text-yellow-600" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-yellow-800">Email Service Not Configured</p>
+            <p className="text-sm text-yellow-700">
+              Add RESEND_API_KEY to Railway to enable automatic invite emails.
+              You can still create invites and copy the link manually.
+            </p>
+          </div>
+        </div>
+      )}
+      
+      {emailConfig?.configured && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
+          <CheckCircle2 className="h-5 w-5 text-green-600" />
+          <div>
+            <p className="text-sm font-medium text-green-800">Email Service Connected</p>
+            <p className="text-sm text-green-700">
+              Invite emails will be sent automatically via Resend.
+            </p>
+          </div>
+        </div>
+      )}
+      
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

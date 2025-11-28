@@ -2,6 +2,7 @@ import { router, publicProcedure } from '../trpc';
 import { z } from 'zod';
 import { supabaseAdmin } from '@/lib/supabase/client';
 import { logger } from '@/lib/logger';
+import { sendOrganizationInviteEmail, sendTeamInviteEmail, isEmailConfigured } from '@/lib/email/service';
 
 // Type assertion for tables not yet in schema
 const supabase = supabaseAdmin as any;
@@ -68,12 +69,28 @@ export const adminRouter = router({
       }
       
       logger.info(`📨 Organization invite created for ${input.organizationName} (${input.email})`);
-      logger.info(`   Invite link: /accept-invite?token=${token}`);
       
-      // TODO: Send email via Resend when API key is configured
-      // For now, admin can copy the link manually
+      // Send invite email
+      const emailResult = await sendOrganizationInviteEmail({
+        email: input.email,
+        organizationName: input.organizationName,
+        contactName: input.contactName,
+        token,
+        trialDays: input.trialDays,
+      });
       
-      return invite;
+      if (emailResult.success) {
+        logger.info(`✉️ Invite email sent successfully`);
+      } else {
+        logger.warn(`⚠️ Email not sent: ${emailResult.error}`);
+        // Don't fail the invite creation if email fails
+      }
+      
+      return {
+        ...invite,
+        emailSent: emailResult.success,
+        emailError: emailResult.error,
+      };
     }),
 
   // Resend organization invite
@@ -115,10 +132,23 @@ export const adminRouter = router({
         throw new Error(updateError.message);
       }
       
-      logger.info(`🔄 Organization invite resent: ${invite.email}`);
-      logger.info(`   New invite link: /accept-invite?token=${newToken}`);
+      // Send email
+      const emailResult = await sendOrganizationInviteEmail({
+        email: invite.email,
+        organizationName: invite.organization_name,
+        contactName: invite.contact_name,
+        token: newToken,
+        trialDays: invite.trial_days,
+      });
       
-      return { success: true, token: newToken };
+      logger.info(`🔄 Organization invite resent: ${invite.email}`);
+      
+      return { 
+        success: true, 
+        token: newToken,
+        emailSent: emailResult.success,
+        emailError: emailResult.error,
+      };
     }),
 
   // Cancel organization invite
@@ -139,6 +169,12 @@ export const adminRouter = router({
       logger.info(`❌ Organization invite cancelled: ${input.inviteId}`);
       
       return { success: true };
+    }),
+
+  // Check if email is configured
+  isEmailConfigured: publicProcedure
+    .query(() => {
+      return { configured: isEmailConfigured() };
     }),
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -247,17 +283,28 @@ export const adminRouter = router({
         throw new Error(error.message);
       }
       
-      // Get organization name for logging
+      // Get organization name for email
       const { data: org } = await supabase
         .from('organizations')
         .select('name')
         .eq('id', input.organizationId)
         .single();
       
-      logger.info(`📨 Team invite created for ${input.email} to join ${org?.name || 'organization'}`);
-      logger.info(`   Invite link: /accept-team-invite?token=${token}`);
+      // Send email
+      const emailResult = await sendTeamInviteEmail({
+        email: input.email,
+        organizationName: org?.name || 'Your Organization',
+        role: input.role,
+        token,
+      });
       
-      return data;
+      logger.info(`📨 Team invite created for ${input.email} to join ${org?.name || 'organization'}`);
+      
+      return {
+        ...data,
+        emailSent: emailResult.success,
+        emailError: emailResult.error,
+      };
     }),
 
   // Cancel team invite
