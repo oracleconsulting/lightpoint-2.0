@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { trpc } from '@/lib/trpc/Provider';
-import { Save, Lock, Send, FileText, CheckCircle2, Clock, RefreshCw, Edit2, AlertCircle, Sparkles, Loader2 } from 'lucide-react';
+import { Save, Lock, Send, FileText, CheckCircle2, Clock, RefreshCw, Edit2, AlertCircle, Sparkles, Loader2, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { FormattedLetter } from './FormattedLetter';
 
@@ -95,12 +95,19 @@ export function LetterManager({
   });
 
   const regenerateLetter = trpc.letters.regenerate.useMutation({
-    onSuccess: (newLetter) => {
+    onSuccess: () => {
       refetchLetters();
       alert('Letter regenerated successfully! The old version has been archived. (No extra time logged)');
     },
+  });
+
+  const deleteLetter = trpc.letters.delete.useMutation({
+    onSuccess: () => {
+      refetchLetters();
+      alert('Letter deleted successfully!');
+    },
     onError: (error) => {
-      alert(`Failed to regenerate letter: ${error.message}`);
+      alert(`Failed to delete letter: ${error.message}`);
     },
   });
 
@@ -162,6 +169,21 @@ export function LetterManager({
     setSelectedLetter(letter);
     setCorrectionContext('');
     setShowReanalyzeDialog(true);
+  };
+
+  const handleDeleteLetter = (letter: any) => {
+    if (letter.sent_at) {
+      alert('Cannot delete a letter that has been sent. Sent letters are part of the audit trail.');
+      return;
+    }
+    
+    const confirmMessage = letter.locked_at 
+      ? 'This letter is locked. Are you sure you want to delete it? This cannot be undone.'
+      : 'Are you sure you want to delete this letter? This cannot be undone.';
+    
+    if (confirm(confirmMessage)) {
+      deleteLetter.mutate({ letterId: letter.id });
+    }
   };
 
   const handleReanalyzeWithAI = async () => {
@@ -335,6 +357,21 @@ export function LetterManager({
                         >
                           <Lock className="h-3 w-3" />
                           Lock
+                        </Button>
+                      )}
+                      
+                      {/* Delete button - available if not sent */}
+                      {!letter.sent_at && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDeleteLetter(letter)}
+                          className="gap-1 text-red-600 border-red-300 hover:bg-red-50"
+                          title="Delete this letter"
+                          disabled={deleteLetter.isPending}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          Delete
                         </Button>
                       )}
                       

@@ -759,6 +759,72 @@ export const appRouter = router({
         return data;
       }),
 
+    // Delete a letter (only if not sent)
+    delete: publicProcedure
+      .input(z.object({
+        letterId: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        // First check if the letter exists and hasn't been sent
+        const { data: letter, error: fetchError } = await (supabaseAdmin as any)
+          .from('generated_letters')
+          .select('id, sent_at, locked_at, letter_type')
+          .eq('id', input.letterId)
+          .single();
+        
+        if (fetchError || !letter) {
+          throw new Error('Letter not found');
+        }
+        
+        if (letter.sent_at) {
+          throw new Error('Cannot delete a letter that has been sent. Sent letters are part of the audit trail.');
+        }
+        
+        // Delete the letter
+        const { error: deleteError } = await (supabaseAdmin as any)
+          .from('generated_letters')
+          .delete()
+          .eq('id', input.letterId);
+        
+        if (deleteError) throw new Error(deleteError.message);
+        
+        logger.info(`🗑️ Letter deleted: ${input.letterId}`);
+        
+        return { success: true, deletedId: input.letterId };
+      }),
+
+    // Bulk delete letters (for cleanup)
+    bulkDelete: publicProcedure
+      .input(z.object({
+        letterIds: z.array(z.string()),
+      }))
+      .mutation(async ({ input }) => {
+        // Check none of them are sent
+        const { data: letters, error: fetchError } = await (supabaseAdmin as any)
+          .from('generated_letters')
+          .select('id, sent_at')
+          .in('id', input.letterIds);
+        
+        if (fetchError) throw new Error(fetchError.message);
+        
+        const sentLetters = (letters || []).filter((l: any) => l.sent_at);
+        if (sentLetters.length > 0) {
+          throw new Error(`Cannot delete ${sentLetters.length} letter(s) that have been sent.`);
+        }
+        
+        // Delete all
+        const { error: deleteError } = await (supabaseAdmin as any)
+          .from('generated_letters')
+          .delete()
+          .in('id', input.letterIds);
+        
+        if (deleteError) throw new Error(deleteError.message);
+        
+        logger.info(`🗑️ Bulk deleted ${input.letterIds.length} letters`);
+        
+        return { success: true, deletedCount: input.letterIds.length };
+      }),
+
     generateResponse: publicProcedure
       .input(z.object({
         complaintId: z.string(),
