@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { trpc } from '@/lib/trpc/Provider';
-import { Save, Lock, Send, FileText, CheckCircle2, Clock, RefreshCw, Edit2, AlertCircle } from 'lucide-react';
+import { Save, Lock, Send, FileText, CheckCircle2, Clock, RefreshCw, Edit2, AlertCircle, Sparkles, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { FormattedLetter } from './FormattedLetter';
 
@@ -17,15 +17,36 @@ interface LetterManagerProps {
   generatedLetter?: string;
   clientReference?: string;
   onLetterSaved?: () => void;
-  onRegenerateLetter?: (letterId: string, currentContent: string) => void;
+  onRegenerateLetter?: (letterId: string, currentContent: string, correctionContext: string) => void;
+  analysisData?: any; // For re-analysis
+  practiceSettings?: any; // For letter generation
+  userName?: string;
+  userTitle?: string;
+  userEmail?: string;
+  userPhone?: string;
 }
 
-export function LetterManager({ complaintId, generatedLetter, clientReference, onLetterSaved, onRegenerateLetter }: LetterManagerProps) {
+export function LetterManager({ 
+  complaintId, 
+  generatedLetter, 
+  clientReference, 
+  onLetterSaved, 
+  onRegenerateLetter,
+  analysisData,
+  practiceSettings,
+  userName,
+  userTitle,
+  userEmail,
+  userPhone,
+}: LetterManagerProps) {
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showReanalyzeDialog, setShowReanalyzeDialog] = useState(false);
   const [selectedLetter, setSelectedLetter] = useState<any>(null);
   const [editContent, setEditContent] = useState('');
   const [editReason, setEditReason] = useState('');
+  const [correctionContext, setCorrectionContext] = useState('');
+  const [isRegenerating, setIsRegenerating] = useState(false);
   const [sendForm, setSendForm] = useState({
     sentBy: '',
     sentMethod: 'post' as 'post' | 'email' | 'post_and_email' | 'fax',
@@ -137,13 +158,37 @@ export function LetterManager({ complaintId, generatedLetter, clientReference, o
     });
   };
 
-  const handleRegenerateLetter = (letter: any) => {
-    if (onRegenerateLetter) {
-      // Use parent's regeneration flow (with AI)
-      onRegenerateLetter(letter.id, letter.letter_content);
-    } else {
-      // Simple regeneration - just mark as needing regeneration
-      alert('To regenerate with AI, use the "Refine Letter" feature above.');
+  const handleOpenReanalyze = (letter: any) => {
+    setSelectedLetter(letter);
+    setCorrectionContext('');
+    setShowReanalyzeDialog(true);
+  };
+
+  const handleReanalyzeWithAI = async () => {
+    if (!selectedLetter || !correctionContext.trim()) {
+      alert('Please provide correction context (e.g., "The dates should be 15 October 2024, not 15 November 2024")');
+      return;
+    }
+
+    if (!onRegenerateLetter) {
+      alert('Re-analysis not available. Please use the Edit function for manual changes.');
+      return;
+    }
+
+    setIsRegenerating(true);
+    
+    try {
+      // Call the parent's regeneration handler with the correction context
+      await onRegenerateLetter(selectedLetter.id, selectedLetter.letter_content, correctionContext);
+      
+      setShowReanalyzeDialog(false);
+      setSelectedLetter(null);
+      setCorrectionContext('');
+      refetchLetters();
+    } catch (error: any) {
+      alert(`Re-analysis failed: ${error.message}`);
+    } finally {
+      setIsRegenerating(false);
     }
   };
 
@@ -266,17 +311,17 @@ export function LetterManager({ complaintId, generatedLetter, clientReference, o
                         </Button>
                       )}
                       
-                      {/* Regenerate button - available if not sent */}
+                      {/* Re-analyze with AI button - available if not sent */}
                       {!letter.sent_at && onRegenerateLetter && (
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handleRegenerateLetter(letter)}
-                          className="gap-1 text-blue-600 border-blue-300 hover:bg-blue-50"
-                          title="Regenerate with AI (replaces this letter, no extra time)"
+                          onClick={() => handleOpenReanalyze(letter)}
+                          className="gap-1 text-purple-600 border-purple-300 hover:bg-purple-50"
+                          title="Re-analyze with AI corrections (no extra time)"
                         >
-                          <RefreshCw className="h-3 w-3" />
-                          Regenerate
+                          <Sparkles className="h-3 w-3" />
+                          Re-analyze
                         </Button>
                       )}
                       
@@ -467,6 +512,102 @@ export function LetterManager({ complaintId, generatedLetter, clientReference, o
                 >
                   <Save className="h-4 w-4" />
                   {updateContent.isPending ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Re-analyze with AI dialog */}
+      {showReanalyzeDialog && selectedLetter && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <Card className="w-full max-w-2xl">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-purple-600" />
+                Re-analyze Letter with AI
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Provide corrections or additional context. The AI will regenerate the letter with your changes.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Info banner */}
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 flex items-start gap-2">
+                <AlertCircle className="h-5 w-5 text-purple-600 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium text-purple-900">No extra time logged</p>
+                  <p className="text-purple-700">
+                    Re-analysis after the initial generation does not add to billable time. 
+                    The original letter will be archived.
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="correctionContext" className="text-base font-medium">
+                  What needs to be corrected? *
+                </Label>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Be specific about dates, amounts, references, or any other details that need fixing.
+                </p>
+                <Textarea
+                  id="correctionContext"
+                  placeholder={`Examples:
+• The repayment date should be 15 October 2024, not 15 November 2024
+• The client reference is ABC123, not ABC124
+• The penalty amount was £450, not £400
+• Add that we have evidence of the call on 3rd March
+• The timeline section has the wrong sequence of events`}
+                  value={correctionContext}
+                  onChange={(e) => setCorrectionContext(e.target.value)}
+                  className="mt-1.5 min-h-[150px]"
+                  rows={6}
+                />
+              </div>
+
+              {/* Current letter preview (collapsed) */}
+              <details className="text-sm border rounded-lg p-3 bg-gray-50">
+                <summary className="cursor-pointer font-medium text-gray-700">
+                  View current letter content
+                </summary>
+                <div className="mt-3 max-h-[200px] overflow-y-auto">
+                  <pre className="text-xs whitespace-pre-wrap font-mono text-gray-600">
+                    {selectedLetter.letter_content?.substring(0, 1500)}
+                    {selectedLetter.letter_content?.length > 1500 && '...'}
+                  </pre>
+                </div>
+              </details>
+
+              <div className="flex gap-2 justify-end pt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowReanalyzeDialog(false);
+                    setSelectedLetter(null);
+                    setCorrectionContext('');
+                  }}
+                  disabled={isRegenerating}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleReanalyzeWithAI}
+                  disabled={isRegenerating || !correctionContext.trim()}
+                  className="gap-2 bg-purple-600 hover:bg-purple-700"
+                >
+                  {isRegenerating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Re-analyzing...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4" />
+                      Re-analyze with AI
+                    </>
+                  )}
                 </Button>
               </div>
             </CardContent>

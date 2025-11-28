@@ -128,6 +128,14 @@ export default function ComplaintDetailPage({ params }: { params: { id: string }
     },
   });
 
+  // Mutation for regenerating letters (marks old as superseded)
+  const regenerateLetterMutation = trpc.letters.regenerate.useMutation({
+    onSuccess: () => {
+      logger.info('🔄 Letter regenerated (old version archived)');
+      utils.letters.list.invalidate({ complaintId: params.id });
+    },
+  });
+
   const generateLetter = trpc.letters.generateComplaint.useMutation({
     onSuccess: (data) => {
       logger.info('✅ Letter generation succeeded!');
@@ -281,6 +289,54 @@ This precedent was manually added because it represents a novel complaint type n
     // Close dialog and reset context
     setShowLetterDialog(false);
     setAdditionalContext('');
+  };
+
+  // Handler for re-analyzing a letter with corrections (NO extra time logged)
+  const handleReanalyzeLetter = async (letterId: string, currentContent: string, correctionContext: string) => {
+    logger.info('🔄 Re-analyzing letter with corrections (no extra time)');
+    logger.info(`📝 Correction context: ${correctionContext}`);
+    
+    if (!analysisData?.analysis) {
+      alert('No analysis data available. Please run initial analysis first.');
+      return;
+    }
+    
+    try {
+      // Generate a new letter with the correction context
+      const letterParams = {
+        complaintId: params.id,
+        analysis: analysisData.analysis,
+        clientReference: complaintData.complaint_reference,
+        hmrcDepartment: complaintData.hmrc_department,
+        practiceLetterhead: getPracticeLetterhead(),
+        chargeOutRate: practiceSettings?.chargeOutRate,
+        userName: currentUser?.full_name || currentUser?.email?.split('@')[0] || 'Professional',
+        userTitle: currentUser?.job_title || 'Chartered Accountant',
+        userEmail: currentUser?.email,
+        userPhone: currentUser?.phone,
+        // Include the correction context
+        additionalContext: `CORRECTIONS TO PREVIOUS LETTER:\n${correctionContext}\n\nPlease regenerate the letter with these corrections applied. The previous letter content is provided for reference but should be updated with the corrections above.`,
+      };
+      
+      const result = await generateLetter.mutateAsync(letterParams);
+      
+      if (result?.letter) {
+        // Mark the old letter as superseded
+        await regenerateLetterMutation.mutateAsync({
+          letterId,
+          newContent: result.letter,
+          reason: correctionContext.substring(0, 100) + (correctionContext.length > 100 ? '...' : ''),
+        });
+        
+        logger.info('✅ Letter re-analyzed and saved (no extra time logged)');
+        
+        // Refresh the letters list
+        utils.letters.list.invalidate({ complaintId: params.id });
+      }
+    } catch (error: any) {
+      logger.error('❌ Re-analysis failed:', error);
+      throw error;
+    }
   };
 
   const handleRefineLetter = async (additionalContext: string) => {
@@ -684,6 +740,13 @@ This precedent was manually added because it represents a novel complaint type n
                   clientReference={complaintData.complaint_reference}
                   generatedLetter={generatedLetter}
                   onLetterSaved={() => setGeneratedLetter(null)}
+                  onRegenerateLetter={handleReanalyzeLetter}
+                  analysisData={analysisData}
+                  practiceSettings={practiceSettings}
+                  userName={currentUser?.full_name}
+                  userTitle={currentUser?.job_title}
+                  userEmail={currentUser?.email}
+                  userPhone={currentUser?.phone}
                 />
               </>
             )}
@@ -693,6 +756,13 @@ This precedent was manually added because it represents a novel complaint type n
               <LetterManager 
                 complaintId={params.id} 
                 clientReference={complaintData.complaint_reference}
+                onRegenerateLetter={handleReanalyzeLetter}
+                analysisData={analysisData}
+                practiceSettings={practiceSettings}
+                userName={currentUser?.full_name}
+                userTitle={currentUser?.job_title}
+                userEmail={currentUser?.email}
+                userPhone={currentUser?.phone}
               />
             )}
 
