@@ -92,12 +92,29 @@ const MetricCard: React.FC<MetricCardProps> = ({
   );
 };
 
+interface TrendData {
+  activeChange?: number;
+  successRateChange?: number;
+  resolutionDaysChange?: number;
+  recoveredChange?: number;
+}
+
 interface HeroMetricsProps {
   activeComplaints: number;
   successRate: number;
   avgResolutionDays: number;
   totalRecovered: number;
+  trends?: TrendData;
   onMetricClick?: (metric: string) => void;
+}
+
+function formatCurrency(amount: number): string {
+  if (amount >= 1000000) {
+    return `£${(amount / 1000000).toFixed(1)}M`;
+  } else if (amount >= 1000) {
+    return `£${(amount / 1000).toFixed(0)}K`;
+  }
+  return `£${amount.toFixed(0)}`;
 }
 
 export default function HeroMetrics({
@@ -105,8 +122,27 @@ export default function HeroMetrics({
   successRate,
   avgResolutionDays,
   totalRecovered,
+  trends,
   onMetricClick,
 }: HeroMetricsProps) {
+  // Determine trend directions and values
+  const successTrend = (trends?.successRateChange ?? 0) >= 0 ? 'up' : 'down';
+  const successTrendValue = trends?.successRateChange 
+    ? `${trends.successRateChange >= 0 ? '+' : ''}${trends.successRateChange} this month`
+    : successRate > 0 ? `${successRate}% success` : 'No data yet';
+  
+  const resolutionTrend = (trends?.resolutionDaysChange ?? 0) <= 0 ? 'down' : 'up';
+  const resolutionTrendValue = avgResolutionDays > 0 
+    ? (trends?.resolutionDaysChange 
+        ? `${trends.resolutionDaysChange <= 0 ? '' : '+'}${trends.resolutionDaysChange} days`
+        : `${avgResolutionDays} day avg`)
+    : 'No data yet';
+  
+  const recoveredTrend = (trends?.recoveredChange ?? 0) >= 0 ? 'up' : 'down';
+  const recoveredTrendValue = trends?.recoveredChange 
+    ? `${trends.recoveredChange >= 0 ? '+' : ''}${formatCurrency(trends.recoveredChange)}`
+    : totalRecovered > 0 ? 'Total to date' : 'No recoveries yet';
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
       <MetricCard
@@ -125,8 +161,8 @@ export default function HeroMetrics({
         title="Success Rate"
         value={successRate}
         suffix="%"
-        trend="up"
-        trendValue="+2.5%"
+        trend={successRate > 0 ? successTrend : 'neutral'}
+        trendValue={successTrendValue}
         icon={TrendingUp}
         iconColor="text-success"
         gradientFrom="from-success"
@@ -137,9 +173,9 @@ export default function HeroMetrics({
       <MetricCard
         title="Avg Resolution Time"
         value={avgResolutionDays}
-        suffix=" days"
-        trend="down"
-        trendValue="-5 days"
+        suffix={avgResolutionDays > 0 ? " days" : ""}
+        trend={avgResolutionDays > 0 ? resolutionTrend : 'neutral'}
+        trendValue={resolutionTrendValue}
         icon={Clock}
         iconColor="text-brand-blurple"
         gradientFrom="from-brand-blurple"
@@ -150,9 +186,9 @@ export default function HeroMetrics({
       <MetricCard
         title="Total Recovered"
         value={totalRecovered}
-        prefix="£"
-        trend="up"
-        trendValue="+£125K"
+        prefix={totalRecovered > 0 ? "£" : ""}
+        trend={totalRecovered > 0 ? recoveredTrend : 'neutral'}
+        trendValue={recoveredTrendValue}
         icon={DollarSign}
         iconColor="text-amber-500"
         gradientFrom="from-amber-500"

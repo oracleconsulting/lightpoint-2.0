@@ -2188,6 +2188,217 @@ export const appRouter = router({
       }),
   }),
 
+  // Dashboard metrics
+  dashboard: router({
+    // Get real metrics for the current organization
+    getMetrics: protectedProcedure
+      .query(async ({ ctx }) => {
+        const organizationId = ctx.organizationId;
+        
+        if (!organizationId) {
+          return {
+            activeComplaints: 0,
+            resolvedComplaints: 0,
+            totalComplaints: 0,
+            successRate: 0,
+            totalRecovered: 0,
+            avgResolutionDays: 0,
+            trends: {
+              activeChange: 0,
+              successRateChange: 0,
+              resolutionDaysChange: 0,
+              recoveredChange: 0,
+            },
+          };
+        }
+        
+        try {
+          // Get complaint counts by status
+          const { data: complaints, error: complaintsError } = await supabaseAdmin
+            .from('complaints')
+            .select('id, status, created_at, resolved_at, recovered_amount')
+            .eq('organization_id', organizationId);
+          
+          if (complaintsError) {
+            logger.error('Error fetching complaints for metrics:', complaintsError);
+            throw new Error(complaintsError.message);
+          }
+          
+          const allComplaints = complaints || [];
+          const activeComplaints = allComplaints.filter((c: any) => 
+            ['assessment', 'active', 'escalated'].includes(c.status)
+          ).length;
+          
+          const resolvedComplaints = allComplaints.filter((c: any) => 
+            ['resolved', 'closed'].includes(c.status)
+          ).length;
+          
+          const totalComplaints = allComplaints.length;
+          
+          const successRate = totalComplaints > 0 
+            ? Math.round((resolvedComplaints / totalComplaints) * 100) 
+            : 0;
+          
+          // Calculate total recovered
+          const totalRecovered = allComplaints
+            .filter((c: any) => ['resolved', 'closed'].includes(c.status))
+            .reduce((sum: number, c: any) => sum + (parseFloat(c.recovered_amount) || 0), 0);
+          
+          // Calculate average resolution time
+          const resolvedWithDates = allComplaints.filter((c: any) => 
+            c.resolved_at && ['resolved', 'closed'].includes(c.status)
+          );
+          
+          let avgResolutionDays = 0;
+          if (resolvedWithDates.length > 0) {
+            const totalDays = resolvedWithDates.reduce((sum: number, c: any) => {
+              const created = new Date(c.created_at);
+              const resolved = new Date(c.resolved_at);
+              const days = Math.ceil((resolved.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
+              return sum + days;
+            }, 0);
+            avgResolutionDays = Math.round(totalDays / resolvedWithDates.length);
+          }
+          
+          // Calculate trends (compare to previous month)
+          const now = new Date();
+          const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          const twoMonthsAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+          
+          const thisMonthResolved = allComplaints.filter((c: any) => 
+            c.resolved_at && new Date(c.resolved_at) >= oneMonthAgo
+          ).length;
+          
+          const lastMonthResolved = allComplaints.filter((c: any) => 
+            c.resolved_at && 
+            new Date(c.resolved_at) >= twoMonthsAgo && 
+            new Date(c.resolved_at) < oneMonthAgo
+          ).length;
+          
+          const thisMonthRecovered = allComplaints
+            .filter((c: any) => c.resolved_at && new Date(c.resolved_at) >= oneMonthAgo)
+            .reduce((sum: number, c: any) => sum + (parseFloat(c.recovered_amount) || 0), 0);
+          
+          const lastMonthRecovered = allComplaints
+            .filter((c: any) => 
+              c.resolved_at && 
+              new Date(c.resolved_at) >= twoMonthsAgo && 
+              new Date(c.resolved_at) < oneMonthAgo
+            )
+            .reduce((sum: number, c: any) => sum + (parseFloat(c.recovered_amount) || 0), 0);
+          
+          return {
+            activeComplaints,
+            resolvedComplaints,
+            totalComplaints,
+            successRate,
+            totalRecovered,
+            avgResolutionDays,
+            trends: {
+              activeChange: activeComplaints, // Just show current for now
+              successRateChange: thisMonthResolved - lastMonthResolved,
+              resolutionDaysChange: 0, // Would need more complex calculation
+              recoveredChange: thisMonthRecovered - lastMonthRecovered,
+            },
+          };
+        } catch (error: any) {
+          logger.error('Error calculating dashboard metrics:', error);
+          throw new Error('Failed to calculate metrics');
+        }
+      }),
+    
+    // Get onboarding status for current organization
+    getOnboardingStatus: protectedProcedure
+      .query(async ({ ctx }) => {
+        const organizationId = ctx.organizationId;
+        
+        if (!organizationId) {
+          return {
+            onboardingCompleted: false,
+            meetingBooked: false,
+            meetingDate: null,
+            hasComplaints: false,
+          };
+        }
+        
+        try {
+          // Check organization onboarding status
+          const { data: org, error: orgError } = await (supabaseAdmin as any)
+            .from('organizations')
+            .select('onboarding_completed, onboarding_meeting_booked, onboarding_meeting_date')
+            .eq('id', organizationId)
+            .single();
+          
+          // Check if they have any complaints
+          const { count, error: countError } = await supabaseAdmin
+            .from('complaints')
+            .select('id', { count: 'exact', head: true })
+            .eq('organization_id', organizationId);
+          
+          return {
+            onboardingCompleted: org?.onboarding_completed || false,
+            meetingBooked: org?.onboarding_meeting_booked || false,
+            meetingDate: org?.onboarding_meeting_date || null,
+            hasComplaints: (count || 0) > 0,
+          };
+        } catch (error: any) {
+          logger.error('Error fetching onboarding status:', error);
+          return {
+            onboardingCompleted: false,
+            meetingBooked: false,
+            meetingDate: null,
+            hasComplaints: false,
+          };
+        }
+      }),
+    
+    // Mark onboarding meeting as booked
+    bookOnboardingMeeting: protectedProcedure
+      .input(z.object({
+        meetingDate: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const organizationId = ctx.organizationId;
+        
+        if (!organizationId) {
+          throw new Error('No organization found');
+        }
+        
+        const { error } = await (supabaseAdmin as any)
+          .from('organizations')
+          .update({
+            onboarding_meeting_booked: true,
+            onboarding_meeting_date: input.meetingDate || null,
+          })
+          .eq('id', organizationId);
+        
+        if (error) throw new Error(error.message);
+        
+        return { success: true };
+      }),
+    
+    // Mark onboarding as completed
+    completeOnboarding: protectedProcedure
+      .mutation(async ({ ctx }) => {
+        const organizationId = ctx.organizationId;
+        
+        if (!organizationId) {
+          throw new Error('No organization found');
+        }
+        
+        const { error } = await (supabaseAdmin as any)
+          .from('organizations')
+          .update({
+            onboarding_completed: true,
+          })
+          .eq('id', organizationId);
+        
+        if (error) throw new Error(error.message);
+        
+        return { success: true };
+      }),
+  }),
+
 });
 
 export type AppRouter = typeof appRouter;

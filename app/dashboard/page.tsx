@@ -7,10 +7,11 @@ import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { useUser } from '@/contexts/UserContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { Plus, FileText, AlertCircle, CheckCircle, Clock, Building2, Trash2, Users, Shield, LogOut, BookOpen, Settings, Cog } from 'lucide-react';
+import { Plus, FileText, AlertCircle, CheckCircle, Clock, Building2, Trash2, Users, Shield, LogOut, BookOpen, Settings, Cog, Calendar, Video, X } from 'lucide-react';
 import { useState } from 'react';
 import { logger } from '../../lib/logger';
 import HeroMetrics from '@/components/dashboard/HeroMetrics';
+import OnboardingBanner from '@/components/dashboard/OnboardingBanner';
 
 
 // Mock data for demo - replace with actual auth
@@ -41,6 +42,12 @@ export default function DashboardPage() {
   const { data: complaints, isLoading, error } = trpc.complaints.list.useQuery({
     organizationId: MOCK_ORGANIZATION_ID,
   });
+  
+  // Get real metrics
+  const { data: metrics } = trpc.dashboard.getMetrics.useQuery();
+  
+  // Get onboarding status
+  const { data: onboardingStatus } = trpc.dashboard.getOnboardingStatus.useQuery();
 
   const deleteComplaint = trpc.complaints.delete.useMutation({
     onSuccess: () => {
@@ -210,12 +217,21 @@ export default function DashboardPage() {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        {/* Hero Metrics - Modernized */}
+        {/* Onboarding Banner - Show for new users without complaints */}
+        {onboardingStatus && !onboardingStatus.hasComplaints && !onboardingStatus.onboardingCompleted && (
+          <OnboardingBanner 
+            meetingBooked={onboardingStatus.meetingBooked}
+            meetingDate={onboardingStatus.meetingDate}
+          />
+        )}
+        
+        {/* Hero Metrics - Now using real data */}
         <HeroMetrics
-          activeComplaints={stats.active + stats.escalated}
-          successRate={stats.total > 0 ? Math.round((stats.resolved / stats.total) * 100) : 98}
-          avgResolutionDays={47}
-          totalRecovered={2300000}
+          activeComplaints={metrics?.activeComplaints ?? stats.active + stats.escalated}
+          successRate={metrics?.successRate ?? (stats.total > 0 ? Math.round((stats.resolved / stats.total) * 100) : 0)}
+          avgResolutionDays={metrics?.avgResolutionDays ?? 0}
+          totalRecovered={metrics?.totalRecovered ?? 0}
+          trends={metrics?.trends}
           onMetricClick={(metric) => {
             if (metric === 'active') setStatusFilter('active');
             if (metric === 'success') setStatusFilter('resolved');
