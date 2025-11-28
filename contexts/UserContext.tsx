@@ -43,10 +43,16 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   });
 
   useEffect(() => {
-    console.log('👤 UserContext effect:', { authUser: !!authUser, profile, authLoading, profileLoading, isFetched });
+    console.log('👤 UserContext effect:', { 
+      authUser: !!authUser, 
+      profile: profile ? { ...profile, is_super_admin: profile.is_super_admin } : null,
+      authLoading, 
+      profileLoading, 
+      isFetched 
+    });
     
     if (profile) {
-      console.log('👤 Setting current user from profile:', profile);
+      console.log('👤 Setting current user from profile, is_super_admin:', profile.is_super_admin);
       setCurrentUser({
         id: profile.id,
         email: profile.email,
@@ -58,15 +64,16 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         is_active: profile.is_active,
         is_super_admin: profile.is_super_admin || false,
       });
-    } else if (!authLoading && isFetched && !profile) {
-      // Auth is done loading and we fetched but got no profile
+    } else if (isFetched && !profile) {
+      // We fetched but got no profile - user not logged in
       console.log('👤 No profile found, setting currentUser to null');
       setCurrentUser(null);
     }
   }, [authUser, profile, authLoading, profileLoading, isFetched]);
 
-  // Loading state - true while auth is loading OR profile query hasn't completed yet
-  const isLoading = authLoading || (!isFetched && profileLoading);
+  // Loading state - true only while profile query hasn't completed
+  // Don't wait for authLoading - profile query already checks session
+  const isLoading = !isFetched;
   
   const isAdmin = currentUser?.role === 'admin';
   const isManager = currentUser?.role === 'manager' || isAdmin;
