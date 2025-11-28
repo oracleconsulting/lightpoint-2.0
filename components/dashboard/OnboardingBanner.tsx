@@ -11,8 +11,8 @@ interface OnboardingBannerProps {
   meetingDate: string | null;
 }
 
-// Your Calendly or booking link - uses environment variable or fallback
-const BOOKING_LINK = process.env.NEXT_PUBLIC_BOOKING_LINK || 'https://calendly.com/lightpoint-info';
+// Calendly booking link for pilot onboarding
+const BOOKING_LINK = 'https://calendly.com/lightpoint-info/30min';
 
 export default function OnboardingBanner({ meetingBooked, meetingDate }: OnboardingBannerProps) {
   const [dismissed, setDismissed] = useState(false);
