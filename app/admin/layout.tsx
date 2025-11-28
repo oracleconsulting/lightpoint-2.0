@@ -20,7 +20,12 @@ import {
   Menu,
   X,
   Users,
+  AlertCircle,
+  Loader2,
 } from 'lucide-react';
+import { useUser } from '@/contexts/UserContext';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 export default function AdminLayout({
   children,
@@ -30,6 +35,48 @@ export default function AdminLayout({
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { isSuperAdmin, isLoading } = useUser();
+
+  // Show loading while checking permissions
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-brand-blurple" />
+          <p className="text-gray-500">Checking admin access...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Only super admins can access admin pages
+  if (!isSuperAdmin) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <Card className="max-w-md w-full">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-600">
+              <AlertCircle className="h-5 w-5" />
+              Access Denied
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-600 mb-4">
+              The Lightpoint Admin panel is restricted to super administrators only.
+            </p>
+            <p className="text-sm text-gray-500 mb-6">
+              Contact info@lightpoint.uk if you need access.
+            </p>
+            <Link href="/dashboard">
+              <Button variant="outline" className="w-full">
+                Return to Dashboard
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const adminLinks = [
     { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
