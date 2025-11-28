@@ -652,24 +652,19 @@ function splitInlineHeading(text: string, headingCount: number): MappedComponent
 
 /**
  * Remove consumed content from text (content that's already in visual components)
+ * 
+ * DISABLED: This was causing text corruption by removing partial word matches.
+ * The substring replacement was too aggressive and corrupted content like:
+ * - "classification" → "" (because "Classification" was a step title)
+ * - "reference [XXX]" → "eference [XXX]" (partial word removal)
+ * 
+ * Instead, we rely on:
+ * 1. shouldSkipContent() to skip ENTIRE blocks that match
+ * 2. splitInlineHeading() to properly separate headings from content
  */
-function removeConsumedContent(text: string, contentToRemove: Set<string>): string {
-  let result = text;
-  
-  for (const pattern of contentToRemove) {
-    if (pattern.length > 10) {
-      // Create regex that matches the pattern followed by optional whitespace
-      const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const regex = new RegExp(escaped + '\\s*', 'gi');
-      const before = result;
-      result = result.replace(regex, '');
-      if (result !== before) {
-        console.log(`🧹 Removed consumed content: "${pattern.substring(0, 30)}..."`);
-      }
-    }
-  }
-  
-  return result.trim();
+function removeConsumedContent(text: string, _contentToRemove: Set<string>): string {
+  // NO-OP: Return text unchanged to prevent corruption
+  return text;
 }
 
 /**
@@ -735,78 +730,43 @@ export function mapToComponents(
   const usedQuotes = new Set<number>();
   const usedLists = new Set<number>();
   
-  // Build a set of content to skip (titles/text that will be rendered as components)
+  // Build a set of content to skip - ONLY full section headings/titles
+  // DO NOT add step titles, list items, or partial content - this causes text corruption
   const contentToSkip = new Set<string>();
   
-  // Add process titles to skip list - CRITICAL for avoiding duplication
+  // Add ONLY the main process title (not step titles!)
   extraction.processes.forEach(p => {
-    if (p.title) {
-      const title = p.title.toLowerCase().trim();
-      contentToSkip.add(title);
-      // Also add variations without punctuation
-      contentToSkip.add(title.replace(/[^\w\s]/g, '').trim());
-      // Add first few words as pattern
-      const words = title.split(/\s+/).slice(0, 5).join(' ');
-      if (words.length > 10) {
-        contentToSkip.add(words);
-      }
+    if (p.title && p.title.length > 20) {
+      contentToSkip.add(p.title.toLowerCase().trim());
     }
-    // Add step titles too
-    p.steps.forEach(s => {
-      if (s.title) {
-        contentToSkip.add(s.title.toLowerCase().trim());
-      }
-    });
+    // DO NOT add step titles - they appear naturally in body text
   });
   
-  // Add quote text to skip list
-  extraction.quotes.forEach(q => {
-    if (q.text && q.text.length < 200) {
-      contentToSkip.add(q.text.toLowerCase().substring(0, 50));
-    }
-  });
+  // Add ONLY full quote text (not partial matches)
+  // Skip this - quotes can appear in context and shouldn't be stripped
   
-  // Add list titles to skip list
+  // Add ONLY list section titles (not item titles!)
   extraction.lists.forEach(l => {
-    if (l.title) {
+    if (l.title && l.title.length > 30) {
       contentToSkip.add(l.title.toLowerCase().trim());
     }
-    // Add list item titles too
-    l.items.forEach(item => {
-      if (item.title && item.title.length > 15) {
-        contentToSkip.add(item.title.toLowerCase().trim());
-      }
-    });
+    // DO NOT add list item titles - they appear in body text
   });
   
-  // Add timeline event descriptions to skip list
-  if (extraction.timeline) {
-    extraction.timeline.events.forEach(e => {
-      if (e.description && e.description.length > 20) {
-        contentToSkip.add(e.description.toLowerCase().substring(0, 40));
-      }
-    });
-  }
+  // DO NOT add timeline events - they're meant to appear in context
   
-  // Add known section headings that should NOT appear inline
+  // Known section headings - these are STANDALONE and should be skipped if they appear as entire blocks
   const knownHeadings = [
     'the internal resolution trap',
-    'why most complaints fail',
     'why most complaints fail at first contact',
     'the structure that actually works',
-    'the october 2024 change',
     'the october 2024 game-changer',
     'professional fee recovery that works',
-    'professional fee recovery',
     'making complaints worth the effort',
-    'missing the target entirely',
-    'no evidence trail',
-    'wrong resolution request',
   ];
   knownHeadings.forEach(h => contentToSkip.add(h));
   
-  console.log(`📦 Content to skip: ${contentToSkip.size} patterns`);
-  console.log(`📦 Sample patterns:`, Array.from(contentToSkip).slice(0, 5));
+  console.log(`📦 Content to skip (safe patterns only): ${contentToSkip.size}`);
   
   // Visual insertion points (after every N paragraphs)
   let paragraphCount = 0;
@@ -854,19 +814,16 @@ export function mapToComponents(
   
   let headingCount = 0;
   
-  // Helper to check if content should be skipped
+  // Helper to check if ENTIRE block should be skipped
+  // ONLY matches if the WHOLE block is a known heading - no partial matching
   const shouldSkipContent = (text: string): boolean => {
     const lowerText = text.toLowerCase().trim();
-    const shortText = lowerText.substring(0, 50);
     
-    // Check exact matches
-    if (contentToSkip.has(lowerText)) return true;
-    if (contentToSkip.has(shortText)) return true;
-    
-    // Check if text starts with a skipped pattern
-    for (const pattern of contentToSkip) {
-      if (lowerText.startsWith(pattern) && pattern.length > 15) return true;
-      if (pattern.startsWith(shortText) && shortText.length > 15) return true;
+    // Only skip if the ENTIRE text matches a known heading exactly
+    // This prevents partial matching that corrupts content
+    if (contentToSkip.has(lowerText)) {
+      console.log(`⏭️ Exact match skip: "${lowerText.substring(0, 40)}"`);
+      return true;
     }
     
     return false;
@@ -905,17 +862,8 @@ export function mapToComponents(
       return;
     }
     
-    // FIRST: Remove any consumed content from the text
-    let cleanedText = removeConsumedContent(block.text, contentToSkip);
-    
-    // Skip if nothing left after cleaning
-    if (cleanedText.length < 20) {
-      console.log(`⏭️ Skipping empty/short block after cleaning`);
-      return;
-    }
-    
-    // SECOND: Check if paragraph starts with an inline heading
-    const inlineHeadingComponents = splitInlineHeading(cleanedText, headingCount);
+    // Check if paragraph starts with an inline heading (split it out)
+    const inlineHeadingComponents = splitInlineHeading(block.text, headingCount);
     if (inlineHeadingComponents) {
       headingCount++;
       components.push(...inlineHeadingComponents);
@@ -924,7 +872,7 @@ export function mapToComponents(
     }
     
     // Regular paragraph - apply inline highlighting
-    const highlightedText = applyInlineHighlighting(cleanedText);
+    const highlightedText = applyInlineHighlighting(block.text);
     components.push({
       type: 'TextSection',
       props: {
