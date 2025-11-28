@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
 
       let categoryProcessed = 0;
       let categoryErrors = 0;
+      let firstError: string | undefined;
 
       for (let i = 0; i < entries.length; i += BATCH_SIZE) {
         const batch = entries.slice(i, i + BATCH_SIZE);
@@ -72,7 +73,9 @@ export async function POST(request: NextRequest) {
             `${entry.title}\n\n${entry.content}`
           );
 
+          console.log(`📊 Re-embedding ${category} batch ${Math.floor(i/BATCH_SIZE)+1} (${batch.length} items)`);
           const embeddings = await generateEmbeddingsBatch(texts, 'primary');
+          console.log(`✅ Got ${embeddings.length} embeddings, each with ${embeddings[0]?.length || 0} dimensions`);
 
           for (let j = 0; j < batch.length; j++) {
             const { error: updateError } = await supabase
@@ -84,7 +87,9 @@ export async function POST(request: NextRequest) {
               .eq('id', batch[j].id);
 
             if (updateError) {
+              console.error(`❌ Update error for ${batch[j].id}:`, updateError.message);
               categoryErrors++;
+              if (!firstError) firstError = `DB update: ${updateError.message}`;
             } else {
               categoryProcessed++;
             }
@@ -97,17 +102,16 @@ export async function POST(request: NextRequest) {
           const errorMsg = error.message || String(error);
           console.error(`❌ Re-embed error for ${category}:`, errorMsg);
           categoryErrors += batch.length;
-          // Store first error for this category
-          if (!results.find(r => r.category === category)?.error) {
-            results.push({ category, processed: categoryProcessed, errors: categoryErrors, error: errorMsg });
-          }
+          if (!firstError) firstError = errorMsg;
         }
       }
 
-      // Only push if not already added due to error
-      if (!results.find(r => r.category === category)) {
-        results.push({ category, processed: categoryProcessed, errors: categoryErrors });
-      }
+      results.push({ 
+        category, 
+        processed: categoryProcessed, 
+        errors: categoryErrors,
+        ...(firstError && { error: firstError })
+      });
       totalProcessed += categoryProcessed;
       totalErrors += categoryErrors;
     }
