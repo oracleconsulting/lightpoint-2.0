@@ -27,7 +27,8 @@ import {
   RefreshCw,
   Plus,
   MessageCircle,
-  Loader2
+  Loader2,
+  X
 } from 'lucide-react';
 import Link from 'next/link';
 import { logger } from '../../lib/logger';
@@ -586,8 +587,16 @@ export default function KnowledgeBasePage() {
       {/* Preview Dialog */}
       <Dialog open={!!previewEntry} onOpenChange={() => setPreviewEntry(null)}>
         <DialogContent className="max-w-3xl max-h-[80vh]">
+          {/* Close button */}
+          <button
+            onClick={() => setPreviewEntry(null)}
+            className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 z-10"
+            aria-label="Close"
+          >
+            <X className="h-5 w-5" />
+          </button>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2 pr-8">
               {previewEntry?.title}
               <Badge variant="outline">{previewEntry?.category}</Badge>
             </DialogTitle>
