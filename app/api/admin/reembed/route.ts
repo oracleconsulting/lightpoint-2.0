@@ -82,7 +82,6 @@ export async function POST(request: NextRequest) {
               .from('knowledge_base')
               .update({ 
                 embedding: embeddings[j],
-                updated_at: new Date().toISOString(),
               })
               .eq('id', batch[j].id);
 
@@ -142,7 +141,6 @@ export async function POST(request: NextRequest) {
               .from('precedents')
               .update({ 
                 embedding: embeddings[j],
-                updated_at: new Date().toISOString(),
               })
               .eq('id', batch[j].id);
 
