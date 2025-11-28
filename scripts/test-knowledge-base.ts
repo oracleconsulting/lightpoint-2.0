@@ -7,10 +7,40 @@
  * 3. Performance benchmarks - Query speed and embedding quality
  * 
  * Run with: npx tsx scripts/test-knowledge-base.ts
+ * 
+ * Requires environment variables:
+ *   NEXT_PUBLIC_SUPABASE_URL
+ *   SUPABASE_SERVICE_ROLE_KEY
+ *   OPENROUTER_API_KEY (for embedding tests)
  */
 
-import { config } from 'dotenv';
-config({ path: '.env.local' });
+import * as fs from 'fs';
+import * as path from 'path';
+
+// Load environment files in order of priority
+const envFiles = ['.env.local', '.env', '.env.development'];
+for (const envFile of envFiles) {
+  const envPath = path.join(process.cwd(), envFile);
+  if (fs.existsSync(envPath)) {
+    console.log(`📄 Loading environment from ${envFile}`);
+    const envContent = fs.readFileSync(envPath, 'utf-8');
+    envContent.split('\n').forEach(line => {
+      // Skip comments and empty lines
+      if (line.startsWith('#') || !line.trim()) return;
+      const match = line.match(/^([^=]+)=(.*)$/);
+      if (match) {
+        const key = match[1].trim();
+        let value = match[2].trim();
+        // Remove surrounding quotes
+        value = value.replace(/^["']|["']$/g, '');
+        if (!process.env[key]) {
+          process.env[key] = value;
+        }
+      }
+    });
+    break; // Only load first found env file
+  }
+}
 
 import { createClient } from '@supabase/supabase-js';
 
@@ -18,11 +48,26 @@ import { createClient } from '@supabase/supabase-js';
 // CONFIGURATION
 // ============================================================================
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
-  console.error('❌ Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+  console.error('═══════════════════════════════════════════════════════════════');
+  console.error('❌ MISSING ENVIRONMENT VARIABLES');
+  console.error('═══════════════════════════════════════════════════════════════');
+  console.error('');
+  console.error('This script requires the following environment variables:');
+  console.error('');
+  console.error('  NEXT_PUBLIC_SUPABASE_URL      ' + (supabaseUrl ? '✅ Set' : '❌ Missing'));
+  console.error('  SUPABASE_SERVICE_ROLE_KEY     ' + (supabaseKey ? '✅ Set' : '❌ Missing'));
+  console.error('  OPENROUTER_API_KEY            ' + (process.env.OPENROUTER_API_KEY ? '✅ Set' : '⚠️  Missing (needed for search tests)'));
+  console.error('');
+  console.error('Options:');
+  console.error('  1. Create a .env.local file in the lightpoint-2.0 directory');
+  console.error('  2. Export the variables in your shell before running');
+  console.error('  3. Run the SQL health check instead (no env needed):');
+  console.error('     Copy supabase/KNOWLEDGE_BASE_HEALTH_CHECK.sql to Supabase SQL Editor');
+  console.error('');
   process.exit(1);
 }
 
