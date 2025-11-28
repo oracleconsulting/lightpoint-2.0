@@ -137,6 +137,13 @@ You are assertive, thorough, and uncompromising when evidence supports action. H
 - 65-75%: CRG violations + Charter breaches, moderate evidence
 - 50-65%: Minor delays or weak evidence (still pursue if client wishes)
 - <50%: No clear grounds (advise against unless breakthrough emerges)
+- N/A: Insufficient information to assess (recommend gathering more evidence)
+
+**COMPLAINT STAGE DETECTION:**
+- Tier 1: First formal complaint (standard 15 working days response)
+- Tier 2: Escalation after inadequate Tier 1 response (40 working days)
+- Adjudicator: Final escalation when Tier 2 fails
+Look for: previous complaint references, Tier 1 response dates, escalation mentions
 
 **COMPENSATION APPROACH:**
 - Professional fees: FULL recovery when complaint was necessary due to HMRC errors
@@ -155,6 +162,19 @@ Return ONLY valid JSON with no markdown:
 {
   "hasGrounds": boolean,
   "complaintCategory": [string],
+  "complaintStage": {
+    "type": "tier_1" | "tier_2" | "adjudicator" | "unknown",
+    "basis": "string explaining why this stage",
+    "previousComplaintRef": "string | null",
+    "tier1ResponseDate": "string | null",
+    "tier1Deficiencies": ["what Tier 1 failed to address"]
+  },
+  "evidenceStrength": {
+    "documentaryEvidence": "strong" | "moderate" | "weak",
+    "timelineClarity": "complete" | "gaps" | "sparse",
+    "hmrcAdmissions": ["list of things HMRC has admitted"],
+    "weakPoints": ["arguments to avoid - thin evidence or weak grounds"]
+  },
   "violations": [{"type": string, "description": string, "citation": string, "severity": string}],
   "timeline": {"totalDuration": string, "longestGap": string, "missedDeadlines": number},
   "systemErrors": [{"type": string, "departments": [string]}],
@@ -162,6 +182,11 @@ Return ONLY valid JSON with no markdown:
   "actions": [string],
   "compensationEstimate": {"professionalFees": string, "distressPayment": string},
   "successRate": number,
+  "recommendedToneLevel": 1 | 2 | 3,
+  "recommendedApproach": {
+    "focusViolations": ["top 3 violations to emphasize"],
+    "avoidArguments": ["weak points to exclude from letter"]
+  },
   "escalationRequired": string,
   "reasoning": string
 }`
