@@ -35,7 +35,7 @@ export function SocialProofSection() {
     {
       title: "Platform Launch",
       metric: "Coming Soon",
-      value: "Q1 2025",
+      value: "Q1 2026",
       description: "Real results from real firms",
       color: "blue",
     },
@@ -62,7 +62,7 @@ export function SocialProofSection() {
             transition={{ delay: 0.1 }}
             className="text-3xl sm:text-4xl font-heading font-bold text-gray-900 mb-4"
           >
-            Launching Q1 2025
+            Launching Q1 2026
           </motion.h2>
           <motion.p
             initial={{ opacity: 0, y: 20 }}

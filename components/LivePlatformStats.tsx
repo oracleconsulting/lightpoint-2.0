@@ -46,7 +46,7 @@ export function LivePlatformStats() {
           </p>
           <div className="inline-flex items-center gap-2 px-6 py-3 bg-white rounded-full shadow-lg border border-blue-100">
             <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
-            <span className="text-sm font-medium text-gray-700">Platform launching Q1 2025</span>
+            <span className="text-sm font-medium text-gray-700">Platform launching Q1 2026</span>
           </div>
         </div>
       </div>
