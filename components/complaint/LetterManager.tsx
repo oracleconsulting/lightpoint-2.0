@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { trpc } from '@/lib/trpc/Provider';
-import { Save, Lock, Send, FileText, CheckCircle2, Clock } from 'lucide-react';
+import { Save, Lock, Send, FileText, CheckCircle2, Clock, RefreshCw, Edit2, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { FormattedLetter } from './FormattedLetter';
 
@@ -17,11 +17,15 @@ interface LetterManagerProps {
   generatedLetter?: string;
   clientReference?: string;
   onLetterSaved?: () => void;
+  onRegenerateLetter?: (letterId: string, currentContent: string) => void;
 }
 
-export function LetterManager({ complaintId, generatedLetter, clientReference, onLetterSaved }: LetterManagerProps) {
+export function LetterManager({ complaintId, generatedLetter, clientReference, onLetterSaved, onRegenerateLetter }: LetterManagerProps) {
   const [showSendDialog, setShowSendDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedLetter, setSelectedLetter] = useState<any>(null);
+  const [editContent, setEditContent] = useState('');
+  const [editReason, setEditReason] = useState('');
   const [sendForm, setSendForm] = useState({
     sentBy: '',
     sentMethod: 'post' as 'post' | 'email' | 'post_and_email' | 'fax',
@@ -29,7 +33,8 @@ export function LetterManager({ complaintId, generatedLetter, clientReference, o
     notes: '',
   });
 
-  const { data: savedLetters, refetch: refetchLetters } = trpc.letters.list.useQuery({ complaintId });
+  // Use listActive to show only non-superseded letters
+  const { data: savedLetters, refetch: refetchLetters } = trpc.letters.listActive.useQuery({ complaintId });
   
   const saveLetter = trpc.letters.save.useMutation({
     onSuccess: () => {
@@ -51,6 +56,30 @@ export function LetterManager({ complaintId, generatedLetter, clientReference, o
       refetchLetters();
       setShowSendDialog(false);
       alert('Letter marked as sent and added to timeline!');
+    },
+  });
+
+  const updateContent = trpc.letters.updateContent.useMutation({
+    onSuccess: () => {
+      refetchLetters();
+      setShowEditDialog(false);
+      setSelectedLetter(null);
+      setEditContent('');
+      setEditReason('');
+      alert('Letter updated successfully! (No extra time logged)');
+    },
+    onError: (error) => {
+      alert(`Failed to update letter: ${error.message}`);
+    },
+  });
+
+  const regenerateLetter = trpc.letters.regenerate.useMutation({
+    onSuccess: (newLetter) => {
+      refetchLetters();
+      alert('Letter regenerated successfully! The old version has been archived. (No extra time logged)');
+    },
+    onError: (error) => {
+      alert(`Failed to regenerate letter: ${error.message}`);
     },
   });
 
@@ -86,6 +115,36 @@ export function LetterManager({ complaintId, generatedLetter, clientReference, o
       letterId: selectedLetter.id,
       ...sendForm,
     });
+  };
+
+  const handleEditLetter = (letter: any) => {
+    setSelectedLetter(letter);
+    setEditContent(letter.letter_content);
+    setEditReason('');
+    setShowEditDialog(true);
+  };
+
+  const handleSaveEdit = () => {
+    if (!selectedLetter || !editContent.trim()) {
+      alert('Letter content cannot be empty');
+      return;
+    }
+
+    updateContent.mutate({
+      letterId: selectedLetter.id,
+      newContent: editContent,
+      editReason: editReason || undefined,
+    });
+  };
+
+  const handleRegenerateLetter = (letter: any) => {
+    if (onRegenerateLetter) {
+      // Use parent's regeneration flow (with AI)
+      onRegenerateLetter(letter.id, letter.letter_content);
+    } else {
+      // Simple regeneration - just mark as needing regeneration
+      alert('To regenerate with AI, use the "Refine Letter" feature above.');
+    }
   };
 
   return (
@@ -143,10 +202,16 @@ export function LetterManager({ complaintId, generatedLetter, clientReference, o
                 >
                   <div className="flex items-start justify-between">
                     <div className="space-y-1">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium">
                           {letter.letter_type.replace('_', ' ').toUpperCase()}
                         </span>
+                        {letter.is_regeneration && (
+                          <Badge variant="outline" className="gap-1 text-blue-600 border-blue-300">
+                            <RefreshCw className="h-3 w-3" />
+                            Regenerated
+                          </Badge>
+                        )}
                         {letter.locked_at && (
                           <Badge variant="secondary" className="gap-1">
                             <Lock className="h-3 w-3" />
@@ -163,6 +228,11 @@ export function LetterManager({ complaintId, generatedLetter, clientReference, o
                       <p className="text-sm text-muted-foreground">
                         Generated: {format(new Date(letter.created_at), 'dd MMM yyyy HH:mm')}
                       </p>
+                      {letter.is_regeneration && letter.notes && (
+                        <p className="text-xs text-blue-600">
+                          {letter.notes}
+                        </p>
+                      )}
                       {letter.sent_at && (
                         <>
                           <p className="text-sm">
@@ -181,8 +251,37 @@ export function LetterManager({ complaintId, generatedLetter, clientReference, o
                         </>
                       )}
                     </div>
-                    <div className="flex gap-2">
-                      {!letter.locked_at && (
+                    <div className="flex flex-wrap gap-2">
+                      {/* Edit button - available if not sent */}
+                      {!letter.sent_at && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleEditLetter(letter)}
+                          className="gap-1"
+                          title="Edit letter content (no extra time)"
+                        >
+                          <Edit2 className="h-3 w-3" />
+                          Edit
+                        </Button>
+                      )}
+                      
+                      {/* Regenerate button - available if not sent */}
+                      {!letter.sent_at && onRegenerateLetter && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleRegenerateLetter(letter)}
+                          className="gap-1 text-blue-600 border-blue-300 hover:bg-blue-50"
+                          title="Regenerate with AI (replaces this letter, no extra time)"
+                        >
+                          <RefreshCw className="h-3 w-3" />
+                          Regenerate
+                        </Button>
+                      )}
+                      
+                      {/* Lock button - available if not locked */}
+                      {!letter.locked_at && !letter.sent_at && (
                         <Button
                           size="sm"
                           variant="outline"
@@ -193,6 +292,8 @@ export function LetterManager({ complaintId, generatedLetter, clientReference, o
                           Lock
                         </Button>
                       )}
+                      
+                      {/* Mark as Sent button - available if locked but not sent */}
                       {letter.locked_at && !letter.sent_at && (
                         <Button
                           size="sm"
@@ -296,6 +397,76 @@ export function LetterManager({ complaintId, generatedLetter, clientReference, o
                 >
                   <CheckCircle2 className="h-4 w-4" />
                   Confirm Sent
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Edit Letter dialog */}
+      {showEditDialog && selectedLetter && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <Card className="w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            <CardHeader className="flex-shrink-0">
+              <CardTitle className="flex items-center gap-2">
+                <Edit2 className="h-5 w-5" />
+                Edit Letter Content
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Make corrections or updates. This will <strong>not</strong> add extra time to the invoice.
+              </p>
+            </CardHeader>
+            <CardContent className="flex-1 overflow-hidden flex flex-col space-y-4">
+              {/* Info banner */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2 flex-shrink-0">
+                <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium text-blue-900">No extra time logged</p>
+                  <p className="text-blue-700">Edits and regenerations after the initial generation do not add to billable time.</p>
+                </div>
+              </div>
+
+              <div className="flex-shrink-0">
+                <Label htmlFor="editReason">Reason for edit (optional)</Label>
+                <Input
+                  id="editReason"
+                  placeholder="e.g., Fixed date error, Updated client details"
+                  value={editReason}
+                  onChange={(e) => setEditReason(e.target.value)}
+                  className="mt-1.5"
+                />
+              </div>
+
+              <div className="flex-1 overflow-hidden">
+                <Label htmlFor="editContent">Letter Content</Label>
+                <Textarea
+                  id="editContent"
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  className="mt-1.5 h-[400px] font-mono text-sm resize-none"
+                />
+              </div>
+
+              <div className="flex gap-2 justify-end flex-shrink-0">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowEditDialog(false);
+                    setSelectedLetter(null);
+                    setEditContent('');
+                    setEditReason('');
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSaveEdit}
+                  disabled={updateContent.isPending}
+                  className="gap-2"
+                >
+                  <Save className="h-4 w-4" />
+                  {updateContent.isPending ? 'Saving...' : 'Save Changes'}
                 </Button>
               </div>
             </CardContent>

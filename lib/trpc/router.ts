@@ -648,6 +648,117 @@ export const appRouter = router({
         return data;
       }),
 
+    // Regenerate letter (replaces existing, NO extra time logged)
+    regenerate: publicProcedure
+      .input(z.object({
+        letterId: z.string(),
+        newContent: z.string(),
+        reason: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        // Get the original letter
+        const { data: originalLetter, error: fetchError } = await (supabaseAdmin as any)
+          .from('generated_letters')
+          .select('*')
+          .eq('id', input.letterId)
+          .single();
+        
+        if (fetchError || !originalLetter) {
+          throw new Error('Original letter not found');
+        }
+        
+        // Mark original as superseded
+        const { error: updateError } = await (supabaseAdmin as any)
+          .from('generated_letters')
+          .update({
+            superseded_at: new Date().toISOString(),
+            superseded_reason: input.reason || 'Replaced with updated version',
+          })
+          .eq('id', input.letterId);
+        
+        if (updateError) throw new Error(updateError.message);
+        
+        // Create new letter as a regeneration (no time tracking)
+        const { data: newLetter, error: insertError } = await (supabaseAdmin as any)
+          .from('generated_letters')
+          .insert({
+            complaint_id: originalLetter.complaint_id,
+            letter_type: originalLetter.letter_type,
+            letter_content: input.newContent,
+            replaces_letter_id: input.letterId,
+            is_regeneration: true,
+            notes: `Regenerated from letter ${input.letterId.substring(0, 8)}... - ${input.reason || 'Content update'}`,
+          })
+          .select()
+          .single();
+        
+        if (insertError) throw new Error(insertError.message);
+        
+        logger.info(`🔄 Letter regenerated: ${input.letterId} → ${newLetter.id} (no time logged)`);
+        
+        return newLetter;
+      }),
+
+    // Update letter content in place (for minor edits, no new letter created)
+    updateContent: publicProcedure
+      .input(z.object({
+        letterId: z.string(),
+        newContent: z.string(),
+        editReason: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        // Check if letter is locked or sent
+        const { data: letter, error: fetchError } = await (supabaseAdmin as any)
+          .from('generated_letters')
+          .select('locked_at, sent_at')
+          .eq('id', input.letterId)
+          .single();
+        
+        if (fetchError) throw new Error(fetchError.message);
+        
+        if (letter.sent_at) {
+          throw new Error('Cannot edit a letter that has been sent. Use regenerate instead.');
+        }
+        
+        // Update the letter content
+        const { data, error } = await (supabaseAdmin as any)
+          .from('generated_letters')
+          .update({
+            letter_content: input.newContent,
+            notes: input.editReason 
+              ? `Edited: ${input.editReason}` 
+              : `Edited at ${new Date().toISOString()}`,
+            // If it was locked, unlock it for review
+            locked_at: null,
+          })
+          .eq('id', input.letterId)
+          .select()
+          .single();
+        
+        if (error) throw new Error(error.message);
+        
+        logger.info(`✏️ Letter content updated: ${input.letterId}`);
+        
+        return data;
+      }),
+
+    // Get active (non-superseded) letters for a complaint
+    listActive: publicProcedure
+      .input(z.object({
+        complaintId: z.string(),
+      }))
+      .query(async ({ input }) => {
+        const { data, error } = await (supabaseAdmin as any)
+          .from('generated_letters')
+          .select('*')
+          .eq('complaint_id', input.complaintId)
+          .is('superseded_at', null)
+          .order('created_at', { ascending: false });
+        
+        if (error) throw new Error(error.message);
+        return data;
+      }),
+
     generateResponse: publicProcedure
       .input(z.object({
         complaintId: z.string(),
