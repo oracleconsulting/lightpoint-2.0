@@ -70,6 +70,22 @@ export interface ExtractedProcess {
   }[];
 }
 
+export interface ExtractedComparison {
+  title: string;
+  cards: {
+    title: string;
+    description: string;
+    type: 'bad' | 'good' | 'neutral';
+  }[];
+}
+
+export interface ExtractedKeyPercentage {
+  value: number;
+  label: string;
+  counterLabel: string;
+  context?: string;
+}
+
 export interface ExtractionResult {
   stats: ExtractedStat[];
   quotes: ExtractedQuote[];
@@ -77,6 +93,8 @@ export interface ExtractionResult {
   timeline: ExtractedTimeline | null;
   sections: ExtractedSection[];
   processes: ExtractedProcess[];
+  comparisons: ExtractedComparison[];
+  keyPercentages: ExtractedKeyPercentage[];
   metadata: {
     totalWords: number;
     statCount: number;
@@ -432,6 +450,7 @@ Find ALL numbers:
 - category: volume | percentage | money | time | comparison
 - sentiment: positive | negative | neutral
 - groupId: opening | middle | closing | adjudicator | success | ungrouped
+- isKeyPercentage: true if this is a major percentage stat (like "98% internal resolution", "41% upheld")
 
 ### QUOTES
 Find quotes, Charter references, guidance citations:
@@ -461,6 +480,32 @@ Example: "Why most complaints fail" with steps like:
 - "No evidence trail" (not "Step 2")
 - "Wrong resolution request" (not "Step 3")
 
+### COMPARISONS (NEW)
+Find content that compares 2-4 things side by side, especially:
+- "three reasons/failures/mistakes/problems"
+- "compare X to Y"
+- "instead of X, do Y"
+- contrasting approaches
+
+Extract as:
+- title: comparison heading
+- cards: [{ title: "Card Title", description: "explanation", type: "bad" | "good" | "neutral" }]
+
+Example: "Why most complaints fail" could have comparison cards:
+- { title: "Missing the target", description: "Writing 'your service is appalling' gives HMRC easy dismissal", type: "bad" }
+- { title: "No evidence trail", description: "Vague timelines kill complaints", type: "bad" }
+- { title: "Wrong resolution request", description: "'Compensation for all this trouble' gets you nowhere", type: "bad" }
+
+### KEY PERCENTAGES (for DonutChart)
+If a percentage is particularly important and would benefit from visual representation:
+- value: the percentage number
+- label: what it represents
+- counterLabel: what the remaining percentage represents
+- context: explanation
+
+Example: "98% of complaints resolved internally" →
+{ value: 98, label: "Resolved internally", counterLabel: "Escalated", context: "Most complaints never reach independent review" }
+
 ## OUTPUT
 
 Return ONLY valid JSON:
@@ -469,7 +514,9 @@ Return ONLY valid JSON:
   "quotes": [...],
   "lists": [...],
   "timeline": {...} or null,
-  "processes": [...]
+  "processes": [...],
+  "comparisons": [...],
+  "keyPercentages": [...]
 }
 
 CRITICAL: Never use placeholder text. Extract actual content.`;
@@ -521,6 +568,7 @@ export async function extractContent(
     console.error('Parse error:', e);
     return {
       stats: [], quotes: [], lists: [], timeline: null, sections: [], processes: [],
+      comparisons: [], keyPercentages: [],
       metadata: { totalWords: 0, statCount: 0, hasTimeline: false, hasChecklist: false }
     };
   }
@@ -529,6 +577,36 @@ export async function extractContent(
 // ═══════════════════════════════════════════════════════════════════════════
 // VALIDATION
 // ═══════════════════════════════════════════════════════════════════════════
+
+function validateComparison(comp: any): ExtractedComparison | null {
+  if (!comp || !comp.cards || comp.cards.length < 2) return null;
+  
+  const validCards = (comp.cards || [])
+    .filter((c: any) => c?.title && c?.description)
+    .map((c: any) => ({
+      title: String(c.title),
+      description: String(c.description),
+      type: c.type || 'neutral',
+    }));
+  
+  if (validCards.length < 2) return null;
+  
+  return {
+    title: String(comp.title || 'Comparison'),
+    cards: validCards,
+  };
+}
+
+function validateKeyPercentage(kp: any): ExtractedKeyPercentage | null {
+  if (!kp || typeof kp.value !== 'number' || !kp.label) return null;
+  
+  return {
+    value: kp.value,
+    label: String(kp.label),
+    counterLabel: String(kp.counterLabel || 'Other'),
+    context: kp.context,
+  };
+}
 
 function validateExtractionResult(result: any): ExtractionResult {
   return {
@@ -580,6 +658,14 @@ function validateExtractionResult(result: any): ExtractionResult {
         description: String(s.description || ''),
       })),
     })),
+    // NEW: Comparisons for side-by-side cards (e.g., "three failures")
+    comparisons: (result.comparisons || [])
+      .map(validateComparison)
+      .filter(Boolean) as ExtractedComparison[],
+    // NEW: Key percentages for DonutChart visualization
+    keyPercentages: (result.keyPercentages || [])
+      .map(validateKeyPercentage)
+      .filter(Boolean) as ExtractedKeyPercentage[],
     metadata: {
       totalWords: result.metadata?.totalWords || 0,
       statCount: result.stats?.length || 0,
@@ -824,16 +910,19 @@ export function mapToComponents(
   // ─────────────────────────────────────────────────────────────────────────
   
   // Pre-calculate visual insertion schedule
+  // AUDIT FIX: Added comparison cards and donut charts
   const visualSchedule: Map<number, string> = new Map();
   visualSchedule.set(2, 'process');      // After 2nd paragraph: process flow
-  visualSchedule.set(4, 'quote');        // After 4th: first quote
-  visualSchedule.set(6, 'timeline');     // After 6th: timeline
-  visualSchedule.set(9, 'quote');        // After 9th: second quote
-  visualSchedule.set(12, 'checklist');   // After 12th: checklist
-  visualSchedule.set(15, 'stats');       // After 15th: middle stats
-  visualSchedule.set(18, 'quote');       // After 18th: third quote
-  visualSchedule.set(22, 'list');        // After 22nd: bullet list
-  visualSchedule.set(26, 'stats');       // After 26th: closing stats
+  visualSchedule.set(4, 'donut');        // After 4th: key percentage donut chart
+  visualSchedule.set(6, 'quote');        // After 6th: first quote
+  visualSchedule.set(8, 'timeline');     // After 8th: timeline
+  visualSchedule.set(10, 'comparison');  // After 10th: comparison cards (e.g., "three failures")
+  visualSchedule.set(12, 'quote');       // After 12th: second quote
+  visualSchedule.set(15, 'checklist');   // After 15th: checklist
+  visualSchedule.set(18, 'stats');       // After 18th: middle stats
+  visualSchedule.set(21, 'quote');       // After 21st: third quote
+  visualSchedule.set(24, 'list');        // After 24th: bullet list
+  visualSchedule.set(28, 'stats');       // After 28th: closing stats
   
   let headingCount = 0;
   
@@ -915,6 +1004,42 @@ export function mapToComponents(
       components.push({
         type: 'NumberedProcessFlowV6',
         props: { title: process.title, steps: process.steps },
+      });
+      visualsInserted++;
+    }
+    
+    // AUDIT FIX: Add DonutChart for key percentages
+    if (scheduledVisual === 'donut' && extraction.keyPercentages.length > 0) {
+      const kp = extraction.keyPercentages[0];
+      components.push({
+        type: 'DonutChart',
+        props: {
+          title: kp.context || `${kp.label} Rate`,
+          segments: [
+            { label: kp.label, value: kp.value, color: 'cyan' },
+            { label: kp.counterLabel, value: 100 - kp.value, color: 'slate' },
+          ],
+          centerLabel: `${kp.value}%`,
+          centerSubtext: kp.label,
+        },
+      });
+      visualsInserted++;
+    }
+    
+    // AUDIT FIX: Add ComparisonCards for "three failures" type content
+    if (scheduledVisual === 'comparison' && extraction.comparisons.length > 0) {
+      const comparison = extraction.comparisons[0];
+      components.push({
+        type: 'ComparisonCards',
+        props: {
+          title: comparison.title,
+          cards: comparison.cards.map(card => ({
+            title: card.title,
+            description: card.description,
+            accent: card.type === 'bad' ? 'red' : card.type === 'good' ? 'green' : 'cyan',
+          })),
+          columns: comparison.cards.length <= 3 ? comparison.cards.length : 2,
+        },
       });
       visualsInserted++;
     }
