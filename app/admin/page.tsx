@@ -11,11 +11,21 @@ import {
   BookOpen, 
   Search, 
   Settings,
-  ArrowRight
+  ArrowRight,
+  Building2,
+  Users
 } from 'lucide-react';
 
 export default function AdminDashboard() {
   const sections = [
+    {
+      title: 'Customer Management',
+      description: 'Invite pilot users and manage customer organizations',
+      icon: Building2,
+      href: '/admin/customers',
+      color: 'bg-purple-500',
+      priority: true,
+    },
     {
       title: 'Subscription Management',
       description: 'Manage pricing tiers, features, and subscription limits',

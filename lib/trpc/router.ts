@@ -17,10 +17,8 @@ import { cpdRouter } from './routers/cpd';
 import { webinarRouter } from './routers/webinars';
 import { examplesRouter } from './routers/examples';
 import { socialContentRouter } from './routers/socialContent';
-
-
 import { analyticsRouter } from './routers/analytics';
-
+import { adminRouter } from './routers/admin';
 
 export const appRouter = router({
   // Subscription management
@@ -28,6 +26,9 @@ export const appRouter = router({
   
   // Analytics & Statistics
   analytics: analyticsRouter,
+  
+  // Admin & Customer Management (superadmin only)
+  admin: adminRouter,
   
   // CMS & Content management
   cms: cmsRouter,
