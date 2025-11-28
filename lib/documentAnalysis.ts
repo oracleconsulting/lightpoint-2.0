@@ -143,11 +143,27 @@ export function combineDocumentAnalyses(
   const allHmrcQuotes = analyses.flatMap(a => a.hmrcQuotes || []);
   const allDeadlines = analyses.flatMap(a => a.deadlines || []);
   const allCharterViolations = [...new Set(analyses.flatMap(a => a.charterViolations || []))];
+  const allPaymentAllocations = analyses.flatMap(a => a.paymentAllocations || []);
+  const allStatutoryRefs = analyses.flatMap(a => a.statutoryReferences || []);
+  const allInterDeptRefs = analyses.flatMap(a => a.interDepartmentalRefs || []);
+  
+  // Determine complaint stage from all analyses
+  const processStatuses = analyses.map(a => a.processStatus).filter(Boolean);
+  const highestTier = processStatuses.reduce((max, ps) => {
+    const tiers = ['none', 'tier1', 'tier2', 'adjudicator'];
+    return tiers.indexOf(ps?.tier || 'none') > tiers.indexOf(max) ? (ps?.tier || 'none') : max;
+  }, 'none' as string);
+  const hasExistingComplaint = processStatuses.some(ps => ps?.existingComplaint);
+  const existingComplaintRef = processStatuses.find(ps => ps?.existingComplaintRef)?.existingComplaintRef || null;
   
   // Build comprehensive but structured context
   const combined = `
 COMPLAINT CONTEXT:
 ${complaintContext}
+
+COMPLAINT STAGE:
+${hasExistingComplaint ? `Existing complaint: Yes (Ref: ${existingComplaintRef || 'unknown'})` : 'New complaint'}
+Current tier: ${highestTier}
 
 CHRONOLOGICAL TIMELINE:
 ${allDates.map(d => `${d.date}: ${d.context}`).join('\n')}
@@ -155,6 +171,9 @@ ${allDates.map(d => `${d.date}: ${d.context}`).join('\n')}
 FINANCIAL DETAILS:
 ${allAmounts.map(a => `${a.amount} - ${a.context}`).join('\n')}
 
+${allPaymentAllocations.length > 0 ? `PAYMENT ALLOCATIONS (DMBM-relevant):
+${allPaymentAllocations.map(p => `${p.paymentDate}: ${p.paymentAmount} allocated to ${p.allocatedTo} by ${p.allocatedBy}`).join('\n')}
+` : ''}
 REFERENCE NUMBERS:
 ${allReferences.map(r => `${r.type}: ${r.value}`).join('\n')}
 
@@ -170,6 +189,12 @@ ${allHmrcQuotes.map(q => `"${q}"`).join('\n')}
 DEADLINES AND TIMEFRAMES:
 ${allDeadlines.map(d => `${d.date}: ${d.description}`).join('\n')}
 
+${allStatutoryRefs.length > 0 ? `STATUTORY REFERENCES:
+${allStatutoryRefs.map(s => `${s.act} ${s.section}: ${s.context}`).join('\n')}
+` : ''}
+${allInterDeptRefs.length > 0 ? `INTER-DEPARTMENTAL REFERENCES:
+${allInterDeptRefs.map(r => `${r.fromDept} → ${r.toDept}: ${r.context}`).join('\n')}
+` : ''}
 CHARTER VIOLATIONS:
 ${allCharterViolations.map((v, i) => `${i + 1}. ${v}`).join('\n')}
 
