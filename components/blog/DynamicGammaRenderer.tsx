@@ -247,23 +247,25 @@ export default function DynamicGammaRenderer({
     }
   };
 
-  // Component-specific spacing for natural flow - MORE GENEROUS
+  // Component-specific spacing for natural flow
+  // AUDIT FIX: Increased spacing throughout for better visual breathing room
   const getSpacingClass = (type: string, index: number): string => {
     switch (type) {
       case 'HeroGradient':
       case 'hero':
-        return 'mb-12 md:mb-16'; // Big gap after hero
+        return 'mb-16 md:mb-20'; // Big gap after hero (was 12/16)
       case 'SectionHeading':
-        return 'mt-12 md:mt-16 mb-4 md:mb-6'; // Space before new sections
+        return 'mt-16 md:mt-24 mb-6 md:mb-8'; // More space before new sections (was 12/16)
       case 'HorizontalStatRow':
       case 'StatCardGroup':
-        return 'my-10 md:my-14'; // Medium gap around stats
+        return 'my-12 md:my-16'; // Medium gap around stats (was 10/14)
       case 'TextSection':
       case 'text':
-        return index === 0 ? 'mb-6 md:mb-8' : 'my-4 md:my-6'; // Tighter for text flow
+        // AUDIT FIX: More space between text sections for readability
+        return index === 0 ? 'mb-8 md:mb-10' : 'my-6 md:my-8'; // (was 4/6)
       case 'QuoteCalloutV6':
       case 'QuoteCallout':
-        return 'my-8 md:my-12'; // Pull quotes get breathing room
+        return 'my-12 md:my-16'; // Pull quotes get breathing room (was 8/12)
       case 'TableTimeline':
       case 'Timeline':
       case 'NumberedProcessFlowV6':
@@ -271,13 +273,14 @@ export default function DynamicGammaRenderer({
       case 'GridChecklist':
       case 'ComparisonCards':
       case 'DonutChart':
-        return 'my-10 md:my-14'; // Special components get space
+      case 'HorizontalBarChart':
+        return 'my-14 md:my-20'; // Special components get space (was 10/14)
       case 'SectionDivider':
-        return ''; // Divider has its own padding
+        return 'my-8 md:my-12'; // Divider gets consistent spacing
       case 'BulletList':
-        return 'my-6 md:my-8'; // Lists get moderate spacing
+        return 'my-8 md:my-12'; // Lists get moderate spacing (was 6/8)
       default:
-        return 'my-6 md:my-8';
+        return 'my-8 md:my-10';
     }
   };
 

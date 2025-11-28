@@ -120,71 +120,94 @@ function splitIntoSentences(text: string): string[] {
 /**
  * Detect if a sentence looks like a heading
  * 
- * EXPANDED: More patterns to catch section headings
+ * EXPANDED V2: Comprehensive patterns for HMRC blog content
+ * Based on audit: need to catch "The internal resolution trap", 
+ * "Why most complaints fail", "The October 2024 change", etc.
  */
 function isLikelyHeading(sentence: string): boolean {
   const trimmed = sentence.trim();
   
-  // Length constraints
+  // Length constraints - headings are typically 8-80 chars
   if (trimmed.length > 80) return false;
   if (trimmed.length < 8) return false;
   
   // Sentences ending with period are usually not headings (unless year)
   if (trimmed.endsWith('.') && !trimmed.match(/\d{4}\.?$/)) return false;
   
-  // Common heading patterns - EXPANDED for HMRC blog content
+  // Common heading patterns - COMPREHENSIVE for HMRC blog content
   const headingPatterns = [
-    // "The X trap/problem/solution" patterns
-    /^The\s+\w+\s+(trap|problem|solution|answer|question|approach|reality|truth|difference|key|secret|resolution)/i,
-    // Internal resolution patterns
-    /^The\s+internal\s+/i,
-    // Question words
+    // "The X trap/problem/solution" patterns - CRITICAL for HMRC content
+    /^The\s+\w+\s+(trap|problem|solution|answer|question|approach|reality|truth|difference|key|secret|resolution|change|shift)/i,
+    /^The\s+(internal|external|real|hidden|true|main|first|second|third|final|only|best|worst|biggest|smallest)\s+/i,
+    
+    // Question words - common blog heading starters
+    /^Why\s+(most|many|some|your|HMRC|complaints?|accountants?)/i,
     /^Why\s+/i,
     /^How\s+to\s+/i,
-    /^How\s+\w+\s+(work|fail|succeed)/i,
-    /^What\s+(is|are|makes|happens|you)/i,
+    /^How\s+\w+\s+(work|fail|succeed|help|hurt)/i,
+    /^What\s+(is|are|makes|happens|you|every|most)/i,
     /^When\s+to\s+/i,
-    /^Where\s+/i,
-    // Action words
-    /^(Making|Building|Creating|Getting|Understanding|Avoiding|Maximising|Winning)\s+/i,
+    /^Where\s+(to|does|do|is|are)/i,
+    /^Which\s+/i,
+    
+    // Action words - common blog heading starters
+    /^(Making|Building|Creating|Getting|Understanding|Avoiding|Maximising|Winning|Turning|Breaking|Fixing|Solving|Recovering)\s+/i,
+    
     // "X that works/fails" patterns
-    /\s+(that (actually )?works|that fails?|you need|worth the effort)/i,
-    // Specific domain patterns
+    /\s+(that (actually )?works|that fails?|you need|worth the effort|that matters?|that counts?)/i,
+    
+    // Specific HMRC/tax complaint domain patterns
     /^Professional\s+fee/i,
     /^The\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}/i,
-    // Structure patterns
-    /^(Step|Stage|Phase|Part)\s+\d+/i,
-    /^(First|Second|Third|Final)\s+/i,
-    // Common blog heading patterns
-    /^(Key|Critical|Essential|Important|Common|Top)\s+/i,
-    /^The\s+(internal|external|real|hidden|true|main)/i,
-    // Colon patterns (often indicate headings)
-    /^[A-Z][^.]{10,50}:$/,
-    // All caps short phrases
-    /^[A-Z\s]{10,40}$/,
-    // Specific HMRC complaint patterns
-    /^(Missing|No evidence|Wrong resolution)/i,
-    /complaint.*(fail|work|succeed)/i,
+    /^(Missing|No evidence|Wrong resolution|Poor communication|System failure|Charter breach)/i,
+    /complaint.*(fail|work|succeed|process|journey)/i,
     /^The structure/i,
     /game.?changer/i,
     /fee recovery/i,
+    /^(HMRC|Adjudicator|Charter|CRG|Taxpayer)/i,
+    /escalation\s+(path|route|option)/i,
+    /resolution\s+(trap|process|rate)/i,
+    
+    // Structure patterns
+    /^(Step|Stage|Phase|Part)\s+\d+/i,
+    /^(First|Second|Third|Final|Next|Last)\s+/i,
+    /^(Number|Point|Reason|Factor|Element)\s+\d+/i,
+    
+    // Common blog heading patterns
+    /^(Key|Critical|Essential|Important|Common|Top|Major|Minor)\s+/i,
+    /^(Three|Four|Five|Six|Seven|Eight|Nine|Ten)\s+(reasons?|ways?|steps?|tips?|mistakes?|failures?)/i,
+    /^The\s+(three|four|five|six|seven)\s+/i,
+    
+    // Colon patterns (often indicate headings)
+    /^[A-Z][^.]{10,50}:$/,
+    
+    // All caps short phrases (editorial headings)
+    /^[A-Z\s]{10,40}$/,
+    
+    // Specific patterns from audit
+    /^The\s+internal\s+resolution/i,
+    /^Why\s+most\s+complaints?\s+fail/i,
+    /^The\s+\w+\s+\d{4}\s+(change|update|reform)/i,
+    /^Making\s+complaints?\s+worth/i,
+    /^Evidence\s+that\s+(works|matters)/i,
+    /^What\s+the\s+(adjudicator|HMRC|charter)/i,
   ];
   
   // Check patterns
   const matchedPattern = headingPatterns.find(p => p.test(trimmed));
   if (matchedPattern) {
-    console.log(`🏷️ Heading detected: "${trimmed.substring(0, 40)}..." matched pattern`);
+    console.log(`🏷️ Heading detected: "${trimmed.substring(0, 50)}..." matched pattern`);
     return true;
   }
   
   // Additional heuristic: Short, starts with capital, mostly title case
-  if (trimmed.length < 60 && trimmed.length > 15) {
+  if (trimmed.length < 65 && trimmed.length > 15) {
     const words = trimmed.split(/\s+/);
-    if (words.length >= 3 && words.length <= 10) {
+    if (words.length >= 3 && words.length <= 12) {
       const capitalizedWords = words.filter(w => /^[A-Z]/.test(w));
       // If most words are capitalized and no ending punctuation
-      if (capitalizedWords.length >= words.length * 0.6 && !trimmed.match(/[.!?,;]$/)) {
-        console.log(`🏷️ Heading detected (title case): "${trimmed.substring(0, 40)}..."`);
+      if (capitalizedWords.length >= words.length * 0.5 && !trimmed.match(/[.!?,;]$/)) {
+        console.log(`🏷️ Heading detected (title case): "${trimmed.substring(0, 50)}..."`);
         return true;
       }
     }

@@ -504,157 +504,136 @@ export const stage3_addTone = async (
         messages: [
           {
             role: 'system',
-            content: `You are transforming a structured complaint letter into professional, firm language suitable for an HMRC complaint.
+            content: `You are transforming a structured complaint letter into professional language appropriate to the case severity.
 
-CRITICAL TONE GUIDELINES:
+=============================================================================
+CALIBRATED TONE SYSTEM - CRITICAL
+=============================================================================
 
-1. **Use ORGANIZATIONAL voice** - NOT first-person singular:
+Based on the complaint analysis, select the appropriate tone level:
+
+**LEVEL 1 - MEASURED PROFESSIONAL** (Default for most cases: success rate 50-70%)
+- Formal, factual, no memorable phrases
+- Use: "This represents a failure to meet CRG standards"
+- Use: "We would appreciate a substantive response"
+- Use: "The delay exceeds HMRC's stated targets"
+- Appropriate for: Minor delays (< 6 months), single issues, weak evidence
+
+**LEVEL 2 - FIRM PROFESSIONAL** (For significant cases: success rate 70-85%)
+- Direct language, clear disappointment expressed
+- Use: "This is unacceptable and falls significantly below HMRC's own standards"
+- Use: "We require a substantive response addressing each point"
+- Use: "This represents a significant breach of [CRG reference]"
+- Use: "The combination of failures is particularly concerning"
+- Appropriate for: Significant delays (6-12 months), multiple failures, clear evidence
+
+**LEVEL 3 - ROBUST PROFESSIONAL** (For exceptional cases: success rate 85%+)
+- Strongest professional language, memorable characterisations permitted
+- Use: "In our considerable experience, this represents one of the more serious service failures we have encountered"
+- Use: "The pattern of errors demonstrates systematic administrative failure"
+- Use: "We have very limited confidence in HMRC's internal processes given..."
+- Can label specific failures (e.g., correspondence HMRC claims to have sent but client never received)
+- Appropriate for: Egregious delays (12+ months), overwhelming evidence, multiple system errors
+
+**DETERMINING TONE LEVEL:**
+Look in the complaint analysis for:
+- success_rate > 85% AND system_errors > 2 → Level 3
+- success_rate 70-85% OR significant_delay → Level 2  
+- success_rate < 70% → Level 1
+
+If uncertain, default to Level 2 (firm but safe).
+
+=============================================================================
+CORE PRINCIPLES (ALL LEVELS)
+=============================================================================
+
+1. **ORGANIZATIONAL VOICE** - Never first-person singular:
    ✅ "We are writing to lodge a formal complaint..."
    ✅ "Our firm has experienced..."
-   ✅ "The client has been deprived..."
    ❌ "I have rarely encountered..."
-   ❌ "In my twenty years..."
-   
-2. **Use MEASURED professional language** - NOT aggressive:
-   ✅ "This represents a comprehensive failure of..."
-   ✅ "These delays are significantly below the standards..."
-   ✅ "The combination of failures is particularly concerning"
-   ❌ "your incompetence"
-   ❌ "phantom letter"
-   ❌ "would be comedic if..."
-   ❌ "breathtaking consistency"
-   ❌ "abandoned by HMRC"
 
-3. **Professional section headings**:
-   ✅ "Chronological Timeline of Events"
-   ✅ "Charter Violations and CRG Breaches"
-   ✅ "Impact on Our Client and Professional Practice"
-   ❌ "TIMELINE OF FAILURES"
-   ❌ "CHARTER & COMPLAINTS REFORM VIOLATIONS"
-
-4. **Maintain FIRMNESS through**:
-   - Specific facts: "14+ months vs 30-day standard = 1,400% excess"
-   - Clear citations: "This comprehensively breaches CRG4025"
-   - Professional disapproval: "completely unacceptable"
-   - Logical consequences: "We will immediately escalate to Tier 2"
-   
-5. **Express concern professionally**:
-   ✅ "particularly concerning"
-   ✅ "significantly below acceptable standards"
-   ✅ "comprehensive failure of service delivery"
-   ✅ "We are disappointed to report..."
-   ❌ "shocking"
-   ❌ "outrageous"
-   ❌ "ridiculous"
-
-6. **AVOID entirely**:
+2. **NEVER USE** (regardless of level):
    - Sarcasm or mockery
-   - Personal attacks ("your incompetence")
-   - Hyperbolic language ("breathtaking", "comedic")
+   - Personal attacks
    - Rhetorical questions
    - First-person singular ("I")
-   - Emotional phrases
+   - Threats beyond stated escalation path
 
-7. **Standard professional phrases** to USE:
-   - "We are writing to lodge a formal complaint regarding..."
-   - "This represents a significant breach of..."
-   - "The combination of... represents multiple breaches..."
-   - "significantly below the standards taxpayers have a right to expect"
-   - "We trust HMRC will act swiftly to resolve this matter"
-   - "Given the evidence outlined above..."
-   - "These delays are completely unacceptable"
-   - "clear breach of" (not "fundamental breach")
-   - "significant" (not "egregious")
-   - "multiple breaches" (not "comprehensive breaches")
+3. **EXPRESS FIRMNESS THROUGH:**
+   - Specific facts with numbers: "14 months vs 30-day standard = 1,400% excess"
+   - Clear CRG citations: "This comprehensively breaches CRG4025"
+   - Logical consequences: "We will immediately escalate to Tier 2"
+   - Percentages and calculations that emphasize the failure
 
-8. **Closing tone**:
-   ✅ "We trust HMRC will treat this matter with appropriate urgency"
-   ✅ "We look forward to a substantive response"
-   ✅ "Failure to respond adequately will result in immediate escalation"
-   ❌ "Make no mistake, we will escalate"
-   ❌ "We have limited optimism"
+4. **LANGUAGE CALIBRATION BY LEVEL:**
 
-9. **Precedent language** (if provided):
-   - USE professional phrases from precedents
-   - ADAPT (don't copy verbatim) successful patterns
-   - AVOID any aggressive phrases even if in precedents
+   Level 1 phrases:
+   - "falls short of stated targets"
+   - "we would appreciate"
+   - "we trust this can be resolved"
 
-10. **BE CONCISE**: Reduce redundancy, maintain clarity.
+   Level 2 phrases:
+   - "significantly below acceptable standards"
+   - "we require"
+   - "completely unacceptable"
+   - "clear breach of"
+   - "particularly concerning"
 
-11. **Language refinements** (measured professional terms):
-   - Use "significant breach" NOT "egregious example"
-   - Use "multiple breaches" NOT "comprehensive breaches"
-   - Use "clear breach" NOT "fundamental breach"
-   - Use "completely" NOT "wholly"
-   - "Comprehensive failure" is acceptable but use sparingly
+   Level 3 phrases:
+   - "comprehensive administrative failure"
+   - "one of the more serious examples we have encountered"
+   - "systematic failure"
+   - "very limited confidence in internal processes"
+   - "demands immediate escalation"
 
-12. **PRESERVE REAL USER DETAILS**:
-   - The structured letter contains REAL user name (${userName || 'from input'}) and title (${userTitle || 'from input'})
-   - DO NOT change these to generic placeholders
-   - DO NOT change these to fictional names
-   - KEEP THEM EXACTLY AS PROVIDED
+=============================================================================
+PRESERVE REAL USER DETAILS
+=============================================================================
 
-**What to enhance:**
-- Make timeline entries clear and factual
-- Emphasize patterns of failure professionally
-- Calculate percentages and excesses
-- State impact clearly but without emotion
+- Real user name: ${userName || 'from input'}
+- Real user title: ${userTitle || 'from input'}
+- DO NOT change these to placeholders or fictional names
+- KEEP THEM EXACTLY AS PROVIDED in closing
+
+=============================================================================
+WHAT TO ENHANCE
+=============================================================================
+
+- Make timeline entries clear and impactful
+- Emphasize patterns of failure
+- Calculate percentages and excesses (Level 2+)
+- State impact clearly
 - Request specific remedies firmly
+- At Level 3: Add memorable characterisations where evidence is overwhelming
 
-**What NOT to change:**
+=============================================================================
+WHAT NOT TO CHANGE
+=============================================================================
+
 - Structure must remain EXACTLY as provided
 - All dates, numbers, facts must be preserved
 - Professional headings as given
-- Factual accuracy
-- Bold formatting (**double asterisks**) on headings and dates
-- **REAL USER NAME AND TITLE** in the closing
+- Bold formatting (**double asterisks**) on headings/dates
+- Real user details in closing
 
-**Critical formatting requirements:**
-- ALL section headings MUST remain bold (e.g., **Chronological Timeline of Events**)
-- ALL dates in timeline MUST remain bold (e.g., **16 February 2024:**)
-- Violation numbers MUST remain bold (e.g., **1. CRG4025 - Unreasonable Delay**)
-- PRESERVE all **double asterisks** from the structured letter
-- DO NOT remove bold formatting - it's required for professional presentation
+=============================================================================
+MANDATORY FORMATTING
+=============================================================================
 
-**MANDATORY FORMATTING - YOU WILL BE SCORED ON THIS:**
-
-Before returning, verify EVERY instance has **double asterisks**:
-✓ Section headings: **Chronological Timeline of Events** (NOT without asterisks)
-✓ Timeline dates: **February 2024:**, **16 February 2024:** (NOT without asterisks)
-✓ Violation headers: **1. CRG4025 - Unreasonable Delay** (NOT without asterisks)
-✓ FORMAL COMPLAINT: **FORMAL COMPLAINT: [Title]** (NOT without asterisks)
-✓ Real user details: Keep "${userName}" and "${userTitle}" EXACTLY as provided (NOT placeholders, NOT generic names)
-
-CRITICAL FAILURES (These will cause the letter to be REJECTED):
-❌ Returning "Chronological Timeline of Events" without **double asterisks**
-❌ Returning "February 2024:" without **double asterisks**
-❌ Returning "1. CRG4025 - Unreasonable Delay" without **double asterisks**
-❌ Changing real user name "${userName}" to a generic name or placeholder
-❌ Changing real user title "${userTitle}" to a generic title or placeholder
-
-IF YOU SEE ANY HEADING, DATE, OR VIOLATION WITHOUT **DOUBLE ASTERISKS**, YOU MUST ADD THEM NOW.
-IF YOU SEE THE REAL USER NAME OR TITLE, YOU MUST KEEP THEM EXACTLY AS PROVIDED.
+Verify EVERY instance has **double asterisks**:
+✓ Section headings: **Chronological Timeline of Events**
+✓ Timeline dates: **16 February 2024:**
+✓ Violation headers: **1. CRG4025 - Unreasonable Delay**
+✓ FORMAL COMPLAINT line
 
 LANGUAGE POLISH:
-- Use "14-month" NOT "14+ month" or "14+ Month"
-- Use "demonstrates systematic failure" for stronger impact
+- Use "14-month" NOT "14+ month"
+- Use "demonstrates systematic failure" for Level 3
 - Use "neither our firm nor our client received" for better flow
-- Replace "was never received" with "neither X nor Y received"
 
-DO NOT RETURN THIS LETTER UNTIL YOU HAVE VERIFIED EVERY HEADING, DATE, AND VIOLATION HAS **DOUBLE ASTERISKS**.
-DO NOT RETURN THIS LETTER IF YOU HAVE CHANGED THE REAL USER NAME OR TITLE.
+=============================================================================
 
-**Gold standard language patterns:**
-- Use "comprehensive administrative failure" (not "wholly unacceptable")
-- Use "significant breach" (not "egregious example")
-- Use "multiple breaches" (not "comprehensive breaches")
-- Use "clear breach" (not "fundamental breach")
-- Balance firmness with professionalism throughout
-
-**Temperature calibration:**
-This prompt uses temperature 0.3 for consistent professional output and formatting compliance.
-
-Transform the structured letter into a firm, professional complaint that demonstrates clear failures without aggressive language, preserving ALL bold formatting and REAL user details exactly as provided.`
+Transform the structured letter now. Apply the appropriate tone level based on case severity, preserving ALL formatting and real user details.`
           },
           {
             role: 'user',
