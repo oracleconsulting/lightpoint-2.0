@@ -7,7 +7,7 @@
  */
 
 import React, { useState } from 'react';
-import { Sparkles, Wand2, Loader2, CheckCircle, XCircle, RefreshCw, Zap } from 'lucide-react';
+import { Sparkles, Wand2, Loader2, CheckCircle, XCircle, RefreshCw, Zap, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import DynamicGammaRenderer from './DynamicGammaRenderer';
 
@@ -29,6 +29,8 @@ export function VisualTransformer({
   const [transformedLayout, setTransformedLayout] = useState<any | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [useV6, setUseV6] = useState(true); // Default to V6 pipeline
+  const [enableImages, setEnableImages] = useState(true); // NEW: Image generation toggle
+  const [imagesGenerated, setImagesGenerated] = useState(0);
 
   const handleTransform = async () => {
     if (!title || !content) {
@@ -53,6 +55,7 @@ export function VisualTransformer({
           title,
           content: stripHtml(content),
           excerpt,
+          enableImages: useV6 ? enableImages : false, // Only V6 supports images
         }),
       });
 
@@ -72,6 +75,7 @@ export function VisualTransformer({
       if (result.success && result.layout) {
         setTransformedLayout(result.layout);
         setShowPreview(true);
+        setImagesGenerated(result.imagesGenerated || 0);
       } else {
         setError(result.error || 'Failed to transform content');
       }
@@ -128,27 +132,51 @@ export function VisualTransformer({
                 charts, stat cards, timelines, and professional formatting.
               </p>
               
-              {/* V6 Toggle */}
-              <div className="flex items-center gap-2 mb-4">
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    checked={useV6} 
-                    onChange={(e) => setUseV6(e.target.checked)}
-                    className="sr-only peer" 
-                  />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-                </label>
-                <span className="text-sm font-medium text-gray-700">
-                  {useV6 ? (
-                    <span className="flex items-center gap-1">
-                      <Zap className="h-4 w-4 text-purple-600" />
-                      V6 Pipeline (Recommended)
+              {/* Pipeline Options */}
+              <div className="flex flex-wrap items-center gap-6 mb-4">
+                {/* V6 Toggle */}
+                <div className="flex items-center gap-2">
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={useV6} 
+                      onChange={(e) => setUseV6(e.target.checked)}
+                      className="sr-only peer" 
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                  </label>
+                  <span className="text-sm font-medium text-gray-700">
+                    {useV6 ? (
+                      <span className="flex items-center gap-1">
+                        <Zap className="h-4 w-4 text-purple-600" />
+                        V6.3 Pipeline
+                      </span>
+                    ) : (
+                      'V5 Pipeline (Legacy)'
+                    )}
+                  </span>
+                </div>
+                
+                {/* Image Generation Toggle - Only show for V6 */}
+                {useV6 && (
+                  <div className="flex items-center gap-2">
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={enableImages} 
+                        onChange={(e) => setEnableImages(e.target.checked)}
+                        className="sr-only peer" 
+                      />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                    </label>
+                    <span className="text-sm font-medium text-gray-700">
+                      <span className="flex items-center gap-1">
+                        <ImageIcon className="h-4 w-4 text-indigo-600" />
+                        {enableImages ? 'AI Images (NanoBanana)' : 'No Images'}
+                      </span>
                     </span>
-                  ) : (
-                    'V5 Pipeline (Legacy)'
-                  )}
-                </span>
+                  </div>
+                )}
               </div>
               
               <div className="flex items-center gap-3">
@@ -172,7 +200,9 @@ export function VisualTransformer({
                 {isTransforming && (
                   <span className="text-sm text-gray-600">
                     {useV6 
-                      ? 'V6: Extracting content → Mapping components...' 
+                      ? enableImages 
+                        ? 'V6.3: Extracting → Mapping → Generating images...' 
+                        : 'V6.3: Extracting content → Mapping components...'
                       : 'AI is analyzing your content and creating the perfect visual layout...'
                     }
                   </span>
@@ -206,6 +236,11 @@ export function VisualTransformer({
                   <p className="font-bold text-green-900">Visual Layout Created!</p>
                   <p className="text-sm text-green-700">
                     AI extracted data, identified key points, and created a professional visual layout
+                    {imagesGenerated > 0 && (
+                      <span className="ml-1 inline-flex items-center gap-1">
+                        • <ImageIcon className="h-3 w-3" /> {imagesGenerated} contextual {imagesGenerated === 1 ? 'image' : 'images'} generated
+                      </span>
+                    )}
                   </p>
                 </div>
               </div>

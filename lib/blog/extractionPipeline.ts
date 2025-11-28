@@ -1190,18 +1190,152 @@ export function mapToComponents(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// IMAGE GENERATION INTEGRATION
+// ═══════════════════════════════════════════════════════════════════════════
+
+import { generateContextualImage, type ImageGenerationResult } from './imageGeneration';
+
+/**
+ * Generate images for key sections in the article
+ * Only generates for sections that would benefit from visual support
+ */
+async function generateSectionImages(
+  title: string,
+  components: MappedComponent[],
+  enableImages: boolean = true
+): Promise<Map<number, string>> {
+  const imageMap = new Map<number, string>();
+  
+  if (!enableImages) {
+    console.log('🖼️ Image generation disabled');
+    return imageMap;
+  }
+  
+  // Find SectionHeading components that would benefit from images
+  const headingsToImage: { index: number; title: string }[] = [];
+  
+  // Patterns that benefit from contextual images
+  const imageWorthyPatterns = [
+    /trap|fail|problem|mistake/i,
+    /success|works|solution|win/i,
+    /process|structure|step|how/i,
+    /change|update|new|reform/i,
+    /recover|fee|cost|money/i,
+    /evidence|document|proof/i,
+  ];
+  
+  components.forEach((comp, index) => {
+    if (comp.type === 'SectionHeading') {
+      const headingTitle = comp.props?.title || comp.props?.text || '';
+      const isImageWorthy = imageWorthyPatterns.some(p => p.test(headingTitle));
+      
+      if (isImageWorthy && headingsToImage.length < 3) { // Max 3 images per article
+        headingsToImage.push({ index, title: headingTitle });
+      }
+    }
+  });
+  
+  if (headingsToImage.length === 0) {
+    console.log('🖼️ No sections identified for image generation');
+    return imageMap;
+  }
+  
+  console.log(`🖼️ Generating images for ${headingsToImage.length} sections...`);
+  
+  // Generate images in parallel (with rate limiting handled by the service)
+  const imagePromises = headingsToImage.map(async ({ index, title: sectionTitle }) => {
+    try {
+      const result = await generateContextualImage({
+        articleTitle: title,
+        sectionHeading: sectionTitle,
+        style: 'professional',
+        aspectRatio: '16:9',
+      });
+      
+      if (result.success && (result.imageUrl || result.base64)) {
+        const imageSource = result.imageUrl || result.base64 || '';
+        console.log(`✅ Generated image for: "${sectionTitle.substring(0, 30)}..."`);
+        return { index, imageSource };
+      } else {
+        console.log(`⚠️ No image generated for: "${sectionTitle.substring(0, 30)}..." - ${result.error}`);
+        return null;
+      }
+    } catch (error) {
+      console.error(`❌ Image generation failed for: "${sectionTitle}"`, error);
+      return null;
+    }
+  });
+  
+  const results = await Promise.all(imagePromises);
+  
+  results.forEach(result => {
+    if (result) {
+      imageMap.set(result.index, result.imageSource);
+    }
+  });
+  
+  console.log(`🖼️ Successfully generated ${imageMap.size} images`);
+  return imageMap;
+}
+
+/**
+ * Insert ContentImage components after SectionHeadings that have images
+ */
+function insertImages(
+  components: MappedComponent[],
+  imageMap: Map<number, string>
+): MappedComponent[] {
+  if (imageMap.size === 0) {
+    return components;
+  }
+  
+  const result: MappedComponent[] = [];
+  
+  components.forEach((comp, index) => {
+    result.push(comp);
+    
+    // If this component has an associated image, insert it after
+    if (imageMap.has(index)) {
+      const imageUrl = imageMap.get(index)!;
+      const headingTitle = comp.props?.title || comp.props?.text || 'Section';
+      
+      result.push({
+        type: 'ContentImage',
+        props: {
+          src: imageUrl,
+          alt: `Visual illustration for: ${headingTitle}`,
+          caption: undefined, // No caption for cleaner look
+          position: 'center',
+          aspectRatio: '16:9',
+        },
+      });
+    }
+  });
+  
+  return result;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // MAIN PIPELINE
 // ═══════════════════════════════════════════════════════════════════════════
+
+export interface TransformOptions {
+  enableImages?: boolean;  // Whether to generate contextual images (default: true)
+}
 
 export async function transformContentV6(
   title: string,
   content: string,
   excerpt: string,
-  apiKey: string
+  apiKey: string,
+  options: TransformOptions = {}
 ): Promise<{ layout: any; extraction: ExtractionResult }> {
   
-  console.log('🚀 Starting V6.2 transformation...');
+  const { enableImages = true } = options;
+  
+  console.log('🚀 Starting V6.3 transformation...');
   console.log(`📝 Content: ${content.length} chars`);
+  console.log(`🖼️ Image generation: ${enableImages ? 'enabled' : 'disabled'}`);
   
   // Stage 1: Smart paragraph splitting
   console.log('📊 Stage 1: Smart content splitting...');
@@ -1214,7 +1348,14 @@ export async function transformContentV6(
   
   // Stage 3: Component mapping
   console.log('🔧 Stage 3: Mapping components...');
-  const components = mapToComponents(extraction, contentBlocks);
+  let components = mapToComponents(extraction, contentBlocks);
+  
+  // Stage 4: Image generation (if enabled)
+  if (enableImages) {
+    console.log('🖼️ Stage 4: Generating contextual images...');
+    const imageMap = await generateSectionImages(title, components, enableImages);
+    components = insertImages(components, imageMap);
+  }
   
   // Assemble layout
   const layout = {
@@ -1232,7 +1373,7 @@ export async function transformContentV6(
   const types: Record<string, number> = {};
   layout.layout.forEach(c => { types[c.type] = (types[c.type] || 0) + 1; });
   console.log('📊 Component breakdown:', types);
-  console.log(`🎉 V6.2 complete: ${layout.layout.length} total components`);
+  console.log(`🎉 V6.3 complete: ${layout.layout.length} total components`);
 
   return { layout, extraction };
 }
