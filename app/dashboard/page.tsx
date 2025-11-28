@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { useUser } from '@/contexts/UserContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { Plus, FileText, AlertCircle, CheckCircle, Clock, Building2, Trash2, Users, Shield, LogOut, BookOpen, Settings } from 'lucide-react';
+import { Plus, FileText, AlertCircle, CheckCircle, Clock, Building2, Trash2, Users, Shield, LogOut, BookOpen, Settings, Cog } from 'lucide-react';
 import { useState } from 'react';
 import { logger } from '../../lib/logger';
 import HeroMetrics from '@/components/dashboard/HeroMetrics';
@@ -17,7 +17,7 @@ import HeroMetrics from '@/components/dashboard/HeroMetrics';
 const MOCK_ORGANIZATION_ID = '00000000-0000-0000-0000-000000000001';
 
 export default function DashboardPage() {
-  const { currentUser, canManageUsers } = useUser();
+  const { currentUser, canManageUsers, isSuperAdmin } = useUser();
   const { signOut } = useAuth();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | 'all'>('all');
@@ -147,6 +147,7 @@ export default function DashboardPage() {
                 Practice Settings
               </Button>
             </Link>
+            {/* Practice admin buttons - Users & Management */}
             {canManageUsers && (
               <>
                 <Link href="/users">
@@ -161,6 +162,11 @@ export default function DashboardPage() {
                     Management
                   </Button>
                 </Link>
+              </>
+            )}
+            {/* Superadmin only buttons */}
+            {isSuperAdmin && (
+              <>
                 <Link href="/knowledge-base">
                   <Button variant="outline">
                     <BookOpen className="h-4 w-4 mr-2" />
@@ -171,6 +177,12 @@ export default function DashboardPage() {
                   <Button variant="outline">
                     <Settings className="h-4 w-4 mr-2" />
                     AI Settings
+                  </Button>
+                </Link>
+                <Link href="/admin">
+                  <Button variant="outline" className="bg-brand-blurple/10 border-brand-blurple text-brand-blurple hover:bg-brand-blurple hover:text-white">
+                    <Cog className="h-4 w-4 mr-2" />
+                    Admin
                   </Button>
                 </Link>
               </>
