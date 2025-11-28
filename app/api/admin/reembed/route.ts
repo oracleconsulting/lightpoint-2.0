@@ -29,13 +29,24 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  // Check for OpenRouter API key
+  const openrouterKey = process.env.OPENROUTER_API_KEY;
+  if (!openrouterKey) {
+    console.error('❌ OPENROUTER_API_KEY is not set!');
+    return NextResponse.json({ 
+      error: 'OPENROUTER_API_KEY not configured',
+      message: 'Please set OPENROUTER_API_KEY in Railway environment variables'
+    }, { status: 500 });
+  }
+  console.log('✅ OPENROUTER_API_KEY is set (starts with:', openrouterKey.substring(0, 12) + '...)');
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const supabaseKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY)!;
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   let totalProcessed = 0;
   let totalErrors = 0;
-  const results: { category: string; processed: number; errors: number }[] = [];
+  const results: { category: string; processed: number; errors: number; error?: string }[] = [];
 
   try {
     // Process knowledge_base categories
@@ -82,12 +93,21 @@ export async function POST(request: NextRequest) {
           // Rate limiting
           await new Promise(resolve => setTimeout(resolve, 500));
 
-        } catch (error) {
+        } catch (error: any) {
+          const errorMsg = error.message || String(error);
+          console.error(`❌ Re-embed error for ${category}:`, errorMsg);
           categoryErrors += batch.length;
+          // Store first error for this category
+          if (!results.find(r => r.category === category)?.error) {
+            results.push({ category, processed: categoryProcessed, errors: categoryErrors, error: errorMsg });
+          }
         }
       }
 
-      results.push({ category, processed: categoryProcessed, errors: categoryErrors });
+      // Only push if not already added due to error
+      if (!results.find(r => r.category === category)) {
+        results.push({ category, processed: categoryProcessed, errors: categoryErrors });
+      }
       totalProcessed += categoryProcessed;
       totalErrors += categoryErrors;
     }
