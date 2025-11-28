@@ -98,6 +98,12 @@ export const appRouter = router({
         // Force user's organization - prevent accessing other orgs
         const organizationId = ctx.organizationId;
         
+        // SECURITY: Reject if no organization ID
+        if (!organizationId) {
+          logger.warn('🚨 SECURITY: User attempted to list complaints without organization');
+          return []; // Return empty array instead of all data
+        }
+        
         try {
           logger.info('📋 Fetching complaints for org:', organizationId);
           logger.info('📋 Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 30));
@@ -142,11 +148,18 @@ export const appRouter = router({
 
     getById: protectedProcedure
       .input(z.string())
-      .query(async ({ input }) => {
+      .query(async ({ input, ctx }) => {
+        // SECURITY: Must have organization
+        if (!ctx.organizationId) {
+          logger.warn('🚨 SECURITY: User attempted to get complaint without organization');
+          throw new Error('User must belong to an organization');
+        }
+        
         const { data, error } = await supabaseAdmin
           .from('complaints')
           .select('*')
           .eq('id', input)
+          .eq('organization_id', ctx.organizationId) // SECURITY: Only allow access to own org's complaints
           .single();
         
         if (error) throw new Error(error.message);
