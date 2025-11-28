@@ -62,10 +62,7 @@ async function acceptOrganizationInvite(invite: any, userId: string, fullName: s
     .from('organizations')
     .insert({
       name: invite.organization_name,
-      settings: {
-        created_from_invite: invite.id,
-        trial_ends_at: new Date(Date.now() + invite.trial_days * 24 * 60 * 60 * 1000).toISOString(),
-      },
+      // Note: trial_ends_at tracked in user_subscriptions table
     })
     .select()
     .single();
