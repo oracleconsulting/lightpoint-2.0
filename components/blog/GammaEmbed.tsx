@@ -17,10 +17,21 @@ export function GammaEmbed({ gammaUrl, title, className = '' }: GammaEmbedProps)
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [embedBlocked, setEmbedBlocked] = useState(false);
-  const [showEmbed, setShowEmbed] = useState(false);
+  const [showEmbed, setShowEmbed] = useState(true); // Try embed by default
 
   // Convert docs URL to embed URL
-  const embedUrl = gammaUrl.replace('/docs/', '/embed/');
+  // Gamma URLs are like: https://gamma.app/docs/Title-Here-{id}
+  // Embed URLs are like: https://gamma.app/embed/{id}
+  const getEmbedUrl = (url: string): string => {
+    // Extract the ID from the end of the URL (after the last dash)
+    const match = url.match(/([a-z0-9]+)(?:\?|$)/i);
+    if (match) {
+      return `https://gamma.app/embed/${match[1]}`;
+    }
+    // Fallback: just replace /docs/ with /embed/
+    return url.replace('/docs/', '/embed/');
+  };
+  const embedUrl = getEmbedUrl(gammaUrl);
 
   // Check if embed is allowed after a timeout
   useEffect(() => {
