@@ -71,8 +71,8 @@ export async function startGammaGeneration(
   }
 
   // Theme ID configuration
-  // Use a professional standard theme if no custom theme is set
-  // Options: 'consultant' (professional blue), 'blues' (navy), 'gleam' (gray/silver)
+  // Default to Lightpoint custom theme, can be overridden via env var
+  const LIGHTPOINT_THEME_ID = '0zln107h52vnsoc';
   const rawThemeId = process.env.GAMMA_THEME_ID;
   
   // Validate custom theme ID (alphanumeric, no dots/slashes)
@@ -82,8 +82,8 @@ export async function startGammaGeneration(
     !rawThemeId.includes('/') &&
     rawThemeId.length > 3;
   
-  // Use custom theme if valid, otherwise fall back to 'consultant' (professional look)
-  const themeId = isValidCustomTheme ? rawThemeId : 'consultant';
+  // Use env var theme if valid, otherwise use Lightpoint theme
+  const themeId = isValidCustomTheme ? rawThemeId : LIGHTPOINT_THEME_ID;
   
   console.log('[Gamma] Theme config:', { rawThemeId, isValidCustomTheme, themeId });
 
