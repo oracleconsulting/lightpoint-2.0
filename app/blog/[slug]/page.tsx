@@ -316,6 +316,14 @@ export default function BlogPostPage() {
     firstComponentType: post.structured_layout?.components?.[0]?.type || post.structured_layout?.layout?.[0]?.type,
   });
 
+  // TEMPORARY DEBUG: Show what we're detecting
+  const debugInfo = {
+    hasV2Layout,
+    keys: post.structured_layout ? Object.keys(post.structured_layout).join(', ') : 'none',
+    componentsCount: post.structured_layout?.components?.length || 0,
+    layoutCount: post.structured_layout?.layout?.length || 0,
+  };
+
   // V2 Layout: Clean, light theme - skip the dark wrapper entirely
   if (hasV2Layout) {
     console.log('🎨 [BlogPostPage] ✅ Rendering V2 Layout with', post.structured_layout?.components?.length, 'components');
@@ -327,6 +335,11 @@ export default function BlogPostPage() {
             📝 Preview Mode - This post is not yet published
           </div>
         )}
+        
+        {/* DEBUG BANNER - REMOVE AFTER TESTING */}
+        <div className="bg-green-500 text-white py-2 px-4 text-center text-sm">
+          ✅ V2 LAYOUT ACTIVE | Components: {debugInfo.componentsCount} | Keys: {debugInfo.keys}
+        </div>
         
         {/* V2 Renderer handles everything including hero */}
         <BlogRendererV2 layout={post.structured_layout} />
@@ -358,6 +371,11 @@ export default function BlogPostPage() {
         background: 'linear-gradient(180deg, #0a0a1a 0%, #0f0f23 50%, #1a1a2e 100%)'
       }}
     >
+      {/* DEBUG BANNER - REMOVE AFTER TESTING */}
+      <div className="bg-red-500 text-white py-2 px-4 text-center text-sm z-50 relative">
+        ❌ V1 LAYOUT (Not V2) | hasV2: {String(hasV2Layout)} | Keys: {debugInfo.keys} | Components: {debugInfo.componentsCount} | Layout: {debugInfo.layoutCount}
+      </div>
+      
       {/* Preview Banner */}
       {isPreview && (
         <div className="bg-amber-500 text-white py-3 px-4 text-center font-semibold z-50 relative">
