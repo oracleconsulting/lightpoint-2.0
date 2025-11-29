@@ -91,7 +91,7 @@ export async function startGammaGeneration(
       amount: 'detailed',
       tone: 'professional, authoritative, helpful',
       audience: 'UK accountants, tax professionals, bookkeepers',
-      language: 'en-GB',
+      language: 'en-gb',
     },
     imageOptions: {
       source: 'aiGenerated',
