@@ -302,9 +302,23 @@ export default function BlogPostPage() {
   const hasStructuredLayout = post.structured_layout && typeof post.structured_layout === 'object';
   const hasV2Layout = hasStructuredLayout && isV2Layout(post.structured_layout);
 
+  // CRITICAL DEBUG: Log exactly what we're seeing
+  console.log('🔍 [BlogPostPage] Layout Analysis:', {
+    slug: post.slug,
+    hasStructuredLayout,
+    hasV2Layout,
+    structuredLayoutType: typeof post.structured_layout,
+    structuredLayoutKeys: post.structured_layout ? Object.keys(post.structured_layout) : [],
+    hasComponentsArray: Array.isArray(post.structured_layout?.components),
+    componentsLength: post.structured_layout?.components?.length,
+    hasLayoutArray: Array.isArray(post.structured_layout?.layout),
+    layoutLength: post.structured_layout?.layout?.length,
+    firstComponentType: post.structured_layout?.components?.[0]?.type || post.structured_layout?.layout?.[0]?.type,
+  });
+
   // V2 Layout: Clean, light theme - skip the dark wrapper entirely
   if (hasV2Layout) {
-    console.log('🎨 [BlogPostPage] Rendering V2 Layout with', post.structured_layout?.components?.length, 'components');
+    console.log('🎨 [BlogPostPage] ✅ Rendering V2 Layout with', post.structured_layout?.components?.length, 'components');
     return (
       <div className="min-h-screen bg-white">
         {/* Preview Banner */}
