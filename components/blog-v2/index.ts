@@ -60,6 +60,17 @@ export type {
 // Theme tokens
 export { theme, colors, typography, spacing, borders, shadows, tw, componentDefaults } from './themeTokens';
 
+// Utilities - Layout generation
+export { 
+  SectionDetector, 
+  detectSections, 
+  generateLayout, 
+  extractMeta, 
+  stripFrontmatter, 
+  markdownToLayout 
+} from './utils';
+export type { DetectedSection as UtilDetectedSection, GenerateLayoutOptions } from './utils';
+
 // Example layout for testing
 export { hmrcComplaintsBlogLayout } from './exampleLayout';
 

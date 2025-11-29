@@ -7,10 +7,11 @@
  */
 
 import React, { useState } from 'react';
-import { Sparkles, Wand2, Loader2, CheckCircle, XCircle, RefreshCw, Zap, Image as ImageIcon, ExternalLink, FileText } from 'lucide-react';
+import { Sparkles, Wand2, Loader2, CheckCircle, XCircle, RefreshCw, Zap, Image as ImageIcon, ExternalLink, FileText, LayoutTemplate } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import DynamicGammaRenderer from './DynamicGammaRenderer';
 import { GammaEmbed } from './GammaEmbed';
+import { BlogRenderer as BlogRendererV2 } from '@/components/blog-v2';
 
 interface VisualTransformerProps {
   title: string;
@@ -42,7 +43,12 @@ export function VisualTransformer({
   const [gammaUrl, setGammaUrl] = useState<string | null>(existingGammaUrl || null);
   const [gammaPdfUrl, setGammaPdfUrl] = useState<string | null>(null);
   const [showGammaPreview, setShowGammaPreview] = useState(false);
-  const [generationMode, setGenerationMode] = useState<'lightpoint' | 'gamma'>('lightpoint');
+  const [generationMode, setGenerationMode] = useState<'lightpoint' | 'v2-clean' | 'gamma'>('v2-clean'); // Default to V2
+  
+  // V2 Layout state
+  const [isGeneratingV2, setIsGeneratingV2] = useState(false);
+  const [v2Layout, setV2Layout] = useState<any | null>(null);
+  const [showV2Preview, setShowV2Preview] = useState(false);
 
   const handleTransform = async () => {
     if (!title || !content) {
@@ -124,6 +130,67 @@ export function VisualTransformer({
     }
   };
 
+  // Generate V2 Clean Layout (pattern-based, no AI)
+  const handleGenerateV2 = async () => {
+    if (!title || !content) {
+      setError('Need title and content to generate layout');
+      return;
+    }
+
+    setError(null);
+    setIsGeneratingV2(true);
+    setV2Layout(null);
+
+    try {
+      const response = await fetch('/api/blog/generate-layout-v2', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title,
+          content: stripHtml(content),
+          excerpt,
+          author: 'Lightpoint Team',
+          includeHero: true,
+          includeCTA: true,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Server error: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success && result.layout) {
+        setV2Layout(result.layout);
+        setShowV2Preview(true);
+        console.log('✅ V2 Layout generated:', result.stats);
+      } else {
+        throw new Error(result.error || 'Failed to generate V2 layout');
+      }
+    } catch (err: any) {
+      console.error('V2 generation error:', err);
+      setError(err.message || 'Failed to generate V2 layout');
+    } finally {
+      setIsGeneratingV2(false);
+    }
+  };
+
+  const handleAcceptV2 = () => {
+    if (v2Layout) {
+      console.log('📦 [VisualTransformer] Applying V2 layout...');
+      console.log('📦 Component count:', v2Layout.components?.length || 0);
+      
+      // V2 layouts have { theme, components } structure
+      const layoutToSave = JSON.parse(JSON.stringify(v2Layout));
+      onTransformed(layoutToSave);
+      setShowV2Preview(false);
+    }
+  };
+
   // Generate with Gamma API
   const handleGenerateWithGamma = async () => {
     if (!title || !content) {
@@ -174,7 +241,7 @@ export function VisualTransformer({
   return (
     <div className="space-y-4">
       {/* Transform Button (Show when there's content but no preview) */}
-      {!showPreview && !showGammaPreview && title && content && (
+      {!showPreview && !showGammaPreview && !showV2Preview && title && content && (
         <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-300 rounded-xl p-6">
           <div className="flex items-start gap-4">
             <div className="flex-shrink-0">
@@ -194,6 +261,19 @@ export function VisualTransformer({
               {/* Generation Mode Selector */}
               <div className="flex items-center gap-2 mb-4 p-1 bg-gray-100 rounded-lg w-fit">
                 <button
+                  onClick={() => setGenerationMode('v2-clean')}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                    generationMode === 'v2-clean'
+                      ? 'bg-white shadow-sm text-green-700'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <LayoutTemplate className="h-4 w-4" />
+                    V2 Clean (Recommended)
+                  </span>
+                </button>
+                <button
                   onClick={() => setGenerationMode('lightpoint')}
                   className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
                     generationMode === 'lightpoint'
@@ -203,7 +283,7 @@ export function VisualTransformer({
                 >
                   <span className="flex items-center gap-2">
                     <Sparkles className="h-4 w-4" />
-                    Lightpoint Pipeline
+                    V1 Dark Theme
                   </span>
                 </button>
                 <button
@@ -221,7 +301,44 @@ export function VisualTransformer({
                 </button>
               </div>
               
-              {/* Lightpoint Pipeline Options */}
+              {/* V2 Clean Layout Options (Recommended) */}
+              {generationMode === 'v2-clean' && (
+                <div className="space-y-4">
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <p className="text-sm text-green-800">
+                      <strong>V2 Clean Layout</strong> uses pattern detection to create a clean, light-themed layout 
+                      matching Gamma's professional quality. Fast, deterministic, no AI costs.
+                    </p>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <Button
+                      onClick={handleGenerateV2}
+                      disabled={isGeneratingV2}
+                      className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                    >
+                      {isGeneratingV2 ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <LayoutTemplate className="h-4 w-4 mr-2" />
+                          Generate V2 Layout
+                        </>
+                      )}
+                    </Button>
+                    {isGeneratingV2 && (
+                      <span className="text-sm text-gray-600">
+                        Detecting patterns → Building components...
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {/* Lightpoint V1 Pipeline Options */}
               {generationMode === 'lightpoint' && (
                 <>
                   <div className="flex flex-wrap items-center gap-6 mb-4">
@@ -490,8 +607,79 @@ export function VisualTransformer({
         </div>
       )}
 
+      {/* V2 Preview Display */}
+      {showV2Preview && v2Layout && (
+        <div className="space-y-4">
+          {/* V2 Preview Header */}
+          <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+                <div>
+                  <p className="font-bold text-green-900">V2 Clean Layout Created!</p>
+                  <p className="text-sm text-green-700">
+                    Pattern detection identified {v2Layout.components?.length || 0} components
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={handleGenerateV2}
+                  variant="outline"
+                  size="sm"
+                  disabled={isGeneratingV2}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isGeneratingV2 ? 'animate-spin' : ''}`} />
+                  Regenerate
+                </Button>
+                <Button 
+                  onClick={handleAcceptV2} 
+                  size="sm" 
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Apply This Layout
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* V2 Layout Preview */}
+          <div className="border-2 border-gray-300 rounded-xl overflow-hidden bg-white">
+            <div className="p-4 border-b border-gray-200 bg-gray-50">
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <LayoutTemplate className="h-4 w-4" />
+                <span>V2 Clean Layout Preview (Light Theme)</span>
+              </div>
+            </div>
+            <div className="max-h-[600px] overflow-y-auto">
+              <BlogRendererV2 layout={v2Layout} />
+            </div>
+          </div>
+
+          {/* Component Summary */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <Sparkles className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <div className="text-sm">
+                <p className="font-semibold text-blue-900 mb-2">Components Detected:</p>
+                <div className="flex flex-wrap gap-2">
+                  {[...new Set(v2Layout.components?.map((c: any) => c.type) || [])]
+                    .filter((type): type is string => typeof type === 'string')
+                    .map((type) => (
+                      <span key={type} className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium">
+                        {type}
+                      </span>
+                    ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Existing Gamma URL indicator */}
-      {existingGammaUrl && !showGammaPreview && !showPreview && (
+      {existingGammaUrl && !showGammaPreview && !showPreview && !showV2Preview && (
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
