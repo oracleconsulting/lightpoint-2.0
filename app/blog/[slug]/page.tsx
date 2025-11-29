@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc/Provider';
-import { ArrowLeft, Calendar, Clock, Tag, Share2, User } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, Tag, Share2, User, FileText, Sparkles, ExternalLink } from 'lucide-react';
 import DynamicGammaRenderer from '@/components/blog/DynamicGammaRenderer';
 import TableOfContents, { generateTocItems } from '@/components/blog/gamma/TableOfContents';
+import { GammaEmbed } from '@/components/blog/GammaEmbed';
 
 // Author credentials mapping - AUDIT FIX: Add professional credentials to byline
 const AUTHOR_CREDENTIALS: Record<string, { title: string; credentials: string; bio?: string }> = {
@@ -53,6 +54,121 @@ function AuthorByline({ author }: { author: string }) {
       <User className="h-5 w-5" />
       <span>By {author}</span>
     </div>
+  );
+}
+
+/**
+ * Blog Content Renderer - Handles switching between Gamma embed and Lightpoint renderer
+ */
+function BlogContentRenderer({ 
+  post, 
+  renderContent 
+}: { 
+  post: any; 
+  renderContent: () => React.ReactNode;
+}) {
+  // Check if Gamma URL exists
+  const hasGammaUrl = !!(post as any).gamma_url;
+  const gammaUrl = (post as any).gamma_url;
+  const hasStructuredLayout = post.structured_layout && typeof post.structured_layout === 'object' && post.structured_layout.layout;
+  
+  // Default to Lightpoint if available, otherwise Gamma
+  const [viewMode, setViewMode] = useState<'lightpoint' | 'gamma' | 'text'>(
+    hasStructuredLayout ? 'lightpoint' : (hasGammaUrl ? 'gamma' : 'text')
+  );
+
+  // Only show toggle if we have multiple view options
+  const showToggle = (hasGammaUrl && hasStructuredLayout) || (hasGammaUrl && !hasStructuredLayout);
+
+  return (
+    <>
+      {/* View Mode Toggle */}
+      {showToggle && (
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+          <div className="flex items-center justify-between bg-gray-900/50 backdrop-blur-sm border border-gray-800 rounded-xl p-4">
+            <span className="text-sm text-gray-400">View mode:</span>
+            <div className="flex items-center gap-2 p-1 bg-gray-800 rounded-lg">
+              {hasStructuredLayout && (
+                <button
+                  onClick={() => setViewMode('lightpoint')}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                    viewMode === 'lightpoint'
+                      ? 'bg-cyan-600 text-white shadow-lg'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4" />
+                    Visual
+                  </span>
+                </button>
+              )}
+              {hasGammaUrl && (
+                <button
+                  onClick={() => setViewMode('gamma')}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                    viewMode === 'gamma'
+                      ? 'bg-orange-600 text-white shadow-lg'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Gamma
+                  </span>
+                </button>
+              )}
+              <button
+                onClick={() => setViewMode('text')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                  viewMode === 'text'
+                    ? 'bg-gray-600 text-white shadow-lg'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                Text Only
+              </button>
+            </div>
+            {hasGammaUrl && viewMode === 'gamma' && (
+              <a
+                href={gammaUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-sm text-cyan-400 hover:text-cyan-300"
+              >
+                Open in Gamma <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Render based on view mode */}
+      {viewMode === 'gamma' && hasGammaUrl ? (
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <GammaEmbed gammaUrl={gammaUrl} title={post.title} />
+        </div>
+      ) : viewMode === 'lightpoint' && hasStructuredLayout ? (
+        <DynamicGammaRenderer layout={post.structured_layout} />
+      ) : (
+        <div className="max-w-4xl mx-auto px-6 lg:px-8 py-16">
+          <div
+            className="prose prose-lg prose-invert max-w-none
+            prose-headings:font-bold prose-headings:text-white
+            prose-p:text-gray-300 prose-p:leading-relaxed prose-p:text-lg
+            prose-a:text-cyan-400 prose-a:no-underline hover:prose-a:underline
+            prose-strong:text-white prose-strong:font-semibold
+            prose-ul:list-disc prose-ol:list-decimal
+            prose-li:text-gray-300
+            prose-blockquote:border-l-4 prose-blockquote:border-cyan-500 prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-gray-300
+            prose-code:bg-gray-800 prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:text-sm prose-code:text-cyan-400
+            prose-img:rounded-xl prose-img:shadow-lg"
+          >
+            {renderContent()}
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -306,28 +422,10 @@ export default function BlogPostPage() {
 
       {/* Content */}
       <article className="w-full">
-        {post.structured_layout && typeof post.structured_layout === 'object' && post.structured_layout.layout ? (
-          // Render Gamma-style visual layout - unified background handled by renderer
-          <DynamicGammaRenderer layout={post.structured_layout} />
-        ) : (
-          // Fallback: plain text if no visual layout
-          <div className="max-w-4xl mx-auto px-6 lg:px-8 py-16">
-            <div
-              className="prose prose-lg prose-invert max-w-none
-              prose-headings:font-bold prose-headings:text-white
-              prose-p:text-gray-300 prose-p:leading-relaxed prose-p:text-lg
-              prose-a:text-cyan-400 prose-a:no-underline hover:prose-a:underline
-              prose-strong:text-white prose-strong:font-semibold
-              prose-ul:list-disc prose-ol:list-decimal
-              prose-li:text-gray-300
-              prose-blockquote:border-l-4 prose-blockquote:border-cyan-500 prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-gray-300
-              prose-code:bg-gray-800 prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:text-sm prose-code:text-cyan-400
-              prose-img:rounded-xl prose-img:shadow-lg"
-            >
-              {renderContent()}
-            </div>
-          </div>
-        )}
+        <BlogContentRenderer 
+          post={post} 
+          renderContent={renderContent} 
+        />
       </article>
 
       {/* Author/CTA Section */}

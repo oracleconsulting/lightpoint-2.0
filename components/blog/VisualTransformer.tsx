@@ -7,15 +7,18 @@
  */
 
 import React, { useState } from 'react';
-import { Sparkles, Wand2, Loader2, CheckCircle, XCircle, RefreshCw, Zap, Image as ImageIcon } from 'lucide-react';
+import { Sparkles, Wand2, Loader2, CheckCircle, XCircle, RefreshCw, Zap, Image as ImageIcon, ExternalLink, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import DynamicGammaRenderer from './DynamicGammaRenderer';
+import { GammaEmbed } from './GammaEmbed';
 
 interface VisualTransformerProps {
   title: string;
   content: string;
   excerpt?: string;
   onTransformed: (layout: any) => void;
+  onGammaGenerated?: (gammaUrl: string, pdfUrl?: string) => void;
+  existingGammaUrl?: string;
 }
 
 export function VisualTransformer({
@@ -23,6 +26,8 @@ export function VisualTransformer({
   content,
   excerpt,
   onTransformed,
+  onGammaGenerated,
+  existingGammaUrl,
 }: VisualTransformerProps) {
   const [isTransforming, setIsTransforming] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,6 +36,13 @@ export function VisualTransformer({
   const [useV6, setUseV6] = useState(true); // Default to V6 pipeline
   const [enableImages, setEnableImages] = useState(true); // NEW: Image generation toggle
   const [imagesGenerated, setImagesGenerated] = useState(0);
+  
+  // Gamma API state
+  const [isGeneratingGamma, setIsGeneratingGamma] = useState(false);
+  const [gammaUrl, setGammaUrl] = useState<string | null>(existingGammaUrl || null);
+  const [gammaPdfUrl, setGammaPdfUrl] = useState<string | null>(null);
+  const [showGammaPreview, setShowGammaPreview] = useState(false);
+  const [generationMode, setGenerationMode] = useState<'lightpoint' | 'gamma'>('lightpoint');
 
   const handleTransform = async () => {
     if (!title || !content) {
@@ -112,10 +124,57 @@ export function VisualTransformer({
     }
   };
 
+  // Generate with Gamma API
+  const handleGenerateWithGamma = async () => {
+    if (!title || !content) {
+      setError('Need title and content to generate with Gamma');
+      return;
+    }
+
+    setError(null);
+    setIsGeneratingGamma(true);
+
+    try {
+      const response = await fetch('/api/blog/generate-gamma', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title,
+          content: stripHtml(content),
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Server error: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success && result.gammaUrl) {
+        setGammaUrl(result.gammaUrl);
+        setGammaPdfUrl(result.exportUrl || null);
+        setShowGammaPreview(true);
+        
+        // Notify parent
+        onGammaGenerated?.(result.gammaUrl, result.exportUrl);
+      } else {
+        throw new Error(result.error || 'Failed to generate Gamma presentation');
+      }
+    } catch (err: any) {
+      console.error('Gamma generation error:', err);
+      setError(err.message || 'Failed to generate with Gamma');
+    } finally {
+      setIsGeneratingGamma(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Transform Button (Show when there's content but no preview) */}
-      {!showPreview && title && content && (
+      {!showPreview && !showGammaPreview && title && content && (
         <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-300 rounded-xl p-6">
           <div className="flex items-start gap-4">
             <div className="flex-shrink-0">
@@ -132,82 +191,153 @@ export function VisualTransformer({
                 charts, stat cards, timelines, and professional formatting.
               </p>
               
-              {/* Pipeline Options */}
-              <div className="flex flex-wrap items-center gap-6 mb-4">
-                {/* V6 Toggle */}
-                <div className="flex items-center gap-2">
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      checked={useV6} 
-                      onChange={(e) => setUseV6(e.target.checked)}
-                      className="sr-only peer" 
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-                  </label>
-                  <span className="text-sm font-medium text-gray-700">
-                    {useV6 ? (
-                      <span className="flex items-center gap-1">
-                        <Zap className="h-4 w-4 text-purple-600" />
-                        V6.3 Pipeline
-                      </span>
-                    ) : (
-                      'V5 Pipeline (Legacy)'
-                    )}
+              {/* Generation Mode Selector */}
+              <div className="flex items-center gap-2 mb-4 p-1 bg-gray-100 rounded-lg w-fit">
+                <button
+                  onClick={() => setGenerationMode('lightpoint')}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                    generationMode === 'lightpoint'
+                      ? 'bg-white shadow-sm text-purple-700'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4" />
+                    Lightpoint Pipeline
                   </span>
-                </div>
-                
-                {/* Image Generation Toggle - Only show for V6 */}
-                {useV6 && (
-                  <div className="flex items-center gap-2">
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        checked={enableImages} 
-                        onChange={(e) => setEnableImages(e.target.checked)}
-                        className="sr-only peer" 
-                      />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                    </label>
-                    <span className="text-sm font-medium text-gray-700">
-                      <span className="flex items-center gap-1">
-                        <ImageIcon className="h-4 w-4 text-indigo-600" />
-                        {enableImages ? 'AI Images (NanoBanana)' : 'No Images'}
-                      </span>
-                    </span>
-                  </div>
-                )}
+                </button>
+                <button
+                  onClick={() => setGenerationMode('gamma')}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                    generationMode === 'gamma'
+                      ? 'bg-white shadow-sm text-orange-700'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Gamma API
+                  </span>
+                </button>
               </div>
               
-              <div className="flex items-center gap-3">
-                <Button
-                  onClick={handleTransform}
-                  disabled={isTransforming}
-                  className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
-                >
-                  {isTransforming ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Transforming...
-                    </>
-                  ) : (
-                    <>
-                      <Wand2 className="h-4 w-4 mr-2" />
-                      Transform to Visual Layout
-                    </>
-                  )}
-                </Button>
-                {isTransforming && (
-                  <span className="text-sm text-gray-600">
-                    {useV6 
-                      ? enableImages 
-                        ? 'V6.3: Extracting → Mapping → Generating images...' 
-                        : 'V6.3: Extracting content → Mapping components...'
-                      : 'AI is analyzing your content and creating the perfect visual layout...'
-                    }
-                  </span>
-                )}
-              </div>
+              {/* Lightpoint Pipeline Options */}
+              {generationMode === 'lightpoint' && (
+                <>
+                  <div className="flex flex-wrap items-center gap-6 mb-4">
+                    {/* V6 Toggle */}
+                    <div className="flex items-center gap-2">
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          checked={useV6} 
+                          onChange={(e) => setUseV6(e.target.checked)}
+                          className="sr-only peer" 
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                      </label>
+                      <span className="text-sm font-medium text-gray-700">
+                        {useV6 ? (
+                          <span className="flex items-center gap-1">
+                            <Zap className="h-4 w-4 text-purple-600" />
+                            V6.3 Pipeline
+                          </span>
+                        ) : (
+                          'V5 Pipeline (Legacy)'
+                        )}
+                      </span>
+                    </div>
+                    
+                    {/* Image Generation Toggle - Only show for V6 */}
+                    {useV6 && (
+                      <div className="flex items-center gap-2">
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            checked={enableImages} 
+                            onChange={(e) => setEnableImages(e.target.checked)}
+                            className="sr-only peer" 
+                          />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                        </label>
+                        <span className="text-sm font-medium text-gray-700">
+                          <span className="flex items-center gap-1">
+                            <ImageIcon className="h-4 w-4 text-indigo-600" />
+                            {enableImages ? 'AI Images (NanoBanana)' : 'No Images'}
+                          </span>
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <Button
+                      onClick={handleTransform}
+                      disabled={isTransforming}
+                      className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
+                    >
+                      {isTransforming ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Transforming...
+                        </>
+                      ) : (
+                        <>
+                          <Wand2 className="h-4 w-4 mr-2" />
+                          Transform to Visual Layout
+                        </>
+                      )}
+                    </Button>
+                    {isTransforming && (
+                      <span className="text-sm text-gray-600">
+                        {useV6 
+                          ? enableImages 
+                            ? 'V6.3: Extracting → Mapping → Generating images...' 
+                            : 'V6.3: Extracting content → Mapping components...'
+                          : 'AI is analyzing your content and creating the perfect visual layout...'
+                        }
+                      </span>
+                    )}
+                  </div>
+                </>
+              )}
+              
+              {/* Gamma API Options */}
+              {generationMode === 'gamma' && (
+                <div className="space-y-4">
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                    <p className="text-sm text-orange-800">
+                      <strong>Gamma API</strong> generates a professional presentation hosted on gamma.app. 
+                      Perfect quality, consistent design, and includes AI-generated images.
+                    </p>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <Button
+                      onClick={handleGenerateWithGamma}
+                      disabled={isGeneratingGamma}
+                      className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600"
+                    >
+                      {isGeneratingGamma ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Generating with Gamma...
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="h-4 w-4 mr-2" />
+                          Generate with Gamma
+                        </>
+                      )}
+                    </Button>
+                    {isGeneratingGamma && (
+                      <span className="text-sm text-gray-600">
+                        Creating presentation... This may take 1-2 minutes.
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -295,6 +425,103 @@ export function VisualTransformer({
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Gamma Preview */}
+      {showGammaPreview && gammaUrl && (
+        <div className="space-y-4">
+          {/* Gamma Preview Header */}
+          <div className="bg-orange-50 border-2 border-orange-200 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="h-6 w-6 text-orange-600" />
+                <div>
+                  <p className="font-bold text-orange-900">Gamma Presentation Created!</p>
+                  <p className="text-sm text-orange-700">
+                    Your content has been transformed into a professional Gamma presentation.
+                    {gammaPdfUrl && ' PDF export is also available.'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={handleGenerateWithGamma}
+                  variant="outline"
+                  size="sm"
+                  disabled={isGeneratingGamma}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isGeneratingGamma ? 'animate-spin' : ''}`} />
+                  Regenerate
+                </Button>
+                <a
+                  href={gammaUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm font-medium"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Open in Gamma
+                </a>
+                {gammaPdfUrl && (
+                  <a
+                    href={gammaPdfUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
+                  >
+                    <FileText className="h-4 w-4" />
+                    Download PDF
+                  </a>
+                )}
+                <Button
+                  onClick={() => setShowGammaPreview(false)}
+                  variant="outline"
+                  size="sm"
+                >
+                  Close Preview
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Gamma Embed */}
+          <GammaEmbed gammaUrl={gammaUrl} title={title} />
+        </div>
+      )}
+
+      {/* Existing Gamma URL indicator */}
+      {existingGammaUrl && !showGammaPreview && !showPreview && (
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <FileText className="h-5 w-5 text-gray-500" />
+              <div>
+                <p className="text-sm font-medium text-gray-700">Gamma presentation available</p>
+                <p className="text-xs text-gray-500">A visual version of this post exists on Gamma</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => {
+                  setGammaUrl(existingGammaUrl);
+                  setShowGammaPreview(true);
+                }}
+                variant="outline"
+                size="sm"
+              >
+                View Preview
+              </Button>
+              <a
+                href={existingGammaUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
+              >
+                Open in Gamma <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
+          </div>
         </div>
       )}
     </div>

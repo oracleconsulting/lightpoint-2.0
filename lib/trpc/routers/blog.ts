@@ -20,6 +20,8 @@ const blogPostSchema = z.object({
   scheduledFor: z.string().optional(), // ISO datetime string
   autoPublish: z.boolean().optional(),
   structuredLayout: z.any().optional(), // AI-generated visual layout
+  gammaUrl: z.string().optional(), // Gamma API presentation URL
+  gammaPdfUrl: z.string().optional(), // Gamma PDF export URL
 });
 
 export const blogRouter = router({
@@ -141,6 +143,8 @@ export const blogRouter = router({
           scheduled_for: input.scheduledFor || null,
           auto_publish: input.autoPublish || false,
           structured_layout: input.structuredLayout || null, // AI-generated layout
+          gamma_url: input.gammaUrl || null,
+          gamma_pdf_url: input.gammaPdfUrl || null,
         } as any)
         .select()
         .single();
@@ -216,6 +220,12 @@ export const blogRouter = router({
         console.log('💾 Component count:', input.data.structuredLayout?.layout?.length || 0);
         console.log('💾 TextSection count:', input.data.structuredLayout?.layout?.filter((c: any) => c.type === 'TextSection').length || 0);
         console.log('💾 Component types:', input.data.structuredLayout?.layout?.map((c: any) => c.type) || []);
+      }
+      if (input.data.gammaUrl !== undefined) {
+        updateData.gamma_url = input.data.gammaUrl;
+      }
+      if (input.data.gammaPdfUrl !== undefined) {
+        updateData.gamma_pdf_url = input.data.gammaPdfUrl;
       }
 
       const { data, error } = await supabase

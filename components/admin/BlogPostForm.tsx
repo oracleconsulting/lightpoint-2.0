@@ -41,6 +41,8 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
   const [scheduledFor, setScheduledFor] = useState('');
   const [autoPublish, setAutoPublish] = useState(false);
   const [structuredLayout, setStructuredLayout] = useState<any>(null); // AI-generated layout
+  const [gammaUrl, setGammaUrl] = useState(''); // Gamma API generated URL
+  const [gammaPdfUrl, setGammaPdfUrl] = useState(''); // Gamma PDF export URL
 
   // tRPC mutations
   const createPost = trpc.blog.create.useMutation();
@@ -95,6 +97,14 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
       // Load structured layout if it exists and is valid
       if (existingPost.structured_layout && typeof existingPost.structured_layout === 'object') {
         setStructuredLayout(existingPost.structured_layout);
+      }
+      
+      // Load Gamma URLs if they exist
+      if ((existingPost as any).gamma_url) {
+        setGammaUrl((existingPost as any).gamma_url);
+      }
+      if ((existingPost as any).gamma_pdf_url) {
+        setGammaPdfUrl((existingPost as any).gamma_pdf_url);
       }
       
       // Scheduled publishing fields
@@ -159,6 +169,8 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
         scheduledFor: scheduledFor ? new Date(scheduledFor).toISOString() : undefined,
         autoPublish: autoPublish || undefined,
         structuredLayout: structuredLayout || undefined, // Include AI-generated layout
+        gammaUrl: gammaUrl || undefined, // Gamma presentation URL
+        gammaPdfUrl: gammaPdfUrl || undefined, // Gamma PDF export URL
       };
       
       console.log('💾 postData.structuredLayout component count:', postData.structuredLayout?.layout?.length || 0);
@@ -404,6 +416,7 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
               title={title}
               content={content}
               excerpt={excerpt}
+              existingGammaUrl={gammaUrl}
               onTransformed={(layout) => {
                 console.log('📥 [BlogPostForm] Received layout from VisualTransformer');
                 console.log('📥 Layout component count:', layout?.layout?.length || 0);
@@ -411,6 +424,12 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
                 console.log('📥 All component types:', layout?.layout?.map((c: any) => c.type) || []);
                 setStructuredLayout(layout);
                 alert('✨ Layout applied! You can now fine-tune the placement below, or save the post to keep this visual layout.');
+              }}
+              onGammaGenerated={(url, pdfUrl) => {
+                console.log('🎨 [BlogPostForm] Gamma presentation generated:', url);
+                setGammaUrl(url);
+                if (pdfUrl) setGammaPdfUrl(pdfUrl);
+                alert('✨ Gamma presentation created! Save the post to keep this visual version.');
               }}
             />
           </CardContent>
