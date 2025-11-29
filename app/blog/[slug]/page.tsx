@@ -1,13 +1,12 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc/Provider';
-import { ArrowLeft, Calendar, Clock, Tag, Share2, User, FileText, Sparkles, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, Tag, Share2, User, FileText, ExternalLink } from 'lucide-react';
 import DynamicGammaRenderer from '@/components/blog/DynamicGammaRenderer';
 import TableOfContents, { generateTocItems } from '@/components/blog/gamma/TableOfContents';
-import { GammaEmbed } from '@/components/blog/GammaEmbed';
 
 // Author credentials mapping - AUDIT FIX: Add professional credentials to byline
 const AUTHOR_CREDENTIALS: Record<string, { title: string; credentials: string; bio?: string }> = {
@@ -58,7 +57,7 @@ function AuthorByline({ author }: { author: string }) {
 }
 
 /**
- * Blog Content Renderer - Handles switching between Gamma embed and Lightpoint renderer
+ * Blog Content Renderer - Shows Lightpoint visual layout with optional Gamma presentation link
  */
 function BlogContentRenderer({ 
   post, 
@@ -67,88 +66,30 @@ function BlogContentRenderer({
   post: any; 
   renderContent: () => React.ReactNode;
 }) {
-  // Check if Gamma URL exists
   const hasGammaUrl = !!(post as any).gamma_url;
   const gammaUrl = (post as any).gamma_url;
   const hasStructuredLayout = post.structured_layout && typeof post.structured_layout === 'object' && post.structured_layout.layout;
-  
-  // Default to Lightpoint if available, otherwise Gamma
-  const [viewMode, setViewMode] = useState<'lightpoint' | 'gamma' | 'text'>(
-    hasStructuredLayout ? 'lightpoint' : (hasGammaUrl ? 'gamma' : 'text')
-  );
-
-  // Only show toggle if we have multiple view options
-  const showToggle = (hasGammaUrl && hasStructuredLayout) || (hasGammaUrl && !hasStructuredLayout);
 
   return (
     <>
-      {/* View Mode Toggle */}
-      {showToggle && (
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-          <div className="flex items-center justify-between bg-gray-900/50 backdrop-blur-sm border border-gray-800 rounded-xl p-4">
-            <span className="text-sm text-gray-400">View mode:</span>
-            <div className="flex items-center gap-2 p-1 bg-gray-800 rounded-lg">
-              {hasStructuredLayout && (
-                <button
-                  onClick={() => setViewMode('lightpoint')}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                    viewMode === 'lightpoint'
-                      ? 'bg-cyan-600 text-white shadow-lg'
-                      : 'text-gray-400 hover:text-white'
-                  }`}
-                >
-                  <span className="flex items-center gap-2">
-                    <Sparkles className="h-4 w-4" />
-                    Visual
-                  </span>
-                </button>
-              )}
-              {hasGammaUrl && (
-                <button
-                  onClick={() => setViewMode('gamma')}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                    viewMode === 'gamma'
-                      ? 'bg-orange-600 text-white shadow-lg'
-                      : 'text-gray-400 hover:text-white'
-                  }`}
-                >
-                  <span className="flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    Gamma
-                  </span>
-                </button>
-              )}
-              <button
-                onClick={() => setViewMode('text')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                  viewMode === 'text'
-                    ? 'bg-gray-600 text-white shadow-lg'
-                    : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                Text Only
-              </button>
-            </div>
-            {hasGammaUrl && viewMode === 'gamma' && (
-              <a
-                href={gammaUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 text-sm text-cyan-400 hover:text-cyan-300"
-              >
-                Open in Gamma <ExternalLink className="h-3 w-3" />
-              </a>
-            )}
-          </div>
+      {/* Floating Gamma Presentation Button */}
+      {hasGammaUrl && (
+        <div className="fixed bottom-6 right-6 z-40">
+          <a
+            href={gammaUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-semibold rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all"
+          >
+            <FileText className="h-5 w-5" />
+            <span className="hidden sm:inline">View as Presentation</span>
+            <ExternalLink className="h-4 w-4 opacity-70 group-hover:opacity-100" />
+          </a>
         </div>
       )}
 
-      {/* Render based on view mode */}
-      {viewMode === 'gamma' && hasGammaUrl ? (
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <GammaEmbed gammaUrl={gammaUrl} title={post.title} />
-        </div>
-      ) : viewMode === 'lightpoint' && hasStructuredLayout ? (
+      {/* Main Content */}
+      {hasStructuredLayout ? (
         <DynamicGammaRenderer layout={post.structured_layout} />
       ) : (
         <div className="max-w-4xl mx-auto px-6 lg:px-8 py-16">
