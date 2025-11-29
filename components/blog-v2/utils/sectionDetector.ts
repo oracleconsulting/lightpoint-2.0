@@ -162,20 +162,16 @@ export class SectionDetector {
 
   /**
    * Detect the type of a single paragraph
-   * IMPORTANT: Prioritize text preservation over fancy detection
-   * Only detect special components when VERY confident
+   * Uses precise patterns to detect special components while preserving text
    */
   private detectParagraphType(text: string, startIndex: number): DetectedSection | null {
     const endIndex = startIndex + text.length;
-    
-    // RULE 1: If it's a substantial paragraph (>100 chars), default to paragraph
-    // This prevents body text from being incorrectly classified
-    const isSubstantialText = text.length > 100;
+    const trimmed = text.trim();
     
     // Check for explicit callout markers (must start with marker)
-    if (/^(?:💡|⚠️|✅|❌|📌|🔑)\s*(?:Pro Tip|Note|Warning|Important|Key Point|Remember|Tip):/i.test(text)) {
+    if (/^(?:💡|⚠️|✅|❌|📌|🔑)\s*(?:Pro Tip|Note|Warning|Important|Key Point|Remember|Tip):/i.test(trimmed)) {
       PATTERNS.callout.lastIndex = 0;
-      const match = PATTERNS.callout.exec(text);
+      const match = PATTERNS.callout.exec(trimmed);
       return {
         type: 'callout',
         content: text,
@@ -187,56 +183,85 @@ export class SectionDetector {
     }
     
     // Check for blockquote (must start with >)
-    if (text.startsWith('>')) {
+    if (trimmed.startsWith('>')) {
       return {
         type: 'quote',
         content: text,
-        data: { text: text.replace(/^>\s*/g, '') },
+        data: { text: trimmed.replace(/^>\s*/g, '') },
         confidence: 0.85,
         startIndex,
         endIndex,
       };
     }
     
+    // Check for markdown header (must start with #)
+    if (/^#{1,3}\s+/.test(trimmed)) {
+      return {
+        type: 'sectionHeading',
+        content: text,
+        data: { title: trimmed.replace(/^#{1,3}\s+/, '') },
+        confidence: 0.9,
+        startIndex,
+        endIndex,
+      };
+    }
+    
+    // Check for bold-only line as heading (short, all bold, no other text)
+    if (trimmed.startsWith('**') && trimmed.endsWith('**') && trimmed.length < 100 && !trimmed.includes('\n')) {
+      const inner = trimmed.replace(/^\*\*|\*\*$/g, '');
+      // Only if it doesn't contain other bold markers inside
+      if (!inner.includes('**')) {
+        return {
+          type: 'sectionHeading',
+          content: text,
+          data: { title: inner },
+          confidence: 0.9,
+          startIndex,
+          endIndex,
+        };
+      }
+    }
+    
+    // Check for section heading patterns (The X trap, Why X fails, How to X, etc.)
+    const headingPatterns = [
+      /^The\s+\w+\s+(?:trap|problem|issue|challenge|solution|answer|key|secret)/i,
+      /^Why\s+(?:most|your|the)?\s*\w+\s+(?:fail|work|matter)/i,
+      /^How\s+to\s+/i,
+      /^What\s+(?:actually|really)\s+works/i,
+      /^Making\s+\w+\s+worth/i,
+      /^Professional\s+fee\s+recovery/i,
+      /^The\s+October\s+2024\s+change/i,
+      /^The\s+structure\s+that\s+(?:actually\s+)?works/i,
+    ];
+    
+    for (const pattern of headingPatterns) {
+      if (pattern.test(trimmed) && trimmed.length < 100) {
+        return {
+          type: 'sectionHeading',
+          content: text,
+          data: { title: trimmed },
+          confidence: 0.85,
+          startIndex,
+          endIndex,
+        };
+      }
+    }
+    
     // Check for numbered step (must start with number or "Step")
     // Only if it's a SHORT item, not a full paragraph
-    if (/^(?:\d+\.|Step\s+\d+:)/i.test(text) && text.length < 300) {
+    if (/^(?:\d+\.|Step\s+\d+:)/i.test(trimmed) && trimmed.length < 400) {
       return {
         type: 'numberedSteps',
         content: text,
-        data: this.parseNumberedStep(text),
+        data: this.parseNumberedStep(trimmed),
         confidence: 0.8,
         startIndex,
         endIndex,
       };
     }
     
-    // Check for markdown header (must start with #)
-    if (/^#{1,3}\s+/.test(text)) {
-      return {
-        type: 'sectionHeading',
-        content: text,
-        data: { title: text.replace(/^#{1,3}\s+/, '') },
-        confidence: 0.9,
-        startIndex,
-        endIndex,
-      };
-    }
-    
-    // Check for bold-only line as heading (short, all bold)
-    if (text.startsWith('**') && text.endsWith('**') && text.length < 80 && !text.includes('\n')) {
-      return {
-        type: 'sectionHeading',
-        content: text,
-        data: { title: text.replace(/\*\*/g, '') },
-        confidence: 0.9,
-        startIndex,
-        endIndex,
-      };
-    }
-    
     // Check for bullet list (must start with bullet)
-    if (/^[-•*]\s+/.test(text)) {
+    if (/^[-•*]\s+/.test(trimmed)) {
       return {
         type: 'bulletList',
         content: text,
@@ -247,18 +272,94 @@ export class SectionDetector {
       };
     }
     
-    // DISABLED: Stats detection in body text - too aggressive, corrupts content
-    // Stats should only be in a dedicated stats section, not extracted from paragraphs
+    // Check for stats-heavy paragraph (multiple stats in a short block)
+    // Only for SHORT paragraphs that are mostly numbers/stats
+    if (trimmed.length < 200) {
+      const statMatches = [
+        ...trimmed.matchAll(/\d+(?:,\d{3})*\s*%/g),
+        ...trimmed.matchAll(/£\d+(?:,\d{3})*/g),
+        ...trimmed.matchAll(/\d+(?:,\d{3})+\s+(?:cases?|complaints?|people)/gi),
+      ];
+      
+      if (statMatches.length >= 3) {
+        const stats = this.extractStats(trimmed);
+        if (stats.length >= 3) {
+          return {
+            type: 'stats',
+            content: text,
+            data: { stats, variant: 'flat', columns: Math.min(stats.length, 4) },
+            confidence: 0.8,
+            startIndex,
+            endIndex,
+          };
+        }
+      }
+    }
     
-    // DISABLED: Timeline detection - too aggressive
+    // Check for "three failures" or similar numbered list patterns
+    const failurePatterns = [
+      /(?:three|3)\s+(?:critical\s+)?failures?/i,
+      /(?:three|3)\s+(?:key\s+)?(?:reasons?|issues?|problems?)/i,
+      /(?:first|second|third)\s+(?:failure|reason|issue)/i,
+    ];
     
-    // DISABLED: Comparison detection - too aggressive, splits paragraphs incorrectly
+    for (const pattern of failurePatterns) {
+      if (pattern.test(trimmed)) {
+        // This might be introducing a comparison or cards section
+        // Mark it as a sectionHeading to introduce the next section
+        return {
+          type: 'sectionHeading',
+          content: text,
+          data: { title: trimmed.split(/[:.]/)[0] || trimmed },
+          confidence: 0.75,
+          startIndex,
+          endIndex,
+        };
+      }
+    }
+    
+    // Check for comparison patterns (Old Way vs New Way, Before/After)
+    // Only for paragraphs that explicitly contain comparison structure
+    if (trimmed.length < 300) {
+      const hasVs = /\bvs\.?\b/i.test(trimmed);
+      const hasBeforeAfter = /\b(?:before|after)\b.*\b(?:before|after)\b/i.test(trimmed);
+      const hasOldNew = /\b(?:old|traditional)\s+(?:way|approach)\b.*\b(?:new|better|modern)\s+(?:way|approach)\b/i.test(trimmed);
+      
+      if (hasVs || hasBeforeAfter || hasOldNew) {
+        return {
+          type: 'comparisonCards',
+          content: text,
+          data: this.extractComparison(trimmed),
+          confidence: 0.75,
+          startIndex,
+          endIndex,
+        };
+      }
+    }
+    
+    // Check for timeline patterns (dates with events)
+    const datePattern = /(?:\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}|Day\s+\d+|Week\s+\d+)/gi;
+    const dateMatches = [...trimmed.matchAll(datePattern)];
+    
+    if (dateMatches.length >= 2 && trimmed.length < 500) {
+      const events = this.extractTimelineEvents(trimmed);
+      if (events.length >= 2) {
+        return {
+          type: 'timeline',
+          content: text,
+          data: { events },
+          confidence: 0.8,
+          startIndex,
+          endIndex,
+        };
+      }
+    }
     
     // Default: paragraph - PRESERVE ALL TEXT
     return {
       type: 'paragraph',
       content: text,
-      data: { text },
+      data: { text: trimmed },
       confidence: 0.5,
       startIndex,
       endIndex,
@@ -266,28 +367,52 @@ export class SectionDetector {
   }
 
   /**
-   * Post-process sections to merge and group
-   * SIMPLIFIED: Only merge consecutive numbered steps
+   * Post-process sections to merge and group related items
    */
   private postProcess(): void {
-    // Group consecutive numbered steps
     const grouped: DetectedSection[] = [];
     let currentSteps: DetectedSection[] = [];
+    let currentStats: DetectedSection[] = [];
     
     for (const section of this.sections) {
+      // Handle numbered steps grouping
       if (section.type === 'numberedSteps') {
+        // Flush stats first
+        if (currentStats.length > 0) {
+          grouped.push(this.mergeStats(currentStats));
+          currentStats = [];
+        }
         currentSteps.push(section);
-      } else {
+      } 
+      // Handle stats grouping (consecutive stats)
+      else if (section.type === 'stats') {
+        // Flush steps first
         if (currentSteps.length > 0) {
           grouped.push(this.mergeNumberedSteps(currentSteps));
           currentSteps = [];
+        }
+        currentStats.push(section);
+      }
+      else {
+        // Flush any pending groups
+        if (currentSteps.length > 0) {
+          grouped.push(this.mergeNumberedSteps(currentSteps));
+          currentSteps = [];
+        }
+        if (currentStats.length > 0) {
+          grouped.push(this.mergeStats(currentStats));
+          currentStats = [];
         }
         grouped.push(section);
       }
     }
     
+    // Flush remaining groups
     if (currentSteps.length > 0) {
       grouped.push(this.mergeNumberedSteps(currentSteps));
+    }
+    if (currentStats.length > 0) {
+      grouped.push(this.mergeStats(currentStats));
     }
     
     this.sections = grouped;
