@@ -86,6 +86,16 @@ function BlogContentRenderer({
   const hasV1Layout = hasStructuredLayout && post.structured_layout.layout;
   const hasV2Layout = hasStructuredLayout && isV2Layout(post.structured_layout);
 
+  // DEBUG: Log layout detection
+  console.log('🔍 [BlogContentRenderer] Layout Detection:', {
+    hasStructuredLayout,
+    hasV1Layout,
+    hasV2Layout,
+    structuredLayoutKeys: post.structured_layout ? Object.keys(post.structured_layout) : [],
+    componentsLength: post.structured_layout?.components?.length,
+    layoutLength: post.structured_layout?.layout?.length,
+  });
+
   // Auto-detect V2 layout
   const shouldUseV2 = hasV2Layout || useV2;
 
@@ -288,6 +298,45 @@ export default function BlogPostPage() {
     }
   };
 
+  // Check if this is a V2 layout - if so, render completely differently
+  const hasStructuredLayout = post.structured_layout && typeof post.structured_layout === 'object';
+  const hasV2Layout = hasStructuredLayout && isV2Layout(post.structured_layout);
+
+  // V2 Layout: Clean, light theme - skip the dark wrapper entirely
+  if (hasV2Layout) {
+    console.log('🎨 [BlogPostPage] Rendering V2 Layout with', post.structured_layout?.components?.length, 'components');
+    return (
+      <div className="min-h-screen bg-white">
+        {/* Preview Banner */}
+        {isPreview && (
+          <div className="bg-amber-500 text-white py-3 px-4 text-center font-semibold z-50 relative">
+            📝 Preview Mode - This post is not yet published
+          </div>
+        )}
+        
+        {/* V2 Renderer handles everything including hero */}
+        <BlogRendererV2 layout={post.structured_layout} />
+        
+        {/* Floating Gamma Button if available */}
+        {(post as any).gamma_url && (
+          <div className="fixed bottom-6 right-6 z-40">
+            <a
+              href={(post as any).gamma_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-semibold rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all"
+            >
+              <FileText className="h-5 w-5" />
+              <span className="hidden sm:inline">View as Presentation</span>
+              <ExternalLink className="h-4 w-4 opacity-70 group-hover:opacity-100" />
+            </a>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // V1/Legacy Layout: Dark theme with old structure
   return (
     <div 
       className="min-h-screen relative overflow-hidden"
