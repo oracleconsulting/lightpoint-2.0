@@ -34,8 +34,14 @@ export function generateLayout(options: GenerateLayoutOptions): BlogLayout {
     includeCTA = true,
   } = options;
 
+  console.log('🔍 [V2 Layout] Input content length:', content?.length || 0);
+  console.log('🔍 [V2 Layout] Content preview:', content?.substring(0, 200));
+
   // Detect sections from content
   const sections = detectSections(content);
+  
+  console.log('🔍 [V2 Layout] Detected sections:', sections.length);
+  console.log('🔍 [V2 Layout] Section types:', sections.map(s => s.type));
   
   // Convert sections to components
   const components: LayoutComponent[] = [];
@@ -169,8 +175,8 @@ function sectionToComponent(section: DetectedSection): LayoutComponent | null {
       };
     
     case 'paragraph':
-      // Skip very short paragraphs
-      if (section.content.length < 50) return null;
+      // Skip very short paragraphs (less than 20 chars)
+      if (section.content.length < 20) return null;
       return {
         type: 'paragraph',
         props: {

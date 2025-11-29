@@ -71,12 +71,27 @@ export class SectionDetector {
       return this.extractTextFromTipTap(content);
     }
     
-    // Strip HTML tags
-    let text = content.replace(/<[^>]*>/g, '\n');
+    let text = content;
+    
+    // Convert block-level HTML tags to paragraph breaks
+    text = text.replace(/<\/?(p|div|br|h[1-6]|li|tr|blockquote)[^>]*>/gi, '\n\n');
+    
+    // Strip remaining HTML tags
+    text = text.replace(/<[^>]*>/g, ' ');
+    
+    // Decode HTML entities
+    text = text.replace(/&nbsp;/g, ' ');
+    text = text.replace(/&amp;/g, '&');
+    text = text.replace(/&lt;/g, '<');
+    text = text.replace(/&gt;/g, '>');
+    text = text.replace(/&quot;/g, '"');
+    text = text.replace(/&#39;/g, "'");
     
     // Normalize whitespace but preserve paragraph breaks
     text = text.replace(/\n{3,}/g, '\n\n');
     text = text.replace(/[ \t]+/g, ' ');
+    text = text.replace(/\n /g, '\n');
+    text = text.replace(/ \n/g, '\n');
     
     return text.trim();
   }
@@ -96,8 +111,30 @@ export class SectionDetector {
   detect(): DetectedSection[] {
     this.sections = [];
     
-    // Split into paragraphs
-    const paragraphs = this.content.split(/\n\n+/).filter(p => p.trim());
+    console.log('🔬 [SectionDetector] Normalized content length:', this.content.length);
+    console.log('🔬 [SectionDetector] Content preview:', this.content.substring(0, 300));
+    
+    // Split into paragraphs - try multiple strategies
+    let paragraphs = this.content.split(/\n\n+/).filter(p => p.trim());
+    
+    // If we only got 1-2 paragraphs, try splitting by sentences for long content
+    if (paragraphs.length <= 2 && this.content.length > 500) {
+      console.log('🔬 [SectionDetector] Few paragraphs detected, trying sentence split');
+      // Split long content into chunks of ~3-4 sentences
+      const sentences = this.content.split(/(?<=[.!?])\s+/);
+      paragraphs = [];
+      let chunk = '';
+      for (const sentence of sentences) {
+        chunk += sentence + ' ';
+        if (chunk.length > 300) {
+          paragraphs.push(chunk.trim());
+          chunk = '';
+        }
+      }
+      if (chunk.trim()) paragraphs.push(chunk.trim());
+    }
+    
+    console.log('🔬 [SectionDetector] Paragraphs found:', paragraphs.length);
     
     let currentIndex = 0;
     
@@ -113,8 +150,12 @@ export class SectionDetector {
       currentIndex += paragraph.length + 2; // +2 for \n\n
     }
     
+    console.log('🔬 [SectionDetector] Sections before post-process:', this.sections.length);
+    
     // Post-process: merge adjacent stats, group numbered steps
     this.postProcess();
+    
+    console.log('🔬 [SectionDetector] Final sections:', this.sections.length);
     
     return this.sections;
   }
