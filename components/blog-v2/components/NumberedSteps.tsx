@@ -1,139 +1,122 @@
 'use client';
 
 import React from 'react';
-import type { NumberedStepsProps, Step } from '../types';
 
-/**
- * NumberedSteps - Vertical connected steps or grid layout
- * 
- * Matches Gamma pages 3 and 6:
- * - Vertical: Connected chevron flow with numbers
- * - Grid: 3-column numbered grid
- */
+// ============================================================================
+// NUMBERED STEPS
+// Process visualization with vertical or grid layouts
+// ============================================================================
+
+interface Step {
+  number?: string;
+  title: string;
+  description: string;
+}
+
+interface NumberedStepsProps {
+  title?: string;
+  intro?: string;
+  steps: Step[];
+  conclusion?: string;
+  variant?: 'vertical' | 'grid';
+}
+
 export function NumberedSteps({
   title,
   intro,
   steps,
   conclusion,
   variant = 'vertical',
-  className = '',
 }: NumberedStepsProps) {
   return (
-    <div className={`bg-white py-16 px-8 ${className}`}>
-      <div className="max-w-5xl mx-auto">
-        {/* Header */}
-        {title && (
-          <h2 className="text-3xl md:text-4xl font-bold text-slate-800 mb-4">
-            {title}
-          </h2>
-        )}
-        {intro && (
-          <p className="text-lg text-gray-600 mb-10 max-w-3xl">
-            {intro}
-          </p>
-        )}
+    <div className="w-full">
+      {/* Header */}
+      {(title || intro) && (
+        <div className="mb-12">
+          {title && (
+            <h2 className="text-3xl lg:text-4xl font-bold text-slate-800 mb-4 tracking-tight">
+              {title}
+            </h2>
+          )}
+          {intro && (
+            <p className="text-lg lg:text-xl text-slate-600 leading-relaxed max-w-3xl">
+              {intro}
+            </p>
+          )}
+        </div>
+      )}
 
-        {/* Steps */}
-        {variant === 'vertical' ? (
-          <VerticalSteps steps={steps} />
-        ) : (
-          <GridSteps steps={steps} />
-        )}
+      {/* Steps */}
+      {variant === 'grid' ? (
+        <GridSteps steps={steps} />
+      ) : (
+        <VerticalSteps steps={steps} />
+      )}
 
-        {/* Conclusion */}
-        {conclusion && (
-          <p className="text-lg text-gray-600 mt-10 max-w-3xl">
+      {/* Conclusion */}
+      {conclusion && (
+        <div className="mt-12 pt-8 border-t border-slate-200">
+          <p className="text-lg text-slate-700 leading-relaxed max-w-3xl">
             {conclusion}
           </p>
-        )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function VerticalSteps({ steps }: { steps: Step[] }) {
+  return (
+    <div className="relative">
+      {/* Connector line */}
+      <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-500 via-blue-400 to-blue-300 hidden md:block" />
+      
+      <div className="space-y-8">
+        {steps.map((step, index) => (
+          <div key={index} className="relative flex gap-6 md:gap-8">
+            {/* Number circle */}
+            <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center font-bold text-lg shadow-lg shadow-blue-500/25 z-10">
+              {step.number || String(index + 1).padStart(2, '0')}
+            </div>
+            
+            {/* Content */}
+            <div className="flex-1 pt-2 pb-4">
+              <h3 className="text-xl font-bold text-slate-800 mb-2">
+                {step.title}
+              </h3>
+              <p className="text-lg text-slate-600 leading-relaxed">
+                {step.description}
+              </p>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
 }
 
-interface StepsProps {
-  steps: Step[];
-}
-
-function VerticalSteps({ steps }: StepsProps) {
+function GridSteps({ steps }: { steps: Step[] }) {
   return (
-    <div className="space-y-0">
-      {steps.map((step, index) => {
-        const stepNumber = step.number || String(index + 1).padStart(2, '0');
-        const isLast = index === steps.length - 1;
-
-        return (
-          <div key={index} className="relative">
-            <div className="flex gap-6">
-              {/* Number and connector */}
-              <div className="flex flex-col items-center">
-                <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
-                  <span className="text-lg font-bold text-blue-600">
-                    {stepNumber}
-                  </span>
-                </div>
-                {!isLast && (
-                  <div className="w-0.5 flex-1 bg-gray-200 my-2 min-h-[20px]" />
-                )}
-              </div>
-
-              {/* Content */}
-              <div className="bg-gray-50 rounded-lg p-5 flex-1 mb-4">
-                <h3 className="font-bold text-slate-800 text-lg mb-2">
-                  {step.title}
-                </h3>
-                <p className="text-gray-600 leading-relaxed">
-                  {step.description}
-                </p>
-              </div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function GridSteps({ steps }: StepsProps) {
-  // Split into rows of 3
-  const rows: Step[][] = [];
-  for (let i = 0; i < steps.length; i += 3) {
-    rows.push(steps.slice(i, i + 3));
-  }
-
-  return (
-    <div className="space-y-8">
-      {rows.map((row, rowIndex) => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      {steps.map((step, index) => (
         <div 
-          key={rowIndex} 
-          className={`grid gap-6 ${
-            row.length === 1 
-              ? 'grid-cols-1' 
-              : row.length === 2 
-                ? 'grid-cols-1 md:grid-cols-2' 
-                : 'grid-cols-1 md:grid-cols-3'
-          }`}
+          key={index}
+          className="bg-white rounded-xl p-6 border border-slate-200 hover:border-blue-300 hover:shadow-lg transition-all duration-200 group"
         >
-          {row.map((step, colIndex) => {
-            const globalIndex = rowIndex * 3 + colIndex;
-            const stepNumber = step.number || String(globalIndex + 1).padStart(2, '0');
-            const isFullWidth = row.length === 1 && steps.length > 1;
-
-            return (
-              <div 
-                key={colIndex} 
-                className={`${isFullWidth ? 'border-t-4 border-blue-500 pt-4' : ''}`}
-              >
-                <div className="text-sm text-gray-400 mb-1">{stepNumber}</div>
-                <h3 className="font-bold text-slate-800 text-lg mb-2">
-                  {step.title}
-                </h3>
-                <p className="text-gray-600 leading-relaxed">
-                  {step.description}
-                </p>
-              </div>
-            );
-          })}
+          {/* Large number */}
+          <div className="text-5xl font-bold text-slate-200 group-hover:text-blue-100 transition-colors mb-4">
+            {step.number || String(index + 1).padStart(2, '0')}
+          </div>
+          
+          {/* Title */}
+          <h3 className="text-lg font-bold text-slate-800 mb-2">
+            {step.title}
+          </h3>
+          
+          {/* Description */}
+          <p className="text-slate-600 leading-relaxed text-sm">
+            {step.description}
+          </p>
         </div>
       ))}
     </div>
@@ -141,4 +124,3 @@ function GridSteps({ steps }: StepsProps) {
 }
 
 export default NumberedSteps;
-

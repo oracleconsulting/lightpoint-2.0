@@ -1,40 +1,78 @@
 'use client';
 
 import React from 'react';
-import type { CalloutBoxProps } from '../types';
 
-/**
- * CalloutBox - Highlighted callout with icon and label
- * 
- * Matches Gamma page 9:
- * - Blue background variant
- * - Left border variant
- * - Icon + bold label + text
- */
+// ============================================================================
+// CALLOUT BOX
+// Highlighted tip, warning, or note with icon
+// ============================================================================
+
+interface CalloutBoxProps {
+  icon?: string;
+  label: string;
+  text: string;
+  variant?: 'blue' | 'border' | 'gold' | 'green';
+}
+
 export function CalloutBox({
-  icon = '💡',
+  icon,
   label,
   text,
   variant = 'blue',
-  className = '',
 }: CalloutBoxProps) {
-  const variantStyles = {
-    blue: 'bg-blue-100 rounded-lg',
-    border: 'border-l-4 border-blue-500 bg-gray-50 rounded-r-lg',
-    gold: 'bg-amber-50 border-l-4 border-amber-500 rounded-r-lg',
+  const variants = {
+    blue: {
+      container: 'bg-blue-50 border-blue-200',
+      icon: 'bg-blue-500 text-white',
+      label: 'text-blue-700',
+      text: 'text-blue-900',
+    },
+    border: {
+      container: 'bg-white border-slate-200 border-l-4 border-l-blue-500',
+      icon: 'bg-slate-100 text-slate-600',
+      label: 'text-slate-700',
+      text: 'text-slate-600',
+    },
+    gold: {
+      container: 'bg-amber-50 border-amber-200',
+      icon: 'bg-amber-500 text-white',
+      label: 'text-amber-700',
+      text: 'text-amber-900',
+    },
+    green: {
+      container: 'bg-emerald-50 border-emerald-200',
+      icon: 'bg-emerald-500 text-white',
+      label: 'text-emerald-700',
+      text: 'text-emerald-900',
+    },
   };
 
+  const style = variants[variant];
+
   return (
-    <div className={`p-5 ${variantStyles[variant]} ${className}`}>
-      <div className="flex items-start gap-3">
+    <div className={`
+      rounded-xl border p-6
+      ${style.container}
+    `}>
+      <div className="flex items-start gap-4">
+        {/* Icon */}
         {icon && (
-          <span className="text-xl flex-shrink-0" role="img" aria-label="icon">
-            {icon}
-          </span>
+          <div className={`
+            w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0
+            ${style.icon}
+          `}>
+            <span className="text-xl">{icon}</span>
+          </div>
         )}
+        
+        {/* Content */}
         <div className="flex-1">
-          <span className="font-bold text-slate-800">{label}</span>{' '}
-          <span className="text-gray-700 leading-relaxed">{text}</span>
+          <div className={`font-bold text-sm uppercase tracking-wider mb-1 ${style.label}`}>
+            {label}
+          </div>
+          <p className={`leading-relaxed ${style.text}`}>
+            {text}
+          </p>
         </div>
       </div>
     </div>
@@ -42,4 +80,3 @@ export function CalloutBox({
 }
 
 export default CalloutBox;
-

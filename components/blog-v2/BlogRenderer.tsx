@@ -1,12 +1,12 @@
 'use client';
 
 import React from 'react';
-import { componentRegistry } from './components';
 import type { BlogLayout, LayoutComponent, ComponentType } from './types';
 
 // ============================================================================
-// BLOG RENDERER
-// Single entry point for rendering blog posts from structured layouts
+// WORLD-CLASS BLOG RENDERER
+// Magazine-quality layout with full-width sections, generous whitespace,
+// and optimal reading typography
 // ============================================================================
 
 interface BlogRendererProps {
@@ -14,54 +14,46 @@ interface BlogRendererProps {
   className?: string;
 }
 
-/**
- * BlogRenderer - Renders a complete blog post from a structured layout
- * 
- * Usage:
- * ```tsx
- * <BlogRenderer layout={blogPost.layout} />
- * ```
- * 
- * The layout object contains:
- * - theme: Optional theme settings
- * - components: Array of { type, props } objects
- */
 export function BlogRenderer({ layout, className = '' }: BlogRendererProps) {
   const { theme, components } = layout;
 
-  // Apply theme classes if specified
-  const themeClasses = theme?.mode === 'dark' 
-    ? 'bg-slate-900 text-slate-100' 
-    : 'bg-white';
-
   return (
-    <div className={`min-h-screen font-sans ${themeClasses} ${className}`}>
+    <article 
+      className={`
+        min-h-screen 
+        bg-white 
+        font-['Georgia',_'Times_New_Roman',_serif]
+        antialiased
+        ${className}
+      `}
+    >
+      {/* Render each component with proper section wrapping */}
       {components.map((component, index) => (
         <ComponentRenderer 
           key={`${component.type}-${index}`} 
-          component={component} 
+          component={component}
+          index={index}
+          isFirst={index === 0}
+          isLast={index === components.length - 1}
         />
       ))}
-    </div>
+    </article>
   );
 }
 
 // ============================================================================
 // COMPONENT RENDERER
-// Renders individual components with error boundary
+// Intelligently wraps components with appropriate section styling
 // ============================================================================
 
 interface ComponentRendererProps {
   component: LayoutComponent;
+  index: number;
+  isFirst: boolean;
+  isLast: boolean;
 }
 
-// Components that should be full-width (no container)
-const FULL_WIDTH_COMPONENTS = ['hero', 'cta', 'stats'];
-
-// Components that need text-width container
-const TEXT_WIDTH_COMPONENTS = ['paragraph', 'sectionHeading', 'bulletList', 'quote', 'callout'];
-
-function ComponentRenderer({ component }: ComponentRendererProps) {
+function ComponentRenderer({ component, index, isFirst, isLast }: ComponentRendererProps) {
   const { type, props } = component;
 
   // Get the component from registry
@@ -69,88 +61,105 @@ function ComponentRenderer({ component }: ComponentRendererProps) {
 
   if (!Component) {
     console.warn(`Unknown component type: ${type}`);
-    return (
-      <div className="max-w-3xl mx-auto px-6 py-4">
-        <div className="bg-yellow-50 border border-yellow-200 p-4 rounded">
-          <p className="text-yellow-800 text-sm">
-            Unknown component type: <code>{type}</code>
-          </p>
-        </div>
-      </div>
-    );
+    return null;
   }
 
-  try {
-    // Full-width components (hero, cta, stats)
-    if (FULL_WIDTH_COMPONENTS.includes(type)) {
-      return <Component {...props} />;
-    }
-    
-    // Text-width components get a container with max-width and padding
-    if (TEXT_WIDTH_COMPONENTS.includes(type)) {
-      return (
-        <div className="max-w-3xl mx-auto px-6 py-4">
-          <Component {...props} />
-        </div>
-      );
-    }
-    
-    // Other components get medium width
-    return (
-      <div className="max-w-5xl mx-auto px-6 py-6">
-        <Component {...props} />
-      </div>
-    );
-  } catch (error) {
-    console.error(`Error rendering component ${type}:`, error);
-    return (
-      <div className="max-w-3xl mx-auto px-6 py-4">
-        <div className="bg-red-50 border border-red-200 p-4 rounded">
-          <p className="text-red-800 text-sm">
-            Error rendering: <code>{type}</code>
-          </p>
-        </div>
-      </div>
-    );
-  }
-}
-
-// ============================================================================
-// SECTION WRAPPER
-// Optional wrapper for adding consistent spacing between sections
-// ============================================================================
-
-interface SectionWrapperProps {
-  children: React.ReactNode;
-  background?: 'white' | 'gray' | 'none';
-  className?: string;
-}
-
-export function SectionWrapper({ 
-  children, 
-  background = 'none',
-  className = '' 
-}: SectionWrapperProps) {
-  const bgClasses = {
-    white: 'bg-white',
-    gray: 'bg-gray-50',
-    none: '',
-  };
+  // Determine section styling based on component type
+  const sectionStyle = getSectionStyle(type as ComponentType, index);
 
   return (
-    <section className={`${bgClasses[background]} ${className}`}>
-      <div className="max-w-5xl mx-auto px-8 py-16">
-        {children}
+    <section 
+      className={`
+        ${sectionStyle.background}
+        ${sectionStyle.padding}
+        ${isFirst ? 'pt-0' : ''}
+        ${isLast ? 'pb-24' : ''}
+      `}
+    >
+      <div className={sectionStyle.container}>
+        <Component {...props} />
       </div>
     </section>
   );
 }
 
 // ============================================================================
-// EXPORTS
+// SECTION STYLING LOGIC
+// Returns appropriate styling based on component type
 // ============================================================================
 
+interface SectionStyle {
+  background: string;
+  padding: string;
+  container: string;
+}
+
+function getSectionStyle(type: ComponentType, index: number): SectionStyle {
+  // Full-width components (hero, stats with ring)
+  const fullWidthTypes = ['hero', 'cta'];
+  
+  // Wide components (stats, comparison)
+  const wideTypes = ['stats', 'comparisonCards', 'threeColumnCards'];
+  
+  // Reading-width components (text-heavy)
+  const readingTypes = ['paragraph', 'textWithImage', 'quote', 'callout', 'bulletList', 'sectionHeading'];
+
+  if (fullWidthTypes.includes(type)) {
+    return {
+      background: '',
+      padding: '',
+      container: 'w-full',
+    };
+  }
+
+  if (wideTypes.includes(type)) {
+    return {
+      background: index % 2 === 0 ? 'bg-white' : 'bg-slate-50',
+      padding: 'py-16 lg:py-20',
+      container: 'max-w-6xl mx-auto px-6 lg:px-8',
+    };
+  }
+
+  // Default: reading-width container
+  return {
+    background: 'bg-white',
+    padding: 'py-8 lg:py-12',
+    container: 'max-w-3xl mx-auto px-6 lg:px-8',
+  };
+}
+
+// ============================================================================
+// COMPONENT REGISTRY
+// All available components mapped by type
+// ============================================================================
+
+import { HeroSection } from './components/HeroSection';
+import { StatsRow } from './components/StatsRow';
+import { TextWithImage } from './components/TextWithImage';
+import { NumberedSteps } from './components/NumberedSteps';
+import { ThreeColumnCards } from './components/ThreeColumnCards';
+import { Timeline } from './components/Timeline';
+import { ComparisonCards } from './components/ComparisonCards';
+import { DonutChart } from './components/DonutChart';
+import { CalloutBox } from './components/CalloutBox';
+import { QuoteBlock } from './components/QuoteBlock';
+import { Paragraph, SectionHeading, BulletList, CTASection } from './components/UtilityComponents';
+
+export const componentRegistry: Record<string, React.ComponentType<any>> = {
+  hero: HeroSection,
+  stats: StatsRow,
+  textWithImage: TextWithImage,
+  numberedSteps: NumberedSteps,
+  threeColumnCards: ThreeColumnCards,
+  timeline: Timeline,
+  comparisonCards: ComparisonCards,
+  donutChart: DonutChart,
+  callout: CalloutBox,
+  quote: QuoteBlock,
+  paragraph: Paragraph,
+  sectionHeading: SectionHeading,
+  bulletList: BulletList,
+  cta: CTASection,
+};
+
 export default BlogRenderer;
-
-export { componentRegistry };
-

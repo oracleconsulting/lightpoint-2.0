@@ -1,26 +1,58 @@
 'use client';
 
 import React from 'react';
-import type { 
-  ParagraphProps, 
-  SectionHeadingProps, 
-  BulletListProps,
-  CTASectionProps 
-} from '../types';
 
 // ============================================================================
-// PARAGRAPH - Simple text paragraph
+// PARAGRAPH
+// Optimized for long-form reading with proper line height and spacing
 // ============================================================================
+
+interface ParagraphProps {
+  text: string;
+  highlight?: boolean;
+  dropcap?: boolean;
+  className?: string;
+}
 
 export function Paragraph({
   text,
   highlight = false,
+  dropcap = false,
   className = '',
 }: ParagraphProps) {
+  if (highlight) {
+    return (
+      <p className={`
+        text-lg leading-relaxed text-slate-700
+        bg-blue-50 border-l-4 border-blue-500
+        px-6 py-4 rounded-r-lg
+        ${className}
+      `}>
+        {text}
+      </p>
+    );
+  }
+
+  if (dropcap) {
+    const firstLetter = text.charAt(0);
+    const restOfText = text.slice(1);
+    
+    return (
+      <p className={`text-lg lg:text-xl leading-[1.8] text-slate-700 ${className}`}>
+        <span className="float-left text-6xl font-bold text-slate-800 leading-[0.8] mr-3 mt-1">
+          {firstLetter}
+        </span>
+        {restOfText}
+      </p>
+    );
+  }
+
   return (
     <p className={`
-      text-lg text-gray-600 leading-relaxed
-      ${highlight ? 'bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500' : ''}
+      text-lg lg:text-xl 
+      leading-[1.8] 
+      text-slate-700 
+      font-['Georgia',_'Times_New_Roman',_serif]
       ${className}
     `}>
       {text}
@@ -29,30 +61,50 @@ export function Paragraph({
 }
 
 // ============================================================================
-// SECTION HEADING - Title for content sections
+// SECTION HEADING
+// Clear visual hierarchy with optional decorative elements
 // ============================================================================
+
+interface SectionHeadingProps {
+  title: string;
+  subtitle?: string;
+  icon?: string;
+  centered?: boolean;
+  decorated?: boolean;
+}
 
 export function SectionHeading({
   title,
   subtitle,
   icon,
   centered = false,
-  className = '',
+  decorated = false,
 }: SectionHeadingProps) {
   return (
-    <div className={`mb-8 ${centered ? 'text-center' : ''} ${className}`}>
+    <div className={`mb-8 ${centered ? 'text-center' : ''}`}>
+      {/* Optional decorative line */}
+      {decorated && (
+        <div className={`w-16 h-1 bg-blue-500 mb-6 ${centered ? 'mx-auto' : ''}`} />
+      )}
+      
+      {/* Icon + Title */}
       <div className={`flex items-center gap-3 ${centered ? 'justify-center' : ''}`}>
         {icon && (
-          <span className="text-2xl" role="img" aria-label="section icon">
+          <span className="text-3xl" role="img" aria-label="section icon">
             {icon}
           </span>
         )}
-        <h2 className="text-3xl md:text-4xl font-bold text-slate-800">
+        <h2 className="text-3xl lg:text-4xl font-bold text-slate-800 tracking-tight">
           {title}
         </h2>
       </div>
+      
+      {/* Subtitle */}
       {subtitle && (
-        <p className={`mt-2 text-lg text-gray-600 ${centered ? '' : 'max-w-2xl'}`}>
+        <p className={`
+          mt-4 text-lg lg:text-xl text-slate-600 leading-relaxed
+          ${centered ? '' : 'max-w-2xl'}
+        `}>
           {subtitle}
         </p>
       )}
@@ -61,39 +113,58 @@ export function SectionHeading({
 }
 
 // ============================================================================
-// BULLET LIST - List with various bullet styles
+// BULLET LIST
+// Clean list presentation with multiple bullet styles
 // ============================================================================
+
+interface BulletListProps {
+  title?: string;
+  items: string[];
+  variant?: 'bullet' | 'check' | 'arrow' | 'number';
+}
 
 export function BulletList({
   title,
   items,
   variant = 'bullet',
-  className = '',
 }: BulletListProps) {
-  const bulletStyles = {
-    bullet: '•',
-    check: '✓',
-    arrow: '→',
-  };
-
-  const bulletColors = {
-    bullet: 'text-slate-400',
-    check: 'text-green-500',
-    arrow: 'text-blue-500',
+  const getBullet = (index: number) => {
+    switch (variant) {
+      case 'check':
+        return (
+          <span className="w-6 h-6 rounded-full bg-green-100 text-green-600 flex items-center justify-center flex-shrink-0 mt-1">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </span>
+        );
+      case 'arrow':
+        return (
+          <span className="text-blue-500 flex-shrink-0 mt-1">→</span>
+        );
+      case 'number':
+        return (
+          <span className="w-6 h-6 rounded-full bg-slate-800 text-white text-sm font-medium flex items-center justify-center flex-shrink-0 mt-1">
+            {index + 1}
+          </span>
+        );
+      default:
+        return (
+          <span className="w-2 h-2 rounded-full bg-slate-400 flex-shrink-0 mt-3" />
+        );
+    }
   };
 
   return (
-    <div className={className}>
+    <div>
       {title && (
-        <h3 className="font-bold text-slate-800 text-lg mb-4">{title}</h3>
+        <h3 className="text-xl font-bold text-slate-800 mb-4">{title}</h3>
       )}
-      <ul className="space-y-3">
+      <ul className="space-y-4">
         {items.map((item, index) => (
-          <li key={index} className="flex items-start gap-3">
-            <span className={`${bulletColors[variant]} flex-shrink-0 font-bold`}>
-              {bulletStyles[variant]}
-            </span>
-            <span className="text-gray-600 leading-relaxed">{item}</span>
+          <li key={index} className="flex items-start gap-4">
+            {getBullet(index)}
+            <span className="text-lg text-slate-700 leading-relaxed">{item}</span>
           </li>
         ))}
       </ul>
@@ -102,8 +173,17 @@ export function BulletList({
 }
 
 // ============================================================================
-// CTA SECTION - Call to action with button
+// CTA SECTION
+// Call-to-action with optional gradient background
 // ============================================================================
+
+interface CTASectionProps {
+  title: string;
+  description: string;
+  buttonText?: string;
+  buttonHref?: string;
+  variant?: 'default' | 'highlight';
+}
 
 export function CTASection({
   title,
@@ -111,41 +191,41 @@ export function CTASection({
   buttonText,
   buttonHref,
   variant = 'default',
-  className = '',
 }: CTASectionProps) {
-  const bgStyles = {
-    default: 'bg-gray-50',
-    highlight: 'bg-gradient-to-r from-blue-600 to-blue-700 text-white',
-  };
-
-  const textStyles = {
-    default: {
-      title: 'text-slate-800',
-      description: 'text-gray-600',
-    },
-    highlight: {
-      title: 'text-white',
-      description: 'text-blue-100',
-    },
-  };
+  const isHighlight = variant === 'highlight';
 
   return (
-    <div className={`py-16 px-8 ${bgStyles[variant]} ${className}`}>
+    <div className={`
+      py-20 px-8
+      ${isHighlight 
+        ? 'bg-gradient-to-br from-slate-800 via-slate-900 to-blue-900' 
+        : 'bg-slate-50'
+      }
+    `}>
       <div className="max-w-3xl mx-auto text-center">
-        <h2 className={`text-3xl font-bold mb-4 ${textStyles[variant].title}`}>
+        <h2 className={`
+          text-3xl lg:text-4xl font-bold mb-4
+          ${isHighlight ? 'text-white' : 'text-slate-800'}
+        `}>
           {title}
         </h2>
-        <p className={`text-lg mb-8 ${textStyles[variant].description}`}>
+        
+        <p className={`
+          text-lg lg:text-xl mb-8 leading-relaxed
+          ${isHighlight ? 'text-slate-300' : 'text-slate-600'}
+        `}>
           {description}
         </p>
+        
         {buttonText && (
           <a
             href={buttonHref || '#'}
             className={`
-              inline-block px-8 py-4 rounded-lg font-semibold transition-colors
-              ${variant === 'highlight' 
-                ? 'bg-white text-blue-600 hover:bg-blue-50' 
-                : 'bg-blue-600 text-white hover:bg-blue-700'
+              inline-block px-8 py-4 rounded-lg font-semibold text-lg
+              transition-all duration-200 hover:scale-105
+              ${isHighlight 
+                ? 'bg-white text-slate-800 hover:bg-blue-50 shadow-xl' 
+                : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg'
               }
             `}
           >
@@ -157,14 +237,4 @@ export function CTASection({
   );
 }
 
-// ============================================================================
-// EXPORTS
-// ============================================================================
-
-export default {
-  Paragraph,
-  SectionHeading,
-  BulletList,
-  CTASection,
-};
-
+export default { Paragraph, SectionHeading, BulletList, CTASection };

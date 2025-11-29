@@ -1,75 +1,103 @@
 'use client';
 
 import React from 'react';
-import type { QuoteBlockProps } from '../types';
 
-/**
- * QuoteBlock - Styled quote with optional attribution
- * 
- * Matches Gamma quote styles:
- * - Border variant: Left border accent
- * - Box variant: Full background
- * - Large variant: Hero-style quote
- */
+// ============================================================================
+// QUOTE BLOCK
+// Styled blockquote with attribution
+// ============================================================================
+
+interface QuoteBlockProps {
+  text: string;
+  attribution?: string;
+  source?: string;
+  variant?: 'border' | 'box' | 'large';
+}
+
 export function QuoteBlock({
   text,
   attribution,
   source,
   variant = 'border',
-  className = '',
 }: QuoteBlockProps) {
   if (variant === 'large') {
     return (
-      <div className={`bg-gray-50 py-12 px-8 ${className}`}>
-        <div className="max-w-4xl mx-auto text-center">
-          <blockquote className="text-2xl md:text-3xl text-slate-700 font-medium leading-relaxed mb-4">
-            &quot;{text}&quot;
-          </blockquote>
-          {(attribution || source) && (
-            <cite className="text-gray-500 not-italic">
-              {attribution && <span className="font-medium">{attribution}</span>}
-              {attribution && source && <span> — </span>}
-              {source && <span>{source}</span>}
-            </cite>
-          )}
+      <blockquote className="relative py-8">
+        {/* Large decorative quote mark */}
+        <div className="absolute -top-4 -left-2 text-8xl text-slate-200 font-serif leading-none select-none">
+          &ldquo;
         </div>
-      </div>
+        
+        <p className="relative text-2xl lg:text-3xl text-slate-700 leading-relaxed font-light italic pl-8">
+          {text}
+        </p>
+        
+        {(attribution || source) && (
+          <footer className="mt-6 pl-8">
+            {attribution && (
+              <cite className="text-lg font-semibold text-slate-800 not-italic">
+                — {attribution}
+              </cite>
+            )}
+            {source && (
+              <span className="text-slate-500 ml-2">
+                {source}
+              </span>
+            )}
+          </footer>
+        )}
+      </blockquote>
     );
   }
 
   if (variant === 'box') {
     return (
-      <div className={`bg-slate-100 rounded-lg p-6 ${className}`}>
-        <blockquote className="text-lg text-slate-700 italic leading-relaxed">
-          &quot;{text}&quot;
-        </blockquote>
+      <blockquote className="bg-slate-50 rounded-xl p-6 border border-slate-200">
+        <p className="text-lg text-slate-700 leading-relaxed italic">
+          &ldquo;{text}&rdquo;
+        </p>
+        
         {(attribution || source) && (
-          <cite className="block mt-3 text-sm text-gray-500 not-italic">
-            {attribution && <span className="font-medium">{attribution}</span>}
-            {attribution && source && <span> — </span>}
-            {source && <span>{source}</span>}
-          </cite>
+          <footer className="mt-4 pt-4 border-t border-slate-200">
+            {attribution && (
+              <cite className="font-semibold text-slate-700 not-italic">
+                — {attribution}
+              </cite>
+            )}
+            {source && (
+              <span className="text-slate-500 text-sm ml-2">
+                {source}
+              </span>
+            )}
+          </footer>
         )}
-      </div>
+      </blockquote>
     );
   }
 
   // Default: border variant
   return (
-    <div className={`border-l-4 border-blue-500 pl-6 py-2 ${className}`}>
-      <blockquote className="text-lg text-gray-700 italic leading-relaxed">
-        &quot;{text}&quot;
-      </blockquote>
+    <blockquote className="relative pl-6 border-l-4 border-blue-500">
+      <p className="text-lg text-slate-700 leading-relaxed italic">
+        &ldquo;{text}&rdquo;
+      </p>
+      
       {(attribution || source) && (
-        <cite className="block mt-2 text-sm text-gray-500 not-italic">
-          {attribution && <span className="font-medium">{attribution}</span>}
-          {attribution && source && <span> — </span>}
-          {source && <span>{source}</span>}
-        </cite>
+        <footer className="mt-3">
+          {attribution && (
+            <cite className="font-medium text-slate-600 not-italic">
+              — {attribution}
+            </cite>
+          )}
+          {source && (
+            <span className="text-slate-500 text-sm ml-2">
+              {source}
+            </span>
+          )}
+        </footer>
       )}
-    </div>
+    </blockquote>
   );
 }
 
 export default QuoteBlock;
-
