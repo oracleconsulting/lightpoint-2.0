@@ -1,12 +1,14 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc/Provider';
-import { ArrowLeft, Calendar, Clock, Tag, Share2, User, FileText, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, Tag, Share2, User, FileText, ExternalLink, LayoutTemplate } from 'lucide-react';
 import DynamicGammaRenderer from '@/components/blog/DynamicGammaRenderer';
 import TableOfContents, { generateTocItems } from '@/components/blog/gamma/TableOfContents';
+// NEW: Clean Gamma-style renderer (V2)
+import { BlogRenderer as BlogRendererV2 } from '@/components/blog-v2';
 
 // Author credentials mapping - AUDIT FIX: Add professional credentials to byline
 const AUTHOR_CREDENTIALS: Record<string, { title: string; credentials: string; bio?: string }> = {
@@ -57,7 +59,18 @@ function AuthorByline({ author }: { author: string }) {
 }
 
 /**
+ * Detect if the layout is V2 format (has 'components' array at root)
+ * V2 layouts have: { theme?: {...}, components: [...] }
+ * V1 layouts have: { theme?: {...}, layout: [...] }
+ */
+function isV2Layout(layout: any): boolean {
+  if (!layout || typeof layout !== 'object') return false;
+  return Array.isArray(layout.components) && layout.components.length > 0;
+}
+
+/**
  * Blog Content Renderer - Shows Lightpoint visual layout with optional Gamma presentation link
+ * Now supports both V1 (dark theme) and V2 (clean Gamma-style) layouts
  */
 function BlogContentRenderer({ 
   post, 
@@ -66,15 +79,38 @@ function BlogContentRenderer({
   post: any; 
   renderContent: () => React.ReactNode;
 }) {
+  const [useV2, setUseV2] = useState(false);
   const hasGammaUrl = !!(post as any).gamma_url;
   const gammaUrl = (post as any).gamma_url;
-  const hasStructuredLayout = post.structured_layout && typeof post.structured_layout === 'object' && post.structured_layout.layout;
+  const hasStructuredLayout = post.structured_layout && typeof post.structured_layout === 'object';
+  const hasV1Layout = hasStructuredLayout && post.structured_layout.layout;
+  const hasV2Layout = hasStructuredLayout && isV2Layout(post.structured_layout);
+
+  // Auto-detect V2 layout
+  const shouldUseV2 = hasV2Layout || useV2;
 
   return (
     <>
-      {/* Floating Gamma Presentation Button */}
-      {hasGammaUrl && (
-        <div className="fixed bottom-6 right-6 z-40">
+      {/* Floating Action Buttons */}
+      <div className="fixed bottom-6 right-6 z-40 flex flex-col gap-3">
+        {/* Toggle V2 Layout (only show if we have V1 layout) */}
+        {hasV1Layout && !hasV2Layout && (
+          <button
+            onClick={() => setUseV2(!useV2)}
+            className={`group flex items-center gap-3 px-5 py-3 font-semibold rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all ${
+              useV2 
+                ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white' 
+                : 'bg-white text-gray-700 border border-gray-200'
+            }`}
+            title="Toggle clean layout"
+          >
+            <LayoutTemplate className="h-5 w-5" />
+            <span className="hidden sm:inline">{useV2 ? 'Clean Mode' : 'Try Clean Mode'}</span>
+          </button>
+        )}
+
+        {/* Gamma Presentation Button */}
+        {hasGammaUrl && (
           <a
             href={gammaUrl}
             target="_blank"
@@ -85,13 +121,18 @@ function BlogContentRenderer({
             <span className="hidden sm:inline">View as Presentation</span>
             <ExternalLink className="h-4 w-4 opacity-70 group-hover:opacity-100" />
           </a>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Main Content */}
-      {hasStructuredLayout ? (
+      {hasV2Layout ? (
+        // V2 Layout: Clean Gamma-style (light theme)
+        <BlogRendererV2 layout={post.structured_layout} />
+      ) : hasV1Layout && !shouldUseV2 ? (
+        // V1 Layout: Dark theme with glows
         <DynamicGammaRenderer layout={post.structured_layout} />
       ) : (
+        // Fallback: Plain text
         <div className="max-w-4xl mx-auto px-6 lg:px-8 py-16">
           <div
             className="prose prose-lg prose-invert max-w-none
