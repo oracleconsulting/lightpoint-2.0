@@ -55,6 +55,12 @@ interface ComponentRendererProps {
   component: LayoutComponent;
 }
 
+// Components that should be full-width (no container)
+const FULL_WIDTH_COMPONENTS = ['hero', 'cta', 'stats'];
+
+// Components that need text-width container
+const TEXT_WIDTH_COMPONENTS = ['paragraph', 'sectionHeading', 'bulletList', 'quote', 'callout'];
+
 function ComponentRenderer({ component }: ComponentRendererProps) {
   const { type, props } = component;
 
@@ -64,23 +70,46 @@ function ComponentRenderer({ component }: ComponentRendererProps) {
   if (!Component) {
     console.warn(`Unknown component type: ${type}`);
     return (
-      <div className="bg-yellow-50 border border-yellow-200 p-4 m-4 rounded">
-        <p className="text-yellow-800 text-sm">
-          Unknown component type: <code>{type}</code>
-        </p>
+      <div className="max-w-3xl mx-auto px-6 py-4">
+        <div className="bg-yellow-50 border border-yellow-200 p-4 rounded">
+          <p className="text-yellow-800 text-sm">
+            Unknown component type: <code>{type}</code>
+          </p>
+        </div>
       </div>
     );
   }
 
   try {
-    return <Component {...props} />;
+    // Full-width components (hero, cta, stats)
+    if (FULL_WIDTH_COMPONENTS.includes(type)) {
+      return <Component {...props} />;
+    }
+    
+    // Text-width components get a container with max-width and padding
+    if (TEXT_WIDTH_COMPONENTS.includes(type)) {
+      return (
+        <div className="max-w-3xl mx-auto px-6 py-4">
+          <Component {...props} />
+        </div>
+      );
+    }
+    
+    // Other components get medium width
+    return (
+      <div className="max-w-5xl mx-auto px-6 py-6">
+        <Component {...props} />
+      </div>
+    );
   } catch (error) {
     console.error(`Error rendering component ${type}:`, error);
     return (
-      <div className="bg-red-50 border border-red-200 p-4 m-4 rounded">
-        <p className="text-red-800 text-sm">
-          Error rendering: <code>{type}</code>
-        </p>
+      <div className="max-w-3xl mx-auto px-6 py-4">
+        <div className="bg-red-50 border border-red-200 p-4 rounded">
+          <p className="text-red-800 text-sm">
+            Error rendering: <code>{type}</code>
+          </p>
+        </div>
       </div>
     );
   }
