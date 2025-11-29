@@ -70,7 +70,18 @@ export async function startGammaGeneration(
     throw new Error('GAMMA_API_KEY environment variable is not set');
   }
 
-  const themeId = process.env.GAMMA_THEME_ID;
+  // Only use theme ID if explicitly set to a valid Gamma theme ID
+  // Theme IDs are typically alphanumeric strings like "abc123def456"
+  // Skip if it looks like a domain name or is empty
+  const rawThemeId = process.env.GAMMA_THEME_ID;
+  const hasValidTheme = rawThemeId && 
+    rawThemeId.trim() !== '' && 
+    !rawThemeId.includes('.') && 
+    !rawThemeId.includes('/') &&
+    rawThemeId.length > 5;
+  const themeId = hasValidTheme ? rawThemeId : undefined;
+  
+  console.log('[Gamma] Theme config:', { rawThemeId, hasValidTheme, themeId });
 
   const requestBody: GammaGenerationRequest = {
     inputText: `# ${title}\n\n${blogMarkdown}`,
