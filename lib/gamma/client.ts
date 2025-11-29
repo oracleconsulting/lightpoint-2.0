@@ -70,18 +70,22 @@ export async function startGammaGeneration(
     throw new Error('GAMMA_API_KEY environment variable is not set');
   }
 
-  // Only use theme ID if explicitly set to a valid Gamma theme ID
-  // Theme IDs are typically alphanumeric strings like "abc123def456"
-  // Skip if it looks like a domain name or is empty
+  // Theme ID configuration
+  // Use a professional standard theme if no custom theme is set
+  // Options: 'consultant' (professional blue), 'blues' (navy), 'gleam' (gray/silver)
   const rawThemeId = process.env.GAMMA_THEME_ID;
-  const hasValidTheme = rawThemeId && 
+  
+  // Validate custom theme ID (alphanumeric, no dots/slashes)
+  const isValidCustomTheme = rawThemeId && 
     rawThemeId.trim() !== '' && 
     !rawThemeId.includes('.') && 
     !rawThemeId.includes('/') &&
-    rawThemeId.length > 5;
-  const themeId = hasValidTheme ? rawThemeId : undefined;
+    rawThemeId.length > 3;
   
-  console.log('[Gamma] Theme config:', { rawThemeId, hasValidTheme, themeId });
+  // Use custom theme if valid, otherwise fall back to 'consultant' (professional look)
+  const themeId = isValidCustomTheme ? rawThemeId : 'consultant';
+  
+  console.log('[Gamma] Theme config:', { rawThemeId, isValidCustomTheme, themeId });
 
   const requestBody: GammaGenerationRequest = {
     inputText: `# ${title}\n\n${blogMarkdown}`,
