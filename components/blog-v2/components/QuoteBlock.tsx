@@ -77,20 +77,20 @@ export function QuoteBlock({
 
   // Default: border variant
   return (
-    <blockquote className="relative pl-7 border-l-4 border-blue-500 py-2">
-      <p className="text-[19px] lg:text-[20px] text-slate-700 leading-[1.7] italic">
+    <blockquote className="relative pl-7 border-l-4 border-blue-500 py-3 my-10">
+      <p className="text-[22px] lg:text-[24px] text-slate-700 leading-[1.7] italic">
         &ldquo;{text}&rdquo;
       </p>
       
       {(attribution || source) && (
         <footer className="mt-4">
           {attribution && (
-            <cite className="font-medium text-slate-600 not-italic text-[17px]">
+            <cite className="font-medium text-slate-600 not-italic text-[18px]">
               — {attribution}
             </cite>
           )}
           {source && (
-            <span className="text-slate-500 text-[15px] ml-2">
+            <span className="text-slate-500 text-[16px] ml-2">
               {source}
             </span>
           )}

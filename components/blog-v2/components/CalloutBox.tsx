@@ -51,7 +51,7 @@ export function CalloutBox({
 
   return (
     <div className={`
-      rounded-xl border p-8 lg:p-10 my-8
+      rounded-xl border p-10 lg:p-12 my-10
       ${style.container}
     `}>
       <div className="flex items-start gap-5">
@@ -70,7 +70,7 @@ export function CalloutBox({
           <div className={`font-bold text-sm uppercase tracking-wider mb-3 ${style.label}`}>
             {label}
           </div>
-          <p className={`text-[19px] lg:text-[20px] leading-[1.8] ${style.text}`}>
+          <p className={`text-[22px] lg:text-[24px] leading-[1.8] ${style.text}`}>
             {text}
           </p>
         </div>

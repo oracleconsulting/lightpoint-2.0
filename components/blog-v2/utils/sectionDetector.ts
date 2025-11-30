@@ -281,6 +281,24 @@ export class SectionDetector {
         ...trimmed.matchAll(/\d+(?:,\d{3})+\s+(?:cases?|complaints?|people)/gi),
       ];
       
+      // Check for percentage-based content (good for donut charts)
+      const percentageMatches = [...trimmed.matchAll(/\d+\s*%/g)];
+      
+      // If we have 2-3 percentages and they're prominent, create a donut chart
+      if (percentageMatches.length >= 2 && percentageMatches.length <= 4) {
+        const segments = this.extractDonutSegments(trimmed);
+        if (segments.length >= 2 && segments.length <= 4) {
+          return {
+            type: 'donutChart',
+            content: text,
+            data: { segments, showLegend: true },
+            confidence: 0.85,
+            startIndex,
+            endIndex,
+          };
+        }
+      }
+      
       if (statMatches.length >= 3) {
         const stats = this.extractStats(trimmed);
         if (stats.length >= 3) {
@@ -373,10 +391,18 @@ export class SectionDetector {
     const grouped: DetectedSection[] = [];
     let currentSteps: DetectedSection[] = [];
     let currentStats: DetectedSection[] = [];
+    let currentParagraphs: DetectedSection[] = [];
     
-    for (const section of this.sections) {
+    for (let i = 0; i < this.sections.length; i++) {
+      const section = this.sections[i];
+      
       // Handle numbered steps grouping
       if (section.type === 'numberedSteps') {
+        // Flush paragraphs first
+        if (currentParagraphs.length > 0) {
+          grouped.push(...this.processParagraphGroup(currentParagraphs));
+          currentParagraphs = [];
+        }
         // Flush stats first
         if (currentStats.length > 0) {
           grouped.push(this.mergeStats(currentStats));
@@ -386,15 +412,36 @@ export class SectionDetector {
       } 
       // Handle stats grouping (consecutive stats)
       else if (section.type === 'stats') {
-        // Flush steps first
+        // Flush paragraphs and steps first
+        if (currentParagraphs.length > 0) {
+          grouped.push(...this.processParagraphGroup(currentParagraphs));
+          currentParagraphs = [];
+        }
         if (currentSteps.length > 0) {
           grouped.push(this.mergeNumberedSteps(currentSteps));
           currentSteps = [];
         }
         currentStats.push(section);
       }
+      // Collect consecutive paragraphs for potential text-with-image conversion
+      else if (section.type === 'paragraph') {
+        // Flush pending groups first
+        if (currentSteps.length > 0) {
+          grouped.push(this.mergeNumberedSteps(currentSteps));
+          currentSteps = [];
+        }
+        if (currentStats.length > 0) {
+          grouped.push(this.mergeStats(currentStats));
+          currentStats = [];
+        }
+        currentParagraphs.push(section);
+      }
       else {
         // Flush any pending groups
+        if (currentParagraphs.length > 0) {
+          grouped.push(...this.processParagraphGroup(currentParagraphs));
+          currentParagraphs = [];
+        }
         if (currentSteps.length > 0) {
           grouped.push(this.mergeNumberedSteps(currentSteps));
           currentSteps = [];
@@ -408,6 +455,9 @@ export class SectionDetector {
     }
     
     // Flush remaining groups
+    if (currentParagraphs.length > 0) {
+      grouped.push(...this.processParagraphGroup(currentParagraphs));
+    }
     if (currentSteps.length > 0) {
       grouped.push(this.mergeNumberedSteps(currentSteps));
     }
@@ -418,9 +468,90 @@ export class SectionDetector {
     this.sections = grouped;
   }
 
+  /**
+   * Process a group of consecutive paragraphs
+   * Every 3-4 paragraphs, insert a textWithImage component for visual variety
+   */
+  private processParagraphGroup(paragraphs: DetectedSection[]): DetectedSection[] {
+    const result: DetectedSection[] = [];
+    const IMAGE_FREQUENCY = 3; // Insert image every N paragraphs
+    
+    for (let i = 0; i < paragraphs.length; i++) {
+      const paragraph = paragraphs[i];
+      
+      // Every Nth paragraph after the first, convert to text-with-image
+      if (i > 0 && i % IMAGE_FREQUENCY === 0 && paragraph.content.length > 150) {
+        // Convert to textWithImage
+        result.push({
+          type: 'textWithImage',
+          content: paragraph.content,
+          data: {
+            paragraphs: [paragraph.content],
+            imageAlt: this.generateImageAlt(paragraph.content),
+            imagePosition: i % 2 === 0 ? 'right' : 'left',
+          },
+          confidence: 0.7,
+          startIndex: paragraph.startIndex,
+          endIndex: paragraph.endIndex,
+        });
+      } else {
+        result.push(paragraph);
+      }
+    }
+    
+    return result;
+  }
+
+  /**
+   * Generate a meaningful image alt text from paragraph content
+   */
+  private generateImageAlt(content: string): string {
+    // Extract first meaningful phrase (up to first period or 50 chars)
+    const firstSentence = content.split(/[.!?]/)[0] || content;
+    const alt = firstSentence.substring(0, 50).trim();
+    return alt || 'Illustration';
+  }
+
   // ============================================================================
   // EXTRACTION HELPERS
   // ============================================================================
+
+  private extractDonutSegments(text: string): Array<{ label: string; value: number }> {
+    const segments: Array<{ label: string; value: number }> = [];
+    const seenValues = new Set<number>();
+    
+    // Pattern: 98% internal resolution, 88% call answering, 34% actually resolved
+    const percentagePattern = /(\d+)\s*%\s*(?:of\s+)?([^,.]{3,40})/gi;
+    const matches = [...text.matchAll(percentagePattern)];
+    
+    for (const match of matches) {
+      const value = parseInt(match[1], 10);
+      if (!seenValues.has(value) && value <= 100 && value > 0) {
+        segments.push({
+          value,
+          label: this.cleanLabel(match[2] || 'Value'),
+        });
+        seenValues.add(value);
+      }
+    }
+    
+    // If we didn't find context, try simple percentages
+    if (segments.length === 0) {
+      const simplePercentages = [...text.matchAll(/(\d+)\s*%/g)];
+      for (let i = 0; i < simplePercentages.length && segments.length < 4; i++) {
+        const value = parseInt(simplePercentages[i][1], 10);
+        if (!seenValues.has(value) && value <= 100 && value > 0) {
+          segments.push({
+            value,
+            label: `Value ${i + 1}`,
+          });
+          seenValues.add(value);
+        }
+      }
+    }
+    
+    return segments;
+  }
 
   private detectCalloutVariant(text: string): 'blue' | 'border' | 'gold' {
     const lower = text.toLowerCase();

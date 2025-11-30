@@ -19,8 +19,12 @@ import { examplesRouter } from './routers/examples';
 import { socialContentRouter } from './routers/socialContent';
 import { analyticsRouter } from './routers/analytics';
 import { adminRouter } from './routers/admin';
+import { pilotRouter } from './routers/pilot';
 
 export const appRouter = router({
+  // Pilot onboarding & activation
+  pilot: pilotRouter,
+  
   // Subscription management
   subscription: subscriptionRouter,
   

@@ -106,6 +106,16 @@ function sectionToComponent(section: DetectedSection): LayoutComponent | null {
         },
       };
     
+    case 'donutChart':
+      return {
+        type: 'donutChart',
+        props: {
+          segments: section.data?.segments || [],
+          showLegend: section.data?.showLegend ?? true,
+          size: 220,
+        },
+      };
+    
     case 'numberedSteps':
       return {
         type: 'numberedSteps',
@@ -171,6 +181,16 @@ function sectionToComponent(section: DetectedSection): LayoutComponent | null {
         type: 'sectionHeading',
         props: {
           title: section.data?.title || section.content,
+        },
+      };
+    
+    case 'textWithImage':
+      return {
+        type: 'textWithImage',
+        props: {
+          paragraphs: section.data?.paragraphs || [section.content],
+          imageAlt: section.data?.imageAlt || 'Illustration',
+          imagePosition: section.data?.imagePosition || 'right',
         },
       };
     
