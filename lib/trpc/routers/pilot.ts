@@ -390,21 +390,29 @@ export const pilotRouter = router({
         .select('id', { count: 'exact', head: true })
         .eq('organization_id', input.organizationId);
 
-      // Get complaints with letters (for sanitized viewing)
-      const { data: complaintsWithLetters } = await supabaseAdmin
+      // Get complaints (for sanitized viewing)
+      const { data: complaints } = await supabaseAdmin
         .from('complaints')
-        .select('id, client_reference, status, created_at, has_generated_letter')
+        .select('id, client_reference, status, created_at')
         .eq('organization_id', input.organizationId)
         .order('created_at', { ascending: false })
         .limit(20);
+
+      // Check which complaints have letters
+      const complaintIds = (complaints || []).map(c => c.id);
+      const { data: lettersData } = await supabaseAdmin
+        .from('generated_letters')
+        .select('complaint_id')
+        .in('complaint_id', complaintIds.length > 0 ? complaintIds : ['00000000-0000-0000-0000-000000000000'])
+        .is('superseded_at', null);
+      
+      const complaintsWithLetterIds = new Set((lettersData || []).map(l => l.complaint_id));
 
       // Get document upload stats
       const { count: documentsCount } = await supabaseAdmin
         .from('documents')
         .select('id', { count: 'exact', head: true })
-        .in('complaint_id', 
-          (complaintsWithLetters || []).map(c => c.id)
-        );
+        .in('complaint_id', complaintIds.length > 0 ? complaintIds : ['00000000-0000-0000-0000-000000000000']);
 
       // Get support tickets for this org
       const { data: tickets, count: ticketsCount } = await supabaseAdmin
@@ -431,13 +439,13 @@ export const pilotRouter = router({
           ticketsCount: ticketsCount || 0,
           usersCount: users?.length || 0,
         },
-        recentComplaints: (complaintsWithLetters || []).map(c => ({
+        recentComplaints: (complaints || []).map(c => ({
           id: c.id,
           // Sanitize client reference
           clientReference: '[PILOT-' + c.id.substring(0, 8).toUpperCase() + ']',
           status: c.status,
           createdAt: c.created_at,
-          hasLetter: c.has_generated_letter,
+          hasLetter: complaintsWithLetterIds.has(c.id),
         })),
         recentTickets: tickets || [],
       };
@@ -483,10 +491,10 @@ export const pilotRouter = router({
         throw new TRPCError({ code: 'FORBIDDEN', message: 'Superadmin access required' });
       }
 
-      // Get the complaint with letter
+      // Get the complaint
       const { data: complaint } = await supabaseAdmin
         .from('complaints')
-        .select('id, generated_letter, complaint_type, hmrc_department, status, created_at')
+        .select('id, complaint_type, hmrc_department, status, created_at')
         .eq('id', input.complaintId)
         .single();
 
@@ -494,7 +502,17 @@ export const pilotRouter = router({
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Complaint not found' });
       }
 
-      if (!complaint.generated_letter) {
+      // Get the letter from generated_letters table
+      const { data: letter } = await supabaseAdmin
+        .from('generated_letters')
+        .select('letter_content')
+        .eq('complaint_id', input.complaintId)
+        .is('superseded_at', null)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (!letter?.letter_content) {
         return {
           hasLetter: false,
           content: null,
@@ -503,7 +521,7 @@ export const pilotRouter = router({
       }
 
       // Sanitize the letter content
-      const sanitized = sanitizeLetterForAdmin(complaint.generated_letter);
+      const sanitized = sanitizeLetterForAdmin(letter.letter_content);
 
       return {
         hasLetter: true,
