@@ -99,7 +99,7 @@ function getSectionStyle(type: ComponentType, index: number): SectionStyle {
   const fullWidthTypes = ['hero', 'cta'];
   
   // Wide components (stats, comparison)
-  const wideTypes = ['stats', 'comparisonCards', 'threeColumnCards'];
+  const wideTypes = ['stats', 'comparisonCards', 'threeColumnCards', 'numberedSteps', 'timeline'];
   
   // Reading-width components (text-heavy)
   const readingTypes = ['paragraph', 'textWithImage', 'quote', 'callout', 'bulletList', 'sectionHeading'];
@@ -115,16 +115,16 @@ function getSectionStyle(type: ComponentType, index: number): SectionStyle {
   if (wideTypes.includes(type)) {
     return {
       background: index % 2 === 0 ? 'bg-white' : 'bg-slate-50',
-      padding: 'py-16 lg:py-20',
-      container: 'max-w-6xl mx-auto px-6 lg:px-8',
+      padding: 'py-20 lg:py-28',  // Magazine-quality spacing
+      container: 'max-w-6xl mx-auto px-8 lg:px-16',  // Wider padding
     };
   }
 
-  // Default: reading-width container
+  // Default: reading-width container with comfortable spacing
   return {
     background: 'bg-white',
-    padding: 'py-8 lg:py-12',
-    container: 'max-w-3xl mx-auto px-6 lg:px-8',
+    padding: 'py-6 lg:py-8',  // Comfortable paragraph spacing
+    container: 'max-w-4xl mx-auto px-8 lg:px-12',  // Wider reading column (600-700px)
   };
 }
 

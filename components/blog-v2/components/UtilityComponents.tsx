@@ -49,10 +49,12 @@ export function Paragraph({
 
   return (
     <p className={`
-      text-lg lg:text-xl 
-      leading-[1.8] 
+      text-[20px] lg:text-[21px]
+      leading-[1.85] lg:leading-[1.9]
       text-slate-700 
       font-['Georgia',_'Times_New_Roman',_serif]
+      mb-6 lg:mb-8
+      max-w-[680px]
       ${className}
     `}>
       {text}
@@ -81,20 +83,20 @@ export function SectionHeading({
   decorated = false,
 }: SectionHeadingProps) {
   return (
-    <div className={`mb-8 ${centered ? 'text-center' : ''}`}>
+    <div className={`mt-16 mb-10 ${centered ? 'text-center' : ''}`}>
       {/* Optional decorative line */}
       {decorated && (
-        <div className={`w-16 h-1 bg-blue-500 mb-6 ${centered ? 'mx-auto' : ''}`} />
+        <div className={`w-24 h-1.5 bg-blue-500 mb-8 ${centered ? 'mx-auto' : ''}`} />
       )}
       
       {/* Icon + Title */}
-      <div className={`flex items-center gap-3 ${centered ? 'justify-center' : ''}`}>
+      <div className={`flex items-center gap-4 ${centered ? 'justify-center' : ''}`}>
         {icon && (
-          <span className="text-3xl" role="img" aria-label="section icon">
+          <span className="text-5xl" role="img" aria-label="section icon">
             {icon}
           </span>
         )}
-        <h2 className="text-3xl lg:text-4xl font-bold text-slate-800 tracking-tight">
+        <h2 className="text-4xl lg:text-[48px] font-bold text-slate-900 tracking-tight leading-[1.15]">
           {title}
         </h2>
       </div>
@@ -102,8 +104,8 @@ export function SectionHeading({
       {/* Subtitle */}
       {subtitle && (
         <p className={`
-          mt-4 text-lg lg:text-xl text-slate-600 leading-relaxed
-          ${centered ? '' : 'max-w-2xl'}
+          mt-6 text-xl lg:text-[24px] text-slate-600 leading-[1.6]
+          ${centered ? '' : 'max-w-3xl'}
         `}>
           {subtitle}
         </p>
@@ -156,15 +158,15 @@ export function BulletList({
   };
 
   return (
-    <div>
+    <div className="my-8">
       {title && (
-        <h3 className="text-xl font-bold text-slate-800 mb-4">{title}</h3>
+        <h3 className="text-2xl lg:text-3xl font-bold text-slate-800 mb-8">{title}</h3>
       )}
-      <ul className="space-y-4">
+      <ul className="space-y-5">
         {items.map((item, index) => (
           <li key={index} className="flex items-start gap-4">
             {getBullet(index)}
-            <span className="text-lg text-slate-700 leading-relaxed">{item}</span>
+            <span className="text-[20px] lg:text-[21px] text-slate-700 leading-[1.8]">{item}</span>
           </li>
         ))}
       </ul>

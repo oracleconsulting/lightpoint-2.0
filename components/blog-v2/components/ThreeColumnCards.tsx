@@ -74,15 +74,15 @@ function CardItem({ card, index }: { card: Card; index: number }) {
   return (
     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-xl transition-shadow duration-300">
       {/* Card content */}
-      <div className="p-6">
+      <div className="p-7 lg:p-8">
         {/* Icon */}
         {card.icon && (
           <div className={`
-            w-12 h-12 rounded-xl bg-gradient-to-br ${iconColors[index % 3]} 
-            flex items-center justify-center mb-4 shadow-lg
+            w-14 h-14 rounded-xl bg-gradient-to-br ${iconColors[index % 3]} 
+            flex items-center justify-center mb-5 shadow-lg
           `}>
             {typeof card.icon === 'string' ? (
-              <span className="text-xl">{card.icon}</span>
+              <span className="text-2xl">{card.icon}</span>
             ) : (
               <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -92,25 +92,25 @@ function CardItem({ card, index }: { card: Card; index: number }) {
         )}
 
         {/* Title */}
-        <h3 className="text-xl font-bold text-slate-800 mb-3">
+        <h3 className="text-[23px] lg:text-[24px] font-bold text-slate-800 mb-4 leading-[1.3]">
           {card.title}
         </h3>
 
         {/* Description */}
-        <p className="text-slate-600 leading-relaxed">
+        <p className="text-[18px] lg:text-[19px] text-slate-600 leading-[1.75]">
           {card.description}
         </p>
       </div>
 
       {/* Callout section */}
       {card.callout && (
-        <div className="px-6 py-4 bg-slate-50 border-t border-slate-100">
-          <div className="flex items-start gap-2">
+        <div className="px-7 lg:px-8 py-6 bg-slate-50 border-t border-slate-100">
+          <div className="flex items-start gap-2 mb-3">
             <span className="text-sm font-bold text-blue-600 uppercase tracking-wider flex-shrink-0">
               {card.callout.label}
             </span>
           </div>
-          <p className="mt-2 text-sm text-slate-700 italic leading-relaxed">
+          <p className="text-[17px] lg:text-[18px] text-slate-700 italic leading-[1.75]">
             &quot;{card.callout.text}&quot;
           </p>
         </div>

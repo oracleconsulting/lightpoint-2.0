@@ -71,7 +71,7 @@ function VerticalSteps({ steps }: { steps: Step[] }) {
       {/* Connector line */}
       <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-500 via-blue-400 to-blue-300 hidden md:block" />
       
-      <div className="space-y-8">
+      <div className="space-y-10">
         {steps.map((step, index) => (
           <div key={index} className="relative flex gap-6 md:gap-8">
             {/* Number circle */}
@@ -80,11 +80,11 @@ function VerticalSteps({ steps }: { steps: Step[] }) {
             </div>
             
             {/* Content */}
-            <div className="flex-1 pt-2 pb-4">
-              <h3 className="text-xl font-bold text-slate-800 mb-2">
+            <div className="flex-1 pt-2 pb-6">
+              <h3 className="text-[24px] lg:text-[26px] font-bold text-slate-800 mb-4 leading-[1.3]">
                 {step.title}
               </h3>
-              <p className="text-lg text-slate-600 leading-relaxed">
+              <p className="text-[19px] lg:text-[20px] text-slate-600 leading-[1.75]">
                 {step.description}
               </p>
             </div>
@@ -109,12 +109,12 @@ function GridSteps({ steps }: { steps: Step[] }) {
           </div>
           
           {/* Title */}
-          <h3 className="text-lg font-bold text-slate-800 mb-2">
+          <h3 className="text-[19px] font-bold text-slate-800 mb-3 leading-[1.3]">
             {step.title}
           </h3>
           
           {/* Description */}
-          <p className="text-slate-600 leading-relaxed text-sm">
+          <p className="text-[16px] text-slate-600 leading-[1.7]">
             {step.description}
           </p>
         </div>

@@ -51,26 +51,26 @@ export function CalloutBox({
 
   return (
     <div className={`
-      rounded-xl border p-6
+      rounded-xl border p-8 lg:p-10 my-8
       ${style.container}
     `}>
-      <div className="flex items-start gap-4">
+      <div className="flex items-start gap-5">
         {/* Icon */}
         {icon && (
           <div className={`
-            w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0
+            w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0
             ${style.icon}
           `}>
-            <span className="text-xl">{icon}</span>
+            <span className="text-2xl">{icon}</span>
           </div>
         )}
         
         {/* Content */}
         <div className="flex-1">
-          <div className={`font-bold text-sm uppercase tracking-wider mb-1 ${style.label}`}>
+          <div className={`font-bold text-sm uppercase tracking-wider mb-3 ${style.label}`}>
             {label}
           </div>
-          <p className={`leading-relaxed ${style.text}`}>
+          <p className={`text-[19px] lg:text-[20px] leading-[1.8] ${style.text}`}>
             {text}
           </p>
         </div>
