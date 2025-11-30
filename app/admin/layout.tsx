@@ -23,6 +23,7 @@ import {
   AlertCircle,
   Loader2,
   Rocket,
+  MessageSquare,
 } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -82,6 +83,7 @@ export default function AdminLayout({
   const adminLinks = [
     { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/admin/pilots', label: 'Pilot Users', icon: Rocket },
+    { href: '/admin/tickets', label: 'Support Tickets', icon: MessageSquare },
     { href: '/admin/waitlist', label: 'Waitlist', icon: Users },
     { href: '/admin/tiers', label: 'Subscription Tiers', icon: DollarSign },
     { href: '/admin/content', label: 'Page Content', icon: Home },
