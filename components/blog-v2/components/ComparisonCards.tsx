@@ -29,13 +29,13 @@ export function ComparisonCards({
   conclusion,
 }: ComparisonCardsProps) {
   return (
-    <div className="w-full py-16 bg-slate-50">
+    <div className="w-full py-8 bg-slate-50">
       <div className="max-w-5xl mx-auto px-6 lg:px-8">
         {/* Header */}
         {(title || intro) && (
-          <div className="mb-12 text-center">
+          <div className="mb-6 text-center">
             {title && (
-              <h2 className="text-3xl lg:text-4xl font-bold text-slate-800 mb-4 tracking-tight">
+              <h2 className="text-3xl lg:text-4xl font-bold text-slate-800 mb-3 tracking-tight">
                 {title}
               </h2>
             )}
@@ -48,7 +48,7 @@ export function ComparisonCards({
         )}
 
         {/* Comparison grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
           {/* Left card (Old Way) */}
           <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
             {/* Header */}
@@ -110,7 +110,7 @@ export function ComparisonCards({
 
         {/* Conclusion */}
         {conclusion && (
-          <div className="mt-10 text-center">
+          <div className="mt-6 text-center">
             <p className="text-lg text-slate-600 leading-relaxed max-w-3xl mx-auto">
               {conclusion}
             </p>

@@ -29,13 +29,13 @@ export function Timeline({
   quoteAttribution,
 }: TimelineProps) {
   return (
-    <div className="w-full py-16 bg-white">
-      <div className="max-w-4xl mx-auto px-6 lg:px-8">
+    <div className="w-full py-8 bg-white">
+      <div className="max-w-5xl mx-auto px-6 lg:px-8">
         {/* Header */}
         {(title || intro) && (
-          <div className="mb-12">
+          <div className="mb-6">
             {title && (
-              <h2 className="text-3xl lg:text-4xl font-bold text-slate-800 mb-4 tracking-tight">
+              <h2 className="text-3xl lg:text-4xl font-bold text-slate-800 mb-3 tracking-tight">
                 {title}
               </h2>
             )}
@@ -53,7 +53,7 @@ export function Timeline({
           <div className="absolute left-4 md:left-1/2 top-0 bottom-0 w-0.5 bg-slate-200 md:transform md:-translate-x-0.5" />
 
           {/* Events */}
-          <div className="space-y-8">
+          <div className="space-y-6">
             {events.map((event, index) => (
               <TimelineEventItem 
                 key={index} 
@@ -67,7 +67,7 @@ export function Timeline({
 
         {/* Quote */}
         {quote && (
-          <div className="mt-12 pt-8 border-t border-slate-200">
+          <div className="mt-6 pt-6 border-t border-slate-200">
             <blockquote className="relative pl-6 border-l-4 border-blue-500">
               <p className="text-lg text-slate-700 italic leading-relaxed">
                 &quot;{quote}&quot;

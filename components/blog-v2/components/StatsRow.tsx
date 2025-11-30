@@ -35,12 +35,12 @@ export function StatsRow({
   return (
     <div className="w-full">
       {title && (
-        <h2 className="text-3xl font-bold text-slate-800 mb-12 text-center">
+        <h2 className="text-3xl font-bold text-slate-800 mb-6 text-center">
           {title}
         </h2>
       )}
       
-      <div className={`grid ${gridCols} gap-8 lg:gap-12`}>
+      <div className={`grid ${gridCols} gap-6 lg:gap-8`}>
         {stats.map((stat, index) => (
           <StatItem 
             key={index} 

@@ -32,9 +32,9 @@ export function NumberedSteps({
     <div className="w-full">
       {/* Header */}
       {(title || intro) && (
-        <div className="mb-12">
+        <div className="mb-6">
           {title && (
-            <h2 className="text-3xl lg:text-4xl font-bold text-slate-800 mb-4 tracking-tight">
+            <h2 className="text-3xl lg:text-4xl font-bold text-slate-800 mb-3 tracking-tight">
               {title}
             </h2>
           )}
@@ -55,7 +55,7 @@ export function NumberedSteps({
 
       {/* Conclusion */}
       {conclusion && (
-        <div className="mt-12 pt-8 border-t border-slate-200">
+        <div className="mt-6 pt-6 border-t border-slate-200">
           <p className="text-lg text-slate-700 leading-relaxed max-w-3xl">
             {conclusion}
           </p>
@@ -71,7 +71,7 @@ function VerticalSteps({ steps }: { steps: Step[] }) {
       {/* Connector line */}
       <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-500 via-blue-400 to-blue-300 hidden md:block" />
       
-      <div className="space-y-10">
+      <div className="space-y-6">
         {steps.map((step, index) => (
           <div key={index} className="relative flex gap-6 md:gap-8">
             {/* Number circle */}
@@ -80,8 +80,8 @@ function VerticalSteps({ steps }: { steps: Step[] }) {
             </div>
             
             {/* Content */}
-            <div className="flex-1 pt-2 pb-6">
-              <h3 className="text-[24px] lg:text-[26px] font-bold text-slate-800 mb-4 leading-[1.3]">
+            <div className="flex-1 pt-2 pb-4">
+              <h3 className="text-[24px] lg:text-[26px] font-bold text-slate-800 mb-2 leading-[1.3]">
                 {step.title}
               </h3>
               <p className="text-[19px] lg:text-[20px] text-slate-600 leading-[1.75]">

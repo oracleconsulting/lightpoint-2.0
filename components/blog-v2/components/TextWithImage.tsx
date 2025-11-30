@@ -37,15 +37,15 @@ export function TextWithImage({
 
       {/* Two-column layout */}
       <div className={`
-        flex flex-col gap-12 items-start
+        flex flex-col gap-4 items-start
         ${isImageLeft ? 'lg:flex-row-reverse' : 'lg:flex-row'}
       `}>
-        {/* Text column - 55% */}
-        <div className="flex-1 lg:w-[55%] space-y-6">
+        {/* Text column - 60% */}
+        <div className="flex-1 lg:w-[60%] space-y-3">
           {paragraphs.map((paragraph, index) => (
             <p 
               key={index} 
-              className="text-lg lg:text-xl text-slate-700 leading-[1.8] font-['Georgia',_'Times_New_Roman',_serif]"
+              className="text-[20px] lg:text-[22px] text-slate-700 leading-[1.75] font-['Georgia',_'Times_New_Roman',_serif]"
             >
               {paragraph}
             </p>

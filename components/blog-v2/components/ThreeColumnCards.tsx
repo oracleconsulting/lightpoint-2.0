@@ -35,13 +35,13 @@ export function ThreeColumnCards({
   const bgClass = background === 'gray' ? 'bg-slate-50' : 'bg-white';
 
   return (
-    <div className={`w-full py-16 ${bgClass}`}>
+    <div className={`w-full py-8 ${bgClass}`}>
       <div className="max-w-6xl mx-auto px-6 lg:px-8">
         {/* Header */}
         {(title || intro) && (
-          <div className="mb-12 text-center">
+          <div className="mb-6 text-center">
             {title && (
-              <h2 className="text-3xl lg:text-4xl font-bold text-slate-800 mb-4 tracking-tight">
+              <h2 className="text-3xl lg:text-4xl font-bold text-slate-800 mb-3 tracking-tight">
                 {title}
               </h2>
             )}
@@ -54,7 +54,7 @@ export function ThreeColumnCards({
         )}
 
         {/* Cards grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {cards.map((card, index) => (
             <CardItem key={index} card={card} index={index} />
           ))}
@@ -92,7 +92,7 @@ function CardItem({ card, index }: { card: Card; index: number }) {
         )}
 
         {/* Title */}
-        <h3 className="text-[23px] lg:text-[24px] font-bold text-slate-800 mb-4 leading-[1.3]">
+        <h3 className="text-[23px] lg:text-[24px] font-bold text-slate-800 mb-3 leading-[1.3]">
           {card.title}
         </h3>
 
@@ -104,8 +104,8 @@ function CardItem({ card, index }: { card: Card; index: number }) {
 
       {/* Callout section */}
       {card.callout && (
-        <div className="px-7 lg:px-8 py-6 bg-slate-50 border-t border-slate-100">
-          <div className="flex items-start gap-2 mb-3">
+        <div className="px-7 lg:px-8 py-4 bg-slate-50 border-t border-slate-100">
+          <div className="flex items-start gap-2 mb-2">
             <span className="text-sm font-bold text-blue-600 uppercase tracking-wider flex-shrink-0">
               {card.callout.label}
             </span>

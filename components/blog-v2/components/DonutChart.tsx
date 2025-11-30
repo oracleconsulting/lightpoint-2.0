@@ -58,7 +58,7 @@ export function DonutChart({
   });
 
   return (
-    <div className="flex flex-col md:flex-row items-center justify-center gap-8 py-8">
+    <div className="flex flex-col md:flex-row items-center justify-center gap-6 py-4">
       {/* Chart */}
       <div className="relative" style={{ width: size, height: size }}>
         <svg 
@@ -117,7 +117,7 @@ export function DonutChart({
       {showLegend && (
         <div className="space-y-3">
           {title && (
-            <h3 className="font-bold text-slate-800 text-lg mb-4">{title}</h3>
+            <h3 className="font-bold text-slate-800 text-lg mb-3">{title}</h3>
           )}
           {segmentData.map((segment, index) => (
             <div key={index} className="flex items-center gap-3">

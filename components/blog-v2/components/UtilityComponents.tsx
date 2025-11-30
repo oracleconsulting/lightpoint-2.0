@@ -49,12 +49,11 @@ export function Paragraph({
 
   return (
     <p className={`
-      text-[22px] lg:text-[24px]
-      leading-[1.85] lg:leading-[1.9]
+      text-[20px] lg:text-[22px]
+      leading-[1.75] lg:leading-[1.8]
       text-slate-700 
       font-['Georgia',_'Times_New_Roman',_serif]
-      mb-8 lg:mb-10
-      max-w-[720px]
+      mb-2
       ${className}
     `}>
       {text}
@@ -83,10 +82,10 @@ export function SectionHeading({
   decorated = false,
 }: SectionHeadingProps) {
   return (
-    <div className={`mt-20 mb-12 ${centered ? 'text-center' : ''}`}>
+    <div className={`mt-6 mb-4 ${centered ? 'text-center' : ''}`}>
       {/* Optional decorative line */}
       {decorated && (
-        <div className={`w-24 h-1.5 bg-blue-500 mb-8 ${centered ? 'mx-auto' : ''}`} />
+        <div className={`w-24 h-1.5 bg-blue-500 mb-4 ${centered ? 'mx-auto' : ''}`} />
       )}
       
       {/* Icon + Title */}
@@ -96,7 +95,7 @@ export function SectionHeading({
             {icon}
           </span>
         )}
-        <h2 className="text-[42px] lg:text-[48px] font-bold text-slate-900 tracking-tight leading-[1.15]">
+        <h2 className="text-[36px] lg:text-[42px] font-bold text-slate-900 tracking-tight leading-[1.2]">
           {title}
         </h2>
       </div>
@@ -104,8 +103,8 @@ export function SectionHeading({
       {/* Subtitle */}
       {subtitle && (
         <p className={`
-          mt-6 text-xl lg:text-[24px] text-slate-600 leading-[1.6]
-          ${centered ? '' : 'max-w-3xl'}
+          mt-3 text-xl lg:text-[22px] text-slate-600 leading-[1.6]
+          ${centered ? '' : 'max-w-4xl'}
         `}>
           {subtitle}
         </p>
@@ -158,11 +157,11 @@ export function BulletList({
   };
 
   return (
-    <div className="my-12">
+    <div className="my-6">
       {title && (
-        <h3 className="text-2xl lg:text-3xl font-bold text-slate-800 mb-8">{title}</h3>
+        <h3 className="text-2xl lg:text-3xl font-bold text-slate-800 mb-4">{title}</h3>
       )}
-      <ul className="space-y-6">
+      <ul className="space-y-4">
         {items.map((item, index) => (
           <li key={index} className="flex items-start gap-4">
             {getBullet(index)}

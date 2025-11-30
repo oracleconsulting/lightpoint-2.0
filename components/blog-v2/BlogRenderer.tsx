@@ -115,16 +115,16 @@ function getSectionStyle(type: ComponentType, index: number): SectionStyle {
   if (wideTypes.includes(type)) {
     return {
       background: index % 2 === 0 ? 'bg-white' : 'bg-slate-50',
-      padding: 'py-24 lg:py-32',  // Magazine-quality spacing
-      container: 'max-w-6xl mx-auto px-8 lg:px-16',  // Wider padding
+      padding: 'py-8 lg:py-10',  // Compact spacing
+      container: 'max-w-7xl mx-auto px-6 lg:px-12',  // MAXIMUM WIDTH
     };
   }
 
-  // Default: reading-width container with comfortable spacing
+  // Default: WIDE container with MINIMAL padding
   return {
     background: 'bg-white',
-    padding: 'py-10 lg:py-12',  // Comfortable paragraph spacing
-    container: 'max-w-4xl mx-auto px-8 lg:px-12',  // Wider reading column (600-700px)
+    padding: 'py-1 lg:py-2',  // MINIMAL - almost no gap
+    container: 'max-w-6xl mx-auto px-6 lg:px-10',  // WIDE (1152px)
   };
 }
 
