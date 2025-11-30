@@ -120,7 +120,7 @@ async function extractLearningsAsync(outcomeId: string): Promise<void> {
     // Extract learnings using AI
     const learnings = await extractLearningsWithAI(
       sanitizedLetter.sanitized,
-      outcome.metadata || {}, // Use complaint metadata as fallback
+      {}, // No additional context available
       outcome.outcome_type,
       outcome.is_successful
     );

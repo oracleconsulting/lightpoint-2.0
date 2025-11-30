@@ -73,17 +73,14 @@ SET structured_layout = '{
       "props": {
         "steps": [
           {
-            "number": 1,
             "title": "Processing Delays",
             "description": "The biggest driver of complaints, jumping 65% to 35,000 cases in 2022-23. Your client R&D claim sits unprocessed for six months."
           },
           {
-            "number": 2,
             "title": "You Complain",
             "description": "HMRC responds saying normal processing times were followed. They close the complaint."
           },
           {
-            "number": 3,
             "title": "Nothing Changes",
             "description": "Your client claim remains stuck. The cycle continues."
           }
@@ -135,19 +132,28 @@ SET structured_layout = '{
             "icon": "🎯",
             "title": "Missing the Target Entirely",
             "description": "Most complaints read like general frustration rather than specific breaches. Writing your service is appalling might feel satisfying, but it gives HMRC an easy dismissal.",
-            "highlight": "Instead: HMRC failed to meet its published 15-day response standard for correspondence, as set out in the Taxpayers Charter, resulting in preventable penalties."
+            "callout": {
+              "label": "Instead:",
+              "text": "HMRC failed to meet its published 15-day response standard for correspondence, as set out in the Taxpayers Charter, resulting in preventable penalties."
+            }
           },
           {
             "icon": "📋",
             "title": "No Evidence Trail",
             "description": "Vague timelines kill complaints. We have been trying to contact you for months carries no weight.",
-            "highlight": "Instead: 17 July: 44-minute hold, call terminated. 24 July: Written to BX9 1AB, proof of delivery attached. 15 August: £100 penalty received despite ongoing correspondence."
+            "callout": {
+              "label": "Instead:",
+              "text": "17 July: 44-minute hold, call terminated. 24 July: Written to BX9 1AB, proof of delivery attached. 15 August: £100 penalty received despite ongoing correspondence."
+            }
           },
           {
             "icon": "⚖️",
             "title": "Wrong Resolution Request",
             "description": "Asking for compensation for all this trouble gets you nowhere. Specific requests get results.",
-            "highlight": "Instead: Cancellation of penalty reference [XXX] charged during helpline closure period, plus reimbursement of £825 professional fees (3 hours at £275, invoice attached)."
+            "callout": {
+              "label": "Instead:",
+              "text": "Cancellation of penalty reference [XXX] charged during helpline closure period, plus reimbursement of £825 professional fees (3 hours at £275, invoice attached)."
+            }
           }
         ]
       }
@@ -170,37 +176,30 @@ SET structured_layout = '{
         "title": "7-Step Complaint Formula",
         "steps": [
           {
-            "number": 1,
             "title": "Classification",
             "description": "Your subject line should read: FORMAL TIER ONE COMPLAINT - [Client Name] - [Tax Reference]. This triggers their formal process rather than general correspondence."
           },
           {
-            "number": 2,
             "title": "Opening Statement",
             "description": "Two sentences maximum: I write to make a formal complaint regarding HMRC failure to process my client VAT registration within published timeframes, resulting in an inability to trade and £2,400 in lost input tax recovery. This complaint evidences breaches of service standards published at [gov.uk reference] and seeks specific redress totalling £3,150."
           },
           {
-            "number": 3,
             "title": "Chronology",
             "description": "Build a bulletproof timeline with specific dates, reference numbers, and outcomes. Not a narrative—evidence."
           },
           {
-            "number": 4,
             "title": "Reference Their Rules",
             "description": "Quote the Compliance Handbook and Taxpayers Charter directly. These aren not just documents—they are commitments HMRC must follow."
           },
           {
-            "number": 5,
             "title": "State the Impact",
             "description": "Quantify losses: lost input tax, lost contracts, professional fees incurred. Make it specific and measurable."
           },
           {
-            "number": 6,
             "title": "Make Specific Demands",
             "description": "List exactly what you want: registration issued, fees reimbursed, written explanation provided."
           },
           {
-            "number": 7,
             "title": "Professional Close",
             "description": "I require acknowledgement within 48 hours and a substantive response within 15 working days per your published standards."
           }
@@ -211,38 +210,34 @@ SET structured_layout = '{
     {
       "type": "timeline",
       "props": {
+        "title": "Example Timeline: Building Your Case",
         "events": [
           {
             "date": "12 May 2024",
-            "title": "VAT1 submitted online",
-            "description": "Acknowledgement reference [XXX]"
+            "description": "VAT1 submitted online, acknowledgement reference [XXX]"
           },
           {
             "date": "12 June 2024",
-            "title": "One month passed",
-            "description": "No registration received"
+            "description": "One month passed, no registration received"
           },
           {
             "date": "18 June 2024",
-            "title": "Called HMRC",
-            "description": "47 minutes hold, told still processing"
+            "description": "Called HMRC, 47 minutes hold, told still processing"
           },
           {
             "date": "12 July 2024",
-            "title": "Two months passed",
-            "description": "Client unable to invoice"
+            "description": "Two months passed, client unable to invoice"
           },
           {
             "date": "19 July 2024",
-            "title": "Agent Dedicated Line",
-            "description": "Promised escalation, reference [XXX]"
+            "description": "Agent Dedicated Line, promised escalation, reference [XXX]"
           },
           {
             "date": "12 August 2024",
-            "title": "Three months passed",
-            "description": "No registration, no update"
+            "description": "Three months passed, no registration, no update"
           }
-        ]
+        ],
+        "quote": "The Taxpayers Charter states HMRC will treat you even-handedly, with courtesy and respect. The three-month delay, with no explanation despite repeated contact, fails this commitment."
       }
     },
     {
@@ -277,14 +272,12 @@ SET structured_layout = '{
         "leftCard": {
           "title": "The Old Way",
           "content": "Tier One rejection → Tier Two escalation → Wait for response → Adjudicator Office → Resolution (if successful)",
-          "variant": "negative",
-          "highlight": "Timeline: 3-6 months minimum"
+          "footer": "Timeline: 3-6 months minimum"
         },
         "rightCard": {
           "title": "The New Way",
           "content": "Tier One rejection → Direct to Adjudicator Office → Resolution (if successful)",
-          "variant": "positive",
-          "highlight": "Timeline: 6-8 weeks"
+          "footer": "Timeline: 6-8 weeks"
         }
       }
     },

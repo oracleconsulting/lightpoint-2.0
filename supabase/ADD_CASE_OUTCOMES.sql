@@ -244,8 +244,7 @@ SELECT
   co.complaint_type,
   co.hmrc_department,
   co.closed_at,
-  gl.letter_content as generated_letter,
-  c.metadata
+  gl.letter_content as generated_letter
 FROM case_outcomes co
 JOIN complaints c ON c.id = co.complaint_id
 LEFT JOIN generated_letters gl ON gl.complaint_id = c.id 
