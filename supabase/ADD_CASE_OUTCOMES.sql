@@ -245,13 +245,11 @@ SELECT
   co.hmrc_department,
   co.closed_at,
   gl.letter_content as generated_letter,
-  da.analysis_result,
   c.metadata
 FROM case_outcomes co
 JOIN complaints c ON c.id = co.complaint_id
 LEFT JOIN generated_letters gl ON gl.complaint_id = c.id 
   AND gl.superseded_at IS NULL
-LEFT JOIN document_analysis da ON da.complaint_id = c.id
 WHERE co.learning_extracted = false
 ORDER BY co.closed_at ASC;
 
