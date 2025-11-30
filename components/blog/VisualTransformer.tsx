@@ -716,35 +716,97 @@ export function VisualTransformer({
   );
 }
 
-// Helper function to strip HTML tags and extract text from TipTap JSON
+// Helper function to extract text from TipTap JSON while PRESERVING STRUCTURE
+// This is critical for pattern detection to work properly
 function stripHtml(content: any): string {
   if (!content) return '';
   
-  // If it's a TipTap JSON object
+  // If it's a TipTap JSON object, preserve structure with markdown-like formatting
   if (typeof content === 'object' && content.type === 'doc') {
-    const extractText = (node: any): string => {
+    const extractNode = (node: any): string => {
       if (!node) return '';
       
+      // Text node - check for marks (bold, italic, etc.)
       if (node.type === 'text') {
-        return node.text || '';
+        let text = node.text || '';
+        if (node.marks) {
+          for (const mark of node.marks) {
+            if (mark.type === 'bold') text = `**${text}**`;
+            if (mark.type === 'italic') text = `*${text}*`;
+          }
+        }
+        return text;
       }
       
-      if (node.content && Array.isArray(node.content)) {
-        return node.content.map(extractText).join(' ');
-      }
+      // Get children content
+      const children = node.content ? node.content.map(extractNode).join('') : '';
       
-      return '';
+      // Handle different node types with proper formatting
+      switch (node.type) {
+        case 'paragraph':
+          return children + '\n\n';
+        case 'heading':
+          const level = node.attrs?.level || 2;
+          return '#'.repeat(level) + ' ' + children + '\n\n';
+        case 'bulletList':
+          return children + '\n';
+        case 'orderedList':
+          return children + '\n';
+        case 'listItem':
+          return '- ' + children + '\n';
+        case 'blockquote':
+          return '> ' + children + '\n\n';
+        case 'codeBlock':
+          return '```\n' + children + '\n```\n\n';
+        case 'hardBreak':
+          return '\n';
+        case 'horizontalRule':
+          return '\n---\n\n';
+        default:
+          return children;
+      }
     };
     
-    return extractText(content).replace(/\s+/g, ' ').trim();
+    const result = extractNode(content);
+    // Normalize excessive newlines but preserve paragraph breaks
+    return result.replace(/\n{4,}/g, '\n\n\n').trim();
   }
   
-  // If it's an HTML string
+  // If it's an HTML string, convert to markdown-like format
   if (typeof content === 'string') {
-    return content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    let text = content;
+    // Convert block elements to paragraph breaks
+    text = text.replace(/<\/?(p|div|br|h[1-6]|li|tr|blockquote)[^>]*>/gi, '\n\n');
+    // Convert headers
+    text = text.replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1\n\n');
+    text = text.replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n\n');
+    text = text.replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1\n\n');
+    // Convert bold
+    text = text.replace(/<strong[^>]*>(.*?)<\/strong>/gi, '**$1**');
+    text = text.replace(/<b[^>]*>(.*?)<\/b>/gi, '**$1**');
+    // Convert italic
+    text = text.replace(/<em[^>]*>(.*?)<\/em>/gi, '*$1*');
+    text = text.replace(/<i[^>]*>(.*?)<\/i>/gi, '*$1*');
+    // Convert list items
+    text = text.replace(/<li[^>]*>(.*?)<\/li>/gi, '- $1\n');
+    // Convert blockquotes
+    text = text.replace(/<blockquote[^>]*>(.*?)<\/blockquote>/gi, '> $1\n\n');
+    // Strip remaining HTML
+    text = text.replace(/<[^>]*>/g, '');
+    // Decode entities
+    text = text.replace(/&nbsp;/g, ' ');
+    text = text.replace(/&amp;/g, '&');
+    text = text.replace(/&lt;/g, '<');
+    text = text.replace(/&gt;/g, '>');
+    text = text.replace(/&quot;/g, '"');
+    text = text.replace(/&#39;/g, "'");
+    // Normalize whitespace but preserve paragraph breaks
+    text = text.replace(/\n{4,}/g, '\n\n\n');
+    text = text.replace(/[ \t]+/g, ' ');
+    return text.trim();
   }
   
   // Otherwise try to stringify it
-  return String(content).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  return String(content);
 }
 
