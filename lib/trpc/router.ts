@@ -189,6 +189,76 @@ export const appRouter = router({
         return data;
       }),
 
+    // Close complaint with outcome data for learning
+    closeWithOutcome: publicProcedure
+      .input(z.object({
+        complaintId: z.string().uuid(),
+        outcomeType: z.enum([
+          'successful_full',
+          'successful_partial',
+          'unsuccessful',
+          'withdrawn',
+          'escalated_adjudicator',
+          'escalated_tribunal',
+          'settled'
+        ]),
+        compensationReceived: z.number().optional(),
+        taxPositionCorrected: z.number().optional(),
+        penaltiesCancelled: z.number().optional(),
+        interestRefunded: z.number().optional(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { recordComplaintOutcome } = await import('@/lib/outcomeAnalysis');
+        
+        // First update the complaint status to closed
+        const { error: statusError } = await (supabaseAdmin as any)
+          .from('complaints')
+          .update({ 
+            status: 'closed', 
+            updated_at: new Date().toISOString() 
+          })
+          .eq('id', input.complaintId);
+        
+        if (statusError) {
+          throw new Error(`Failed to close complaint: ${statusError.message}`);
+        }
+        
+        // Record the outcome for learning
+        const result = await recordComplaintOutcome(input.complaintId, {
+          outcomeType: input.outcomeType,
+          compensationReceived: input.compensationReceived,
+          taxPositionCorrected: input.taxPositionCorrected,
+          penaltiesCancelled: input.penaltiesCancelled,
+          interestRefunded: input.interestRefunded,
+          notes: input.notes,
+        });
+        
+        if (!result.success) {
+          logger.error('Failed to record outcome:', result.error);
+          // Don't throw - complaint is already closed, outcome recording is secondary
+        }
+        
+        return { 
+          success: true, 
+          outcomeId: result.outcomeId,
+          message: result.success 
+            ? 'Complaint closed and outcome recorded for learning'
+            : 'Complaint closed but outcome recording failed'
+        };
+      }),
+
+    // Get outcome statistics for similar complaints
+    getOutcomeStats: publicProcedure
+      .input(z.object({
+        complaintType: z.string().optional(),
+        hmrcDepartment: z.string().optional(),
+      }))
+      .query(async ({ input }) => {
+        const { getOutcomeStats } = await import('@/lib/outcomeAnalysis');
+        return getOutcomeStats(input.complaintType, input.hmrcDepartment);
+      }),
+
     updateReference: publicProcedure
       .input(z.object({
         id: z.string(),
