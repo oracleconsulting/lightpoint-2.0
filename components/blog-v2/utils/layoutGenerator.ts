@@ -75,8 +75,8 @@ export function generateLayout(options: GenerateLayoutOptions): BlogLayout {
       props: {
         title: 'Ready to Get Started?',
         description: 'Let Lightpoint help you navigate HMRC complaints with confidence.',
-        primaryButton: { text: 'Start Free Trial', href: '/signup' },
-        secondaryButton: { text: 'Learn More', href: '/features' },
+        primaryButton: { text: 'Join the Waitlist', href: '/subscription/checkout' },
+        secondaryButton: { text: 'View Pricing', href: '/pricing' },
       },
     });
   }
