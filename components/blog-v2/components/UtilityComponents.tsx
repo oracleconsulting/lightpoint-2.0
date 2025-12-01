@@ -175,14 +175,21 @@ export function BulletList({
 
 // ============================================================================
 // CTA SECTION
-// Call-to-action with optional gradient background
+// Call-to-action with optional gradient background and multiple buttons
 // ============================================================================
+
+interface CTAButton {
+  text: string;
+  href: string;
+}
 
 interface CTASectionProps {
   title: string;
   description: string;
   buttonText?: string;
   buttonHref?: string;
+  primaryButton?: CTAButton;
+  secondaryButton?: CTAButton;
   variant?: 'default' | 'highlight';
 }
 
@@ -191,9 +198,14 @@ export function CTASection({
   description,
   buttonText,
   buttonHref,
+  primaryButton,
+  secondaryButton,
   variant = 'default',
 }: CTASectionProps) {
   const isHighlight = variant === 'highlight';
+
+  // Use primaryButton if provided, otherwise fall back to buttonText/buttonHref
+  const mainButton = primaryButton || (buttonText ? { text: buttonText, href: buttonHref || '#' } : null);
 
   return (
     <div className={`
@@ -218,21 +230,42 @@ export function CTASection({
           {description}
         </p>
         
-        {buttonText && (
-          <a
-            href={buttonHref || '#'}
-            className={`
-              inline-block px-8 py-4 rounded-lg font-semibold text-lg
-              transition-all duration-200 hover:scale-105
-              ${isHighlight 
-                ? 'bg-white text-slate-800 hover:bg-blue-50 shadow-xl' 
-                : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg'
-              }
-            `}
-          >
-            {buttonText}
-          </a>
-        )}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          {mainButton && (
+            <a
+              href={mainButton.href}
+              className={`
+                inline-flex items-center gap-2 px-8 py-4 rounded-lg font-semibold text-lg
+                transition-all duration-200 hover:scale-105
+                ${isHighlight 
+                  ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-slate-900 hover:from-amber-300 hover:to-amber-400 shadow-xl' 
+                  : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-500 hover:to-blue-600 shadow-lg'
+                }
+              `}
+            >
+              {mainButton.text}
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </svg>
+            </a>
+          )}
+          
+          {secondaryButton && (
+            <a
+              href={secondaryButton.href}
+              className={`
+                inline-flex items-center gap-2 px-8 py-4 rounded-lg font-semibold text-lg
+                transition-all duration-200 hover:scale-105 border-2
+                ${isHighlight 
+                  ? 'border-white/30 text-white hover:bg-white/10' 
+                  : 'border-slate-300 text-slate-700 hover:bg-slate-100'
+                }
+              `}
+            >
+              {secondaryButton.text}
+            </a>
+          )}
+        </div>
       </div>
     </div>
   );
