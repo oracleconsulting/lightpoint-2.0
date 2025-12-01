@@ -8,9 +8,8 @@ import { ArrowRight, Calendar, Clock, Tag, Sparkles, BookOpen } from 'lucide-rea
 import { Skeleton, SkeletonCard } from '@/components/ui/skeleton';
 
 export default function BlogPage() {
-  const { data: posts, isLoading } = trpc.cms.listContentPosts.useQuery({
-    contentType: 'blog_post',
-    status: 'published',
+  // Query published posts from blog_posts table (not content_posts)
+  const { data: posts, isLoading } = trpc.blog.listPublished.useQuery({
     limit: 20,
   });
 

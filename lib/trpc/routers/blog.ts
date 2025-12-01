@@ -69,6 +69,38 @@ export const blogRouter = router({
       };
     }),
 
+  // List PUBLISHED blog posts (PUBLIC - for blog listing page)
+  listPublished: publicProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(50).optional().default(20),
+        offset: z.number().min(0).optional().default(0),
+      }).optional()
+    )
+    .query(async ({ input }) => {
+      const supabase = createServerClient();
+      const limit = input?.limit || 20;
+      const offset = input?.offset || 0;
+
+      const { data, error, count } = await supabase
+        .from('blog_posts')
+        .select('id, title, slug, excerpt, featured_image_url, featured_image_alt, author, category, tags, read_time_minutes, published_at, created_at', { count: 'exact' })
+        .eq('status', 'published')
+        .eq('is_published', true)
+        .order('published_at', { ascending: false, nullsFirst: false })
+        .range(offset, offset + limit - 1);
+
+      if (error) {
+        console.error('Error fetching published blog posts:', error);
+        return { posts: [], total: 0 };
+      }
+
+      return {
+        posts: data || [],
+        total: count || 0,
+      };
+    }),
+
   // Get single blog post by ID
   getById: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
