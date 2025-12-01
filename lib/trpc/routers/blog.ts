@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { router, protectedProcedure } from '../trpc';
+import { router, protectedProcedure, publicProcedure } from '../trpc';
 import { createServerClient } from '@/lib/supabase/client';
 import { TRPCError } from '@trpc/server';
 
@@ -90,7 +90,7 @@ export const blogRouter = router({
     }),
 
   // Get single blog post by slug (for public viewing)
-  getBySlug: protectedProcedure
+  getBySlug: publicProcedure
     .input(z.object({ slug: z.string() }))
     .query(async ({ input }) => {
       const supabase = createServerClient();
