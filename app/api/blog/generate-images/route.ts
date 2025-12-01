@@ -11,9 +11,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { generateContextualImage } from '@/lib/blog/imageGeneration';
 
-// Initialize Supabase client
+// Initialize Supabase client (check both possible env var names)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || '';
 
 interface ImageRequest {
   slug: string;

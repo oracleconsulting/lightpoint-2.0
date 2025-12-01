@@ -6,7 +6,7 @@
  * Requires:
  * - OPENROUTER_API_KEY
  * - NEXT_PUBLIC_SUPABASE_URL
- * - SUPABASE_SERVICE_ROLE_KEY
+ * - SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SERVICE_KEY
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -179,12 +179,12 @@ async function main() {
 
   // Check environment
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
   const openrouterKey = process.env.OPENROUTER_API_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
     console.error('❌ Missing Supabase credentials');
-    console.log('Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY');
+    console.log('Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SERVICE_KEY)');
     process.exit(1);
   }
 
