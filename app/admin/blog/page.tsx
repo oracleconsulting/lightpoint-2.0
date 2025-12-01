@@ -136,13 +136,21 @@ export default function AdminBlogPage() {
                         </span>
                       </>
                     )}
-                    {post.view_count > 0 && (
+                    <span>•</span>
+                    <span className="flex items-center gap-1">
+                      <Eye className="h-4 w-4" />
+                      {post.view_count || 0} views
+                    </span>
+                    {(post.like_count || 0) > 0 && (
                       <>
                         <span>•</span>
-                        <span className="flex items-center gap-1">
-                          <Eye className="h-4 w-4" />
-                          {post.view_count} views
-                        </span>
+                        <span>❤️ {post.like_count}</span>
+                      </>
+                    )}
+                    {(post.comment_count || 0) > 0 && (
+                      <>
+                        <span>•</span>
+                        <span>💬 {post.comment_count}</span>
                       </>
                     )}
                   </div>
