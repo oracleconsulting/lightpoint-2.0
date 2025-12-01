@@ -330,22 +330,6 @@ export default function BlogPostPage() {
         
         {/* V2 Renderer handles everything including hero */}
         <BlogRendererV2 layout={post.structured_layout} />
-        
-        {/* Floating Gamma Button if available */}
-        {(post as any).gamma_url && (
-          <div className="fixed bottom-6 right-6 z-40">
-            <a
-              href={(post as any).gamma_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-semibold rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all"
-            >
-              <FileText className="h-5 w-5" />
-              <span className="hidden sm:inline">View as Presentation</span>
-              <ExternalLink className="h-4 w-4 opacity-70 group-hover:opacity-100" />
-            </a>
-          </div>
-        )}
       </div>
     );
   }

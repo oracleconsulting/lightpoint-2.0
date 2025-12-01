@@ -30,7 +30,7 @@ export function HeroSection({
   tags = [],
 }: HeroSectionProps) {
   return (
-    <header className="relative min-h-[70vh] flex items-end overflow-hidden">
+    <header className="relative min-h-[45vh] flex items-end overflow-hidden">
       {/* Background Layer */}
       <div className="absolute inset-0">
         {backgroundImage ? (
