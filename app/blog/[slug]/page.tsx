@@ -11,6 +11,8 @@ import TableOfContents, { generateTocItems } from '@/components/blog/gamma/Table
 import { BlogRenderer as BlogRendererV2 } from '@/components/blog-v2';
 // NEW: Blog engagement (likes + comments)
 import BlogEngagement from '@/components/blog/BlogEngagement';
+// NEW: JSON-LD structured data for SEO
+import BlogJsonLd from '@/components/blog/BlogJsonLd';
 
 // Author credentials mapping - AUDIT FIX: Add professional credentials to byline
 const AUTHOR_CREDENTIALS: Record<string, { title: string; credentials: string; bio?: string }> = {
@@ -323,6 +325,18 @@ export default function BlogPostPage() {
     console.log('🎨 [BlogPostPage] ✅ Rendering V2 Layout with', post.structured_layout?.components?.length, 'components');
     return (
       <div className="min-h-screen bg-white">
+        {/* JSON-LD Structured Data for SEO and AI Search */}
+        <BlogJsonLd
+          title={post.title}
+          description={post.excerpt || post.meta_description || ''}
+          slug={post.slug}
+          author={post.author || 'Lightpoint'}
+          publishedAt={post.published_at}
+          updatedAt={post.updated_at}
+          imageUrl={post.featured_image}
+          tags={post.tags || []}
+        />
+        
         {/* Preview Banner */}
         {isPreview && (
           <div className="bg-amber-500 text-white py-3 px-4 text-center font-semibold z-50 relative">
