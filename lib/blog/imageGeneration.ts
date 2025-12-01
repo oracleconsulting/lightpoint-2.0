@@ -5,6 +5,8 @@
  * for generating contextual blog images.
  * 
  * Model: google/gemini-3-pro-image-preview
+ * 
+ * API Docs: https://openrouter.ai/docs/features/multimodal/image-generation
  */
 
 import { logger } from '../logger';
@@ -25,6 +27,23 @@ interface ImagePromptContext {
   sectionContent?: string;
   style?: 'professional' | 'infographic' | 'abstract' | 'diagram';
   aspectRatio?: '16:9' | '4:3' | '1:1' | '3:4';
+}
+
+// OpenRouter image response structure
+interface OpenRouterImageMessage {
+  role: string;
+  content?: string;
+  images?: Array<{
+    image_url: {
+      url: string; // base64 data URL
+    };
+  }>;
+}
+
+interface OpenRouterImageResponse {
+  choices: Array<{
+    message: OpenRouterImageMessage;
+  }>;
 }
 
 /**
@@ -64,8 +83,8 @@ export async function generateContextualImage(
             content: prompt,
           },
         ],
-        // Gemini image generation parameters
-        response_format: { type: 'image' },
+        // OpenRouter image generation requires modalities parameter
+        modalities: ['image', 'text'],
         temperature: 0.7,
       }),
     });
@@ -76,14 +95,19 @@ export async function generateContextualImage(
       return { success: false, error: `API error: ${response.status}` };
     }
 
-    const data = await response.json();
+    const data: OpenRouterImageResponse = await response.json();
+    const message = data.choices?.[0]?.message;
     
-    // Extract image from response
-    // NanoBanana returns images in various formats
-    const imageContent = data.choices?.[0]?.message?.content;
+    // Check for images in the response (OpenRouter format)
+    if (message?.images && message.images.length > 0) {
+      const imageDataUrl = message.images[0].image_url.url;
+      logger.info(`✅ NanoBanana: Generated image (${imageDataUrl.substring(0, 50)}...)`);
+      return { success: true, base64: imageDataUrl };
+    }
     
+    // Fallback: Check content for image data
+    const imageContent = message?.content;
     if (imageContent) {
-      // Check if it's a URL or base64
       if (imageContent.startsWith('http')) {
         return { success: true, imageUrl: imageContent };
       } else if (imageContent.startsWith('data:image')) {
