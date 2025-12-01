@@ -401,5 +401,142 @@ Focus on UK accounting, HMRC, tax, and professional services keywords.`,
         };
       }
     }),
+
+  // ============================================================================
+  // ENGAGEMENT: Likes & Comments
+  // ============================================================================
+
+  // Toggle like on a blog post
+  toggleLike: publicProcedure
+    .input(
+      z.object({
+        postId: z.string().uuid(),
+        fingerprint: z.string(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const supabase = createServerClient();
+
+      const { data, error } = await supabase.rpc('toggle_blog_like', {
+        p_post_id: input.postId,
+        p_fingerprint: input.fingerprint,
+      });
+
+      if (error) {
+        console.error('Error toggling like:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Could not update like',
+        });
+      }
+
+      return data as { action: string; like_count: number };
+    }),
+
+  // Check if user has liked a post
+  checkLike: publicProcedure
+    .input(
+      z.object({
+        postId: z.string().uuid(),
+        fingerprint: z.string(),
+      })
+    )
+    .query(async ({ input }) => {
+      const supabase = createServerClient();
+
+      const { data, error } = await supabase.rpc('check_blog_like', {
+        p_post_id: input.postId,
+        p_fingerprint: input.fingerprint,
+      });
+
+      if (error) {
+        console.error('Error checking like:', error);
+        return false;
+      }
+
+      return data as boolean;
+    }),
+
+  // Add a comment to a blog post
+  addComment: publicProcedure
+    .input(
+      z.object({
+        postId: z.string().uuid(),
+        authorName: z.string().min(1, 'Name is required'),
+        authorEmail: z.string().email().optional(),
+        content: z.string().min(1, 'Comment is required').max(2000, 'Comment too long'),
+        parentCommentId: z.string().uuid().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const supabase = createServerClient();
+
+      const { data, error } = await supabase.rpc('add_blog_comment', {
+        p_post_id: input.postId,
+        p_author_name: input.authorName,
+        p_content: input.content,
+        p_author_email: input.authorEmail || null,
+        p_parent_comment_id: input.parentCommentId || null,
+      });
+
+      if (error) {
+        console.error('Error adding comment:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Could not add comment',
+        });
+      }
+
+      return { id: data, success: true };
+    }),
+
+  // Get comments for a blog post
+  getComments: publicProcedure
+    .input(z.object({ postId: z.string().uuid() }))
+    .query(async ({ input }) => {
+      const supabase = createServerClient();
+
+      const { data, error } = await supabase.rpc('get_blog_comments', {
+        p_post_id: input.postId,
+      });
+
+      if (error) {
+        console.error('Error fetching comments:', error);
+        return [];
+      }
+
+      return data as Array<{
+        id: string;
+        author_name: string;
+        content: string;
+        is_featured: boolean;
+        parent_comment_id: string | null;
+        created_at: string;
+      }>;
+    }),
+
+  // Get engagement stats for a blog post (for admin)
+  getEngagementStats: publicProcedure
+    .input(z.object({ postId: z.string().uuid() }))
+    .query(async ({ input }) => {
+      const supabase = createServerClient();
+
+      const { data, error } = await supabase
+        .from('blog_posts')
+        .select('view_count, like_count, comment_count')
+        .eq('id', input.postId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching engagement stats:', error);
+        return { view_count: 0, like_count: 0, comment_count: 0 };
+      }
+
+      return {
+        view_count: data?.view_count || 0,
+        like_count: data?.like_count || 0,
+        comment_count: data?.comment_count || 0,
+      };
+    }),
 });
 

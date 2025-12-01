@@ -9,6 +9,8 @@ import DynamicGammaRenderer from '@/components/blog/DynamicGammaRenderer';
 import TableOfContents, { generateTocItems } from '@/components/blog/gamma/TableOfContents';
 // NEW: Clean Gamma-style renderer (V2)
 import { BlogRenderer as BlogRendererV2 } from '@/components/blog-v2';
+// NEW: Blog engagement (likes + comments)
+import BlogEngagement from '@/components/blog/BlogEngagement';
 
 // Author credentials mapping - AUDIT FIX: Add professional credentials to byline
 const AUTHOR_CREDENTIALS: Record<string, { title: string; credentials: string; bio?: string }> = {
@@ -330,6 +332,16 @@ export default function BlogPostPage() {
         
         {/* V2 Renderer handles everything including hero */}
         <BlogRendererV2 layout={post.structured_layout} />
+        
+        {/* Engagement Section: Likes & Comments */}
+        <div className="max-w-4xl mx-auto px-6 lg:px-8 pb-16">
+          <BlogEngagement 
+            postId={post.id}
+            postSlug={post.slug}
+            initialLikeCount={post.like_count || 0}
+            initialCommentCount={post.comment_count || 0}
+          />
+        </div>
       </div>
     );
   }
