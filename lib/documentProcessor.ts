@@ -8,56 +8,74 @@ import pdfParse from 'pdf-parse';
 import mammoth from 'mammoth';
 import * as XLSX from 'xlsx';
 import { logger } from './/logger';
+// @ts-ignore - pdf-img-convert for converting scanned PDFs to images
+import { pdf } from 'pdf-img-convert';
 
 
 /**
  * Extract text from scanned PDF using OCR (for PDFs with no text layer)
- * Note: Vision AI models cannot read PDFs directly - they need images
+ * Converts PDF pages to images, then uses Claude Vision for OCR
  */
 const extractTextFromScannedPDF = async (pdfBuffer: Buffer): Promise<string> => {
   logger.info('⚠️ Scanned PDF detected (no text layer)');
-  logger.info('📋 Vision models require images, not PDFs');
+  logger.info('🔄 Converting PDF pages to images for OCR...');
   
-  // Return helpful guidance message
-  return `[SCANNED PDF DETECTED - NO TEXT LAYER]
+  try {
+    // Convert PDF pages to images (PNG format, 300 DPI for good OCR)
+    const pdfImages = await pdf(pdfBuffer, { 
+      scale: 2.0,  // Higher scale = better quality for OCR
+    });
+    
+    if (!pdfImages || pdfImages.length === 0) {
+      logger.error('❌ Failed to convert PDF to images');
+      return '[SCANNED PDF - Failed to convert to images for OCR. Please try uploading as images instead.]';
+    }
+    
+    logger.info(`✅ Converted PDF to ${pdfImages.length} page image(s)`);
+    
+    // OCR each page and combine results
+    const pageTexts: string[] = [];
+    
+    for (let i = 0; i < pdfImages.length; i++) {
+      const pageImage = pdfImages[i];
+      logger.info(`🔍 OCR processing page ${i + 1} of ${pdfImages.length}...`);
+      
+      // Convert Uint8Array to Buffer if needed
+      const imageBuffer = Buffer.isBuffer(pageImage) ? pageImage : Buffer.from(pageImage);
+      
+      // Use existing OCR function
+      const pageText = await extractTextFromImage(imageBuffer);
+      
+      if (pageText && !pageText.includes('[OCR failed')) {
+        pageTexts.push(`--- PAGE ${i + 1} ---\n${pageText}`);
+        logger.info(`✅ Page ${i + 1}: Extracted ${pageText.length} characters`);
+      } else {
+        pageTexts.push(`--- PAGE ${i + 1} ---\n[OCR could not extract text from this page]`);
+        logger.warn(`⚠️ Page ${i + 1}: OCR extraction failed or returned empty`);
+      }
+    }
+    
+    const combinedText = pageTexts.join('\n\n');
+    logger.info(`✅ Scanned PDF OCR complete: ${combinedText.length} total characters from ${pdfImages.length} pages`);
+    
+    return combinedText;
+    
+  } catch (error: any) {
+    logger.error('❌ Scanned PDF OCR failed:', error.message);
+    logger.error('Stack:', error.stack);
+    
+    // Fallback message if conversion fails
+    return `[SCANNED PDF OCR FAILED]
 
-This PDF appears to be a scanned document (images inside a PDF wrapper) rather than a digital PDF with selectable text.
+The system attempted to automatically OCR this scanned PDF but encountered an error: ${error.message}
 
-Current AI vision models cannot process PDF files directly - they require image formats (PNG, JPG, etc.).
+Please try one of these alternatives:
+1. Export the PDF pages as images (PNG/JPG) and upload those instead
+2. Use a scanning app like Adobe Scan or Microsoft Lens to re-scan with OCR
+3. Take photos of the original documents
 
-RECOMMENDED SOLUTIONS (in order of quality):
-
-1. **Use OCR-enabled PDF tool** (BEST):
-   - Open in Adobe Acrobat and run "Recognize Text (OCR)"
-   - On Mac: Open in Preview → File → Export → enable "Detect text"
-   - This adds a text layer to the PDF, then re-upload
-
-2. **Use a scanning app with built-in OCR**:
-   - Adobe Scan (mobile) - automatically adds OCR
-   - Microsoft Lens (mobile) - creates searchable PDFs
-   - These create PDFs with text layers that work immediately
-
-3. **Convert to images and upload those**:
-   - Open PDF and export each page as PNG or JPG (high quality, 300 DPI)
-   - Upload the images instead - our system will OCR them
-   - Works for screenshots too
-
-4. **Re-photograph the original document**:
-   - If you have the physical letter, take a clear photo
-   - Good lighting, flat surface, all text visible
-   - Upload as JPG/PNG - system will auto-OCR
-
-WHY THIS MATTERS:
-Without readable text, the system cannot:
-- Identify dates and reference numbers
-- Detect Charter violations or CRG breaches
-- Calculate delay timelines
-- Generate accurate complaint letters
-- Assess viability
-
-The document is safely stored and you can delete/re-upload once you've added OCR or converted to images.
-
-For immediate assistance, the fastest solution is #2 (scanning app) - it takes 30 seconds on your phone.]`;
+The document has been stored and can be manually reviewed.`;
+  }
 };
 
 /**
