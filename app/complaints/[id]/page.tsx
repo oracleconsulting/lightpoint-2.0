@@ -675,6 +675,9 @@ This precedent was manually added because it represents a novel complaint type n
               onTimeDeleted={() => {
                 utils.time.getComplaintTime.invalidate(params.id);
               }}
+              onTimeUpdated={() => {
+                utils.time.getComplaintTime.invalidate(params.id);
+              }}
             />
 
             {/* Assign Complaint */}

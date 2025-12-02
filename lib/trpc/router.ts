@@ -1173,6 +1173,35 @@ export const appRouter = router({
         logger.info(`✅ Deleted time log`);
         return { success: true };
       }),
+
+    updateActivity: publicProcedure
+      .input(z.object({
+        id: z.string(),
+        duration: z.number().optional(), // minutes
+        activity: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        logger.info(`✏️ Updating time log: ${input.id}`);
+        
+        const updates: Record<string, any> = {};
+        if (input.duration !== undefined) updates.minutes_spent = input.duration;
+        if (input.activity !== undefined) updates.activity_type = input.activity;
+        
+        const { data, error } = await (supabaseAdmin as any)
+          .from('time_logs')
+          .update(updates)
+          .eq('id', input.id)
+          .select()
+          .single();
+        
+        if (error) {
+          logger.error('Time log update error:', error);
+          throw new Error(error.message);
+        }
+        
+        logger.info(`✅ Updated time log`);
+        return data;
+      }),
   }),
 
   // Knowledge base

@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Clock, FileText, Mail, Search, AlertCircle, Trash2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Clock, FileText, Mail, Search, AlertCircle, Trash2, Pencil, Check, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { trpc } from '@/lib/trpc/Provider';
 
@@ -22,10 +23,14 @@ interface TimeTrackerProps {
   entries: TimeEntry[];
   chargeOutRate?: number;
   onTimeDeleted?: () => void;
+  onTimeUpdated?: () => void;
 }
 
-export function TimeTracker({ complaintId, entries, chargeOutRate = 250, onTimeDeleted }: TimeTrackerProps) {
+export function TimeTracker({ complaintId, entries, chargeOutRate = 250, onTimeDeleted, onTimeUpdated }: TimeTrackerProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editHours, setEditHours] = useState('');
+  const [editMinutes, setEditMinutes] = useState('');
 
   const deleteTime = trpc.time.deleteActivity.useMutation({
     onSuccess: () => {
@@ -37,6 +42,46 @@ export function TimeTracker({ complaintId, entries, chargeOutRate = 250, onTimeD
       setDeletingId(null);
     }
   });
+
+  const updateTime = trpc.time.updateActivity.useMutation({
+    onSuccess: () => {
+      setEditingId(null);
+      setEditHours('');
+      setEditMinutes('');
+      onTimeUpdated?.();
+    },
+    onError: (error) => {
+      alert(`Failed to update: ${error.message}`);
+    }
+  });
+
+  const startEditing = (entry: TimeEntry) => {
+    if (!entry.id) return;
+    setEditingId(entry.id);
+    const hours = Math.floor(entry.duration / 60);
+    const mins = entry.duration % 60;
+    setEditHours(hours.toString());
+    setEditMinutes(mins.toString());
+  };
+
+  const saveEdit = (entryId: string) => {
+    const hours = parseInt(editHours) || 0;
+    const mins = parseInt(editMinutes) || 0;
+    const newDuration = hours * 60 + mins;
+    
+    if (newDuration <= 0) {
+      alert('Duration must be greater than 0');
+      return;
+    }
+    
+    updateTime.mutate({ id: entryId, duration: newDuration });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditHours('');
+    setEditMinutes('');
+  };
 
   // Auto-track activities with standard time allocations
   const getActivityIcon = (activity: string) => {
@@ -122,25 +167,85 @@ export function TimeTracker({ complaintId, entries, chargeOutRate = 250, onTimeD
                       {format(new Date(entry.date), 'PP p')}
                     </p>
                   </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-sm font-medium">
-                      {formatDuration(entry.duration)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      £{calculateValue(entry.duration, entry.rate || chargeOutRate).toFixed(2)}
-                    </p>
-                  </div>
-                  {entry.id && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                      onClick={() => handleDelete(entry)}
-                      disabled={deletingId === entry.id}
-                      title="Delete time entry"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                  
+                  {/* Edit mode */}
+                  {editingId === entry.id ? (
+                    <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1">
+                        <Input
+                          type="number"
+                          min="0"
+                          value={editHours}
+                          onChange={(e) => setEditHours(e.target.value)}
+                          className="w-12 h-7 text-xs text-center p-1"
+                          placeholder="h"
+                        />
+                        <span className="text-xs text-muted-foreground">h</span>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="59"
+                          value={editMinutes}
+                          onChange={(e) => setEditMinutes(e.target.value)}
+                          className="w-12 h-7 text-xs text-center p-1"
+                          placeholder="m"
+                        />
+                        <span className="text-xs text-muted-foreground">m</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                        onClick={() => saveEdit(entry.id!)}
+                        disabled={updateTime.isPending}
+                        title="Save"
+                      >
+                        <Check className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 text-gray-600 hover:text-gray-700"
+                        onClick={cancelEdit}
+                        title="Cancel"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="text-right flex-shrink-0">
+                        <p className="text-sm font-medium">
+                          {formatDuration(entry.duration)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          £{calculateValue(entry.duration, entry.rate || chargeOutRate).toFixed(2)}
+                        </p>
+                      </div>
+                      {entry.id && (
+                        <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                            onClick={() => startEditing(entry)}
+                            title="Edit time"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => handleDelete(entry)}
+                            disabled={deletingId === entry.id}
+                            title="Delete time entry"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               ))}
