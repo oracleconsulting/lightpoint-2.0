@@ -8,74 +8,44 @@ import pdfParse from 'pdf-parse';
 import mammoth from 'mammoth';
 import * as XLSX from 'xlsx';
 import { logger } from './/logger';
-// @ts-ignore - pdf-img-convert for converting scanned PDFs to images
-import { pdf } from 'pdf-img-convert';
 
 
 /**
  * Extract text from scanned PDF using OCR (for PDFs with no text layer)
- * Converts PDF pages to images, then uses Claude Vision for OCR
+ * 
+ * IMPORTANT: PDF-to-image conversion requires native canvas bindings which
+ * don't work in serverless/Docker environments. For scanned PDFs, users
+ * should upload images instead.
  */
 const extractTextFromScannedPDF = async (pdfBuffer: Buffer): Promise<string> => {
   logger.info('⚠️ Scanned PDF detected (no text layer)');
-  logger.info('🔄 Converting PDF pages to images for OCR...');
+  logger.info('📋 Serverless environment cannot process scanned PDFs directly');
   
-  try {
-    // Convert PDF pages to images (PNG format, 300 DPI for good OCR)
-    const pdfImages = await pdf(pdfBuffer, { 
-      scale: 2.0,  // Higher scale = better quality for OCR
-    });
-    
-    if (!pdfImages || pdfImages.length === 0) {
-      logger.error('❌ Failed to convert PDF to images');
-      return '[SCANNED PDF - Failed to convert to images for OCR. Please try uploading as images instead.]';
-    }
-    
-    logger.info(`✅ Converted PDF to ${pdfImages.length} page image(s)`);
-    
-    // OCR each page and combine results
-    const pageTexts: string[] = [];
-    
-    for (let i = 0; i < pdfImages.length; i++) {
-      const pageImage = pdfImages[i];
-      logger.info(`🔍 OCR processing page ${i + 1} of ${pdfImages.length}...`);
-      
-      // Convert Uint8Array to Buffer if needed
-      const imageBuffer = Buffer.isBuffer(pageImage) ? pageImage : Buffer.from(pageImage);
-      
-      // Use existing OCR function
-      const pageText = await extractTextFromImage(imageBuffer);
-      
-      if (pageText && !pageText.includes('[OCR failed')) {
-        pageTexts.push(`--- PAGE ${i + 1} ---\n${pageText}`);
-        logger.info(`✅ Page ${i + 1}: Extracted ${pageText.length} characters`);
-      } else {
-        pageTexts.push(`--- PAGE ${i + 1} ---\n[OCR could not extract text from this page]`);
-        logger.warn(`⚠️ Page ${i + 1}: OCR extraction failed or returned empty`);
-      }
-    }
-    
-    const combinedText = pageTexts.join('\n\n');
-    logger.info(`✅ Scanned PDF OCR complete: ${combinedText.length} total characters from ${pdfImages.length} pages`);
-    
-    return combinedText;
-    
-  } catch (error: any) {
-    logger.error('❌ Scanned PDF OCR failed:', error.message);
-    logger.error('Stack:', error.stack);
-    
-    // Fallback message if conversion fails
-    return `[SCANNED PDF OCR FAILED]
+  // Return actionable guidance for the user
+  return `[SCANNED PDF - ACTION REQUIRED]
 
-The system attempted to automatically OCR this scanned PDF but encountered an error: ${error.message}
+This PDF is a scanned document (images wrapped in PDF format) without a text layer.
 
-Please try one of these alternatives:
-1. Export the PDF pages as images (PNG/JPG) and upload those instead
-2. Use a scanning app like Adobe Scan or Microsoft Lens to re-scan with OCR
-3. Take photos of the original documents
+⚡ FASTEST SOLUTION (30 seconds):
+1. Open this PDF on your phone
+2. Screenshot each page
+3. Upload the screenshots here - they will be automatically OCR'd
 
-The document has been stored and can be manually reviewed.`;
-  }
+📱 BEST QUALITY SOLUTION:
+Use a mobile scanning app that adds OCR automatically:
+• Adobe Scan (free) - creates searchable PDFs
+• Microsoft Lens (free) - excellent OCR
+• Re-scan the original documents with the app
+• Upload the new file
+
+💻 DESKTOP SOLUTION:
+• Open PDF in Preview (Mac) or Adobe Reader
+• Export as Images (PNG/JPG at 300 DPI)
+• Upload the images - system will OCR them
+
+The system fully supports image OCR using Claude Vision AI - just need images, not PDFs.
+
+Document stored for reference. Please re-upload as images for analysis.`;
 };
 
 /**
