@@ -537,8 +537,31 @@ This precedent was manually added because it represents a novel complaint type n
                   <CardTitle>Actions</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
+                  {/* Additional Context for Re-Analysis */}
+                  {(complaint as any)?.analysis_completed_at && (
+                    <div className="space-y-2 pb-2">
+                      <Label htmlFor="reanalysis-context" className="text-sm font-medium">
+                        Add Context for Re-Analysis (Optional)
+                      </Label>
+                      <Textarea
+                        id="reanalysis-context"
+                        placeholder="Add information to refine the analysis:&#10;• Dates or timelines not captured&#10;• Additional HMRC correspondence&#10;• Client impact details&#10;• Clarifications about documents&#10;• Specific violations to focus on"
+                        value={additionalContext}
+                        onChange={(e) => setAdditionalContext(e.target.value)}
+                        rows={4}
+                        className="resize-none text-sm"
+                      />
+                    </div>
+                  )}
+                  
                   <Button 
-                    onClick={handleAnalyze}
+                    onClick={() => {
+                      if (additionalContext.trim()) {
+                        handleReAnalyze(additionalContext);
+                      } else {
+                        handleAnalyze();
+                      }
+                    }}
                     disabled={!documents || documents.length === 0 || analyzeDocument.isPending}
                     className="w-full"
                   >
@@ -546,7 +569,7 @@ This precedent was manually added because it represents a novel complaint type n
                     {analyzeDocument.isPending 
                       ? 'Analyzing...' 
                       : (complaint as any)?.analysis_completed_at 
-                      ? 'Re-analyze Complaint' 
+                      ? (additionalContext.trim() ? 'Re-analyze with Context' : 'Re-analyze Complaint')
                       : 'Analyze Complaint'}
                   </Button>
 
