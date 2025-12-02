@@ -26,12 +26,12 @@ const redis = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_RE
 
 /**
  * General API rate limiter
- * 60 requests per minute per user
+ * 200 requests per minute per user (increased for admin usage)
  */
 export const generalRateLimiter = redis
   ? new Ratelimit({
       redis,
-      limiter: Ratelimit.slidingWindow(60, '1 m'),
+      limiter: Ratelimit.slidingWindow(200, '1 m'),
       analytics: true,
       prefix: 'ratelimit:general',
     })
@@ -78,12 +78,12 @@ export const uploadRateLimiter = redis
 
 /**
  * IP-based rate limiter (for unauthenticated requests)
- * 100 requests per minute per IP
+ * 150 requests per minute per IP
  */
 export const ipRateLimiter = redis
   ? new Ratelimit({
       redis,
-      limiter: Ratelimit.slidingWindow(100, '1 m'),
+      limiter: Ratelimit.slidingWindow(150, '1 m'),
       analytics: true,
       prefix: 'ratelimit:ip',
     })
