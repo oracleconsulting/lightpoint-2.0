@@ -52,7 +52,7 @@ ON audit_logs
 FOR SELECT
 USING (
     organization_id IN (
-        SELECT organization_id FROM user_profiles 
+        SELECT organization_id FROM lightpoint_users 
         WHERE id = auth.uid() AND role IN ('admin', 'manager')
     )
 );
@@ -63,7 +63,7 @@ ON audit_logs
 FOR SELECT
 USING (
     EXISTS (
-        SELECT 1 FROM user_profiles 
+        SELECT 1 FROM lightpoint_users 
         WHERE id = auth.uid() AND is_super_admin = true
     )
 );
