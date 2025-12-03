@@ -10,6 +10,8 @@ import { sanitizeForLLM } from '@/lib/privacy';
 import { prepareAnalysisContext, estimateTokens } from '@/lib/contextManager';
 import { generateEmbedding } from '@/lib/embeddings';
 import { logger } from '../logger';
+
+// Domain-specific routers (extracted from monolithic router)
 import { subscriptionRouter } from './routers/subscription';
 import { cmsRouter } from './routers/cms';
 import { blogRouter } from './routers/blog';
@@ -20,6 +22,11 @@ import { socialContentRouter } from './routers/socialContent';
 import { analyticsRouter } from './routers/analytics';
 import { adminRouter } from './routers/admin';
 import { pilotRouter } from './routers/pilot';
+import { complaintsRouter } from './routers/complaints';
+import { documentsRouter } from './routers/documents';
+import { timeRouter } from './routers/time';
+import { ticketsRouter } from './routers/tickets';
+import { dashboardRouter, managementRouter } from './routers/dashboard';
 
 export const appRouter = router({
   // Pilot onboarding & activation
