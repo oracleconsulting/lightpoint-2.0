@@ -171,7 +171,7 @@ export const appRouter = router({
         return data;
       }),
 
-    updateStatus: publicProcedure
+    updateStatus: protectedProcedure
       .input(z.object({
         id: z.string(),
         status: z.enum(['assessment', 'draft', 'active', 'escalated', 'resolved', 'closed']),
@@ -190,7 +190,7 @@ export const appRouter = router({
       }),
 
     // Close complaint with outcome data for learning
-    closeWithOutcome: publicProcedure
+    closeWithOutcome: protectedProcedure
       .input(z.object({
         complaintId: z.string().uuid(),
         outcomeType: z.enum([
@@ -259,7 +259,7 @@ export const appRouter = router({
         return getOutcomeStats(input.complaintType, input.hmrcDepartment);
       }),
 
-    updateReference: publicProcedure
+    updateReference: protectedProcedure
       .input(z.object({
         id: z.string(),
         complaint_reference: z.string(),
@@ -286,7 +286,7 @@ export const appRouter = router({
         return data;
       }),
 
-    assign: publicProcedure
+    assign: protectedProcedure
       .input(z.object({
         complaintId: z.string(),
         userId: z.string(),
@@ -330,7 +330,7 @@ export const appRouter = router({
         return complaint;
       }),
 
-    delete: publicProcedure
+    delete: protectedProcedure
       .input(z.string())
       .mutation(async ({ input }) => {
         // Delete associated documents first (cascade should handle this, but being explicit)
@@ -356,7 +356,7 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    addTimelineEvent: publicProcedure
+    addTimelineEvent: protectedProcedure
       .input(z.object({
         complaintId: z.string(),
         event: z.object({
@@ -395,7 +395,7 @@ export const appRouter = router({
 
   // Analysis
   analysis: router({
-    analyzeDocument: publicProcedure
+    analyzeDocument: protectedProcedure
       .input(z.object({
         documentId: z.string(),
         additionalContext: z.string().optional(),
@@ -529,7 +529,7 @@ export const appRouter = router({
 
   // Letters
   letters: router({
-    generateComplaint: publicProcedure
+    generateComplaint: protectedProcedure
       .input(z.object({
         complaintId: z.string(),
         analysis: z.any(),
@@ -614,7 +614,7 @@ export const appRouter = router({
       }),
 
     // Save generated letter (without locking)
-    save: publicProcedure
+    save: protectedProcedure
       .input(z.object({
         complaintId: z.string(),
         letterType: z.enum(['initial_complaint', 'tier2_escalation', 'adjudicator_escalation', 'rebuttal', 'acknowledgement']),
@@ -638,7 +638,7 @@ export const appRouter = router({
       }),
 
     // Lock letter (ready to send)
-    lock: publicProcedure
+    lock: protectedProcedure
       .input(z.object({
         letterId: z.string(),
       }))
@@ -655,7 +655,7 @@ export const appRouter = router({
       }),
 
     // Mark letter as sent
-    markAsSent: publicProcedure
+    markAsSent: protectedProcedure
       .input(z.object({
         letterId: z.string(),
         sentBy: z.string(),
@@ -707,7 +707,7 @@ export const appRouter = router({
       }),
 
     // List letters for a complaint
-    list: publicProcedure
+    list: protectedProcedure
       .input(z.object({
         complaintId: z.string(),
       }))
@@ -723,7 +723,7 @@ export const appRouter = router({
       }),
 
     // Get single letter
-    getById: publicProcedure
+    getById: protectedProcedure
       .input(z.string())
       .query(async ({ input }) => {
         const { data, error } = await (supabaseAdmin as any)
@@ -737,7 +737,7 @@ export const appRouter = router({
       }),
 
     // Regenerate letter (replaces existing, NO extra time logged)
-    regenerate: publicProcedure
+    regenerate: protectedProcedure
       .input(z.object({
         letterId: z.string(),
         newContent: z.string(),
@@ -788,7 +788,7 @@ export const appRouter = router({
       }),
 
     // Update letter content in place (for minor edits, no new letter created)
-    updateContent: publicProcedure
+    updateContent: protectedProcedure
       .input(z.object({
         letterId: z.string(),
         newContent: z.string(),
@@ -831,7 +831,7 @@ export const appRouter = router({
       }),
 
     // Get active (non-superseded) letters for a complaint
-    listActive: publicProcedure
+    listActive: protectedProcedure
       .input(z.object({
         complaintId: z.string(),
       }))
@@ -848,7 +848,7 @@ export const appRouter = router({
       }),
 
     // Delete a letter (only if not sent)
-    delete: publicProcedure
+    delete: protectedProcedure
       .input(z.object({
         letterId: z.string(),
       }))
@@ -882,7 +882,7 @@ export const appRouter = router({
       }),
 
     // Bulk delete letters (for cleanup)
-    bulkDelete: publicProcedure
+    bulkDelete: protectedProcedure
       .input(z.object({
         letterIds: z.array(z.string()),
       }))
@@ -913,7 +913,7 @@ export const appRouter = router({
         return { success: true, deletedCount: input.letterIds.length };
       }),
 
-    generateResponse: publicProcedure
+    generateResponse: protectedProcedure
       .input(z.object({
         complaintId: z.string(),
         correspondence: z.string(),
@@ -949,7 +949,7 @@ export const appRouter = router({
 
   // Documents
   documents: router({
-    list: publicProcedure
+    list: protectedProcedure
       .input(z.string())
       .query(async ({ input }) => {
         const { data, error } = await supabaseAdmin
@@ -963,7 +963,7 @@ export const appRouter = router({
         return data;
       }),
 
-    getSignedUrl: publicProcedure
+    getSignedUrl: protectedProcedure
       .input(z.string()) // file_path (storage path)
       .query(async ({ input }) => {
         logger.info('🔗 Generating signed URL for:', input);
@@ -983,7 +983,7 @@ export const appRouter = router({
         return { signedUrl: data.signedUrl };
       }),
 
-    retryOCR: publicProcedure
+    retryOCR: protectedProcedure
       .input(z.string())
       .mutation(async ({ input }) => {
         logger.info('🔄 Retry OCR requested for document:', input);
@@ -1042,7 +1042,7 @@ export const appRouter = router({
 
   // Time tracking
   time: router({
-    getComplaintTime: publicProcedure
+    getComplaintTime: protectedProcedure
       .input(z.string())
       .query(async ({ input }) => {
         const { data, error } = await (supabaseAdmin as any)
@@ -1062,7 +1062,7 @@ export const appRouter = router({
         };
       }),
 
-    logActivity: publicProcedure
+    logActivity: protectedProcedure
       .input(z.object({
         complaintId: z.string(),
         activity: z.string(),
@@ -1130,7 +1130,7 @@ export const appRouter = router({
         return timeLog;
       }),
 
-    deleteActivityByType: publicProcedure
+    deleteActivityByType: protectedProcedure
       .input(z.object({
         complaintId: z.string(),
         activityType: z.string(),
@@ -1155,7 +1155,7 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    deleteActivity: publicProcedure
+    deleteActivity: protectedProcedure
       .input(z.string()) // time log ID
       .mutation(async ({ input }) => {
         logger.info(`🗑️ Deleting time log: ${input}`);
@@ -1174,7 +1174,7 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    updateActivity: publicProcedure
+    updateActivity: protectedProcedure
       .input(z.object({
         id: z.string(),
         duration: z.number().optional(), // minutes
@@ -1255,7 +1255,7 @@ export const appRouter = router({
         return data;
       }),
 
-    addPrecedent: publicProcedure
+    addPrecedent: protectedProcedure
       .input(z.object({
         complaintId: z.string(),
         title: z.string(),
@@ -1354,7 +1354,7 @@ export const appRouter = router({
       }),
 
     // Upload document for comparison (Stage 1: Upload & analyze)
-    uploadForComparison: publicProcedure
+    uploadForComparison: protectedProcedure
       .input(z.object({
         filename: z.string(),
         fileBuffer: z.string(), // base64 encoded
@@ -1494,7 +1494,7 @@ export const appRouter = router({
       }),
 
     // Approve staged document and add to knowledge base
-    approveStaged: publicProcedure
+    approveStaged: protectedProcedure
       .input(z.object({
         stagedId: z.string(),
       }))
@@ -1604,7 +1604,7 @@ export const appRouter = router({
   // AI Settings
   aiSettings: router({
     // List all prompts
-    listPrompts: publicProcedure
+    listPrompts: protectedProcedure
       .query(async () => {
         try {
           const { data, error } = await (supabaseAdmin as any)
@@ -1625,7 +1625,7 @@ export const appRouter = router({
       }),
 
     // Get single prompt
-    getPrompt: publicProcedure
+    getPrompt: protectedProcedure
       .input(z.object({
         promptKey: z.string(),
       }))
@@ -1642,7 +1642,7 @@ export const appRouter = router({
       }),
 
     // Update prompt
-    updatePrompt: publicProcedure
+    updatePrompt: protectedProcedure
       .input(z.object({
         promptId: z.string(),
         systemPrompt: z.string(),
@@ -1681,7 +1681,7 @@ export const appRouter = router({
       }),
 
     // Reset prompt to default
-    resetPrompt: publicProcedure
+    resetPrompt: protectedProcedure
       .input(z.object({
         promptId: z.string(),
       }))
@@ -1705,7 +1705,7 @@ export const appRouter = router({
       }),
 
     // Get prompt history
-    getPromptHistory: publicProcedure
+    getPromptHistory: protectedProcedure
       .input(z.object({
         promptId: z.string(),
         limit: z.number().optional(),
@@ -1726,7 +1726,7 @@ export const appRouter = router({
   // Knowledge Base Chat
   kbChat: router({
     // Start new conversation
-    startConversation: publicProcedure
+    startConversation: protectedProcedure
       .mutation(async ({ ctx }) => {
         const userId = ctx.user?.id || '00000000-0000-0000-0000-000000000001';
         
@@ -1744,7 +1744,7 @@ export const appRouter = router({
       }),
 
     // Send message and get response
-    sendMessage: publicProcedure
+    sendMessage: protectedProcedure
       .input(z.object({
         conversationId: z.string(),
         message: z.string(),
@@ -1817,7 +1817,7 @@ export const appRouter = router({
       }),
 
     // Get conversation history
-    getConversation: publicProcedure
+    getConversation: protectedProcedure
       .input(z.object({
         conversationId: z.string(),
       }))
@@ -1833,7 +1833,7 @@ export const appRouter = router({
       }),
 
     // List user's conversations
-    listConversations: publicProcedure
+    listConversations: protectedProcedure
       .query(async ({ ctx }) => {
         const userId = ctx.user?.id || '00000000-0000-0000-0000-000000000001';
         
@@ -1855,7 +1855,7 @@ export const appRouter = router({
       }),
 
     // Delete conversation
-    deleteConversation: publicProcedure
+    deleteConversation: protectedProcedure
       .input(z.object({
         conversationId: z.string(),
       }))
@@ -1870,7 +1870,7 @@ export const appRouter = router({
       }),
 
     // Submit feedback on message
-    submitFeedback: publicProcedure
+    submitFeedback: protectedProcedure
       .input(z.object({
         messageId: z.string(),
         isHelpful: z.boolean(),
@@ -1897,7 +1897,7 @@ export const appRouter = router({
 
   // Users
   users: router({
-    list: publicProcedure
+    list: protectedProcedure
       .query(async () => {
         const { data, error } = await (supabaseAdmin as any)
           .from('lightpoint_users')
@@ -1909,7 +1909,7 @@ export const appRouter = router({
         return data;
       }),
 
-    create: publicProcedure
+    create: protectedProcedure
       .input(z.object({
         email: z.string().email(),
         full_name: z.string(),
@@ -1940,7 +1940,7 @@ export const appRouter = router({
         return data;
       }),
 
-    update: publicProcedure
+    update: protectedProcedure
       .input(z.object({
         id: z.string(),
         email: z.string().email().optional(),
@@ -1967,7 +1967,7 @@ export const appRouter = router({
         return data;
       }),
 
-    toggleStatus: publicProcedure
+    toggleStatus: protectedProcedure
       .input(z.string())
       .mutation(async ({ input }) => {
         // Get current status
@@ -1992,7 +1992,7 @@ export const appRouter = router({
         return data;
       }),
 
-    invite: publicProcedure
+    invite: protectedProcedure
       .input(z.object({
         email: z.string().email(),
         full_name: z.string(),
@@ -2153,7 +2153,7 @@ export const appRouter = router({
 
   // Tickets
   tickets: router({
-    create: publicProcedure
+    create: protectedProcedure
       .input(z.object({
         complaintId: z.string(),
         subject: z.string(),
@@ -2194,7 +2194,7 @@ export const appRouter = router({
         return data;
       }),
 
-    getByComplaint: publicProcedure
+    getByComplaint: protectedProcedure
       .input(z.string())
       .query(async ({ input }) => {
         const { data, error } = await (supabaseAdmin as any)
@@ -2239,7 +2239,7 @@ export const appRouter = router({
         return data;
       }),
 
-    addComment: publicProcedure
+    addComment: protectedProcedure
       .input(z.object({
         ticketId: z.string(),
         comment: z.string(),
@@ -2266,7 +2266,7 @@ export const appRouter = router({
 
   // Management
   management: router({
-    getOverview: publicProcedure
+    getOverview: protectedProcedure
       .query(async () => {
         // Get management overview from view
         const { data: users, error: usersError } = await (supabaseAdmin as any)

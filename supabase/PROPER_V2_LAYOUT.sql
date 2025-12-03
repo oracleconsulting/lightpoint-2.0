@@ -43,7 +43,7 @@ SET structured_layout = '{
       "type": "textWithImage",
       "props": {
         "paragraphs": [
-          "If you are an accountant dealing with HMRC failures, you already know the pattern. You call about a missing VAT registration. You wait 23 minutes. You explain the problem. They promise to look into it. Three months later, nothing has changed except your client patience has run out.",
+          "If you''re an accountant dealing with HMRC failures, you already know the pattern. You call about a missing VAT registration. You wait 23 minutes. You explain the problem. They promise to look into it. Three months later, nothing''s changed except your client''s patience has run out.",
           "The numbers tell the story: despite HMRC hitting their 88% call answering target by late 2024, only 34% of queries actually get resolved. That means two-thirds of successful calls end with agents still chasing the same issues weeks later."
         ],
         "imageAlt": "Frustrated accountant on phone with HMRC",
@@ -59,7 +59,7 @@ SET structured_layout = '{
     {
       "type": "paragraph",
       "props": {
-        "text": "HMRC complaint process looks straightforward enough. You write to them explaining what went wrong. They investigate. They respond within 15 working days. Problem solved."
+        "text": "HMRC''s complaint process looks straightforward enough. You write to them explaining what went wrong. They investigate. They respond within 15 working days. Problem solved."
       }
     },
     {
@@ -74,7 +74,7 @@ SET structured_layout = '{
         "steps": [
           {
             "title": "Processing Delays",
-            "description": "The biggest driver of complaints, jumping 65% to 35,000 cases in 2022-23. Your client R&D claim sits unprocessed for six months."
+            "description": "The biggest driver of complaints, jumping 65% to 35,000 cases in 2022-23. Your client''s R&D claim sits unprocessed for six months."
           },
           {
             "title": "You Complain",
@@ -82,7 +82,7 @@ SET structured_layout = '{
           },
           {
             "title": "Nothing Changes",
-            "description": "Your client claim remains stuck. The cycle continues."
+            "description": "Your client''s claim remains stuck. The cycle continues."
           }
         ],
         "variant": "vertical"
@@ -97,7 +97,7 @@ SET structured_layout = '{
     {
       "type": "donutChart",
       "props": {
-        "title": "The Adjudicator Office: Your Secret Weapon",
+        "title": "The Adjudicator''s Office: Your Secret Weapon",
         "segments": [
           { "label": "Upheld", "value": 41 },
           { "label": "Not Upheld", "value": 59 }
@@ -109,7 +109,7 @@ SET structured_layout = '{
     {
       "type": "paragraph",
       "props": {
-        "text": "The Adjudicator Office, which provides independent oversight, upheld 41% of the complaints it reviewed in 2023-24. That nearly half of cases where HMRC said no twice internally, yet an independent review found they were wrong. These successful appeals resulted in £103,063 in compensation, including £45,691 in tax liabilities written off."
+        "text": "The Adjudicator''s Office, which provides independent oversight, upheld 41% of the complaints it reviewed in 2023-24. That''s nearly half of cases where HMRC said \"no\" twice internally, yet an independent review found they were wrong. These successful appeals resulted in £103,063 in compensation, including £45,691 in tax liabilities written off."
       }
     },
     {
@@ -134,13 +134,13 @@ SET structured_layout = '{
             "description": "Most complaints read like general frustration rather than specific breaches. Writing your service is appalling might feel satisfying, but it gives HMRC an easy dismissal.",
             "callout": {
               "label": "Instead:",
-              "text": "HMRC failed to meet its published 15-day response standard for correspondence, as set out in the Taxpayers Charter, resulting in preventable penalties."
+              "text": "HMRC failed to meet its published 15-day response standard for correspondence, as set out in the Taxpayers'' Charter, resulting in preventable penalties."
             }
           },
           {
             "icon": "📋",
             "title": "No Evidence Trail",
-            "description": "Vague timelines kill complaints. We have been trying to contact you for months carries no weight.",
+            "description": "Vague timelines kill complaints. \"We''ve been trying to contact you for months\" carries no weight.",
             "callout": {
               "label": "Instead:",
               "text": "17 July: 44-minute hold, call terminated. 24 July: Written to BX9 1AB, proof of delivery attached. 15 August: £100 penalty received despite ongoing correspondence."
@@ -181,7 +181,7 @@ SET structured_layout = '{
           },
           {
             "title": "Opening Statement",
-            "description": "Two sentences maximum: I write to make a formal complaint regarding HMRC failure to process my client VAT registration within published timeframes, resulting in an inability to trade and £2,400 in lost input tax recovery. This complaint evidences breaches of service standards published at [gov.uk reference] and seeks specific redress totalling £3,150."
+            "description": "Two sentences maximum: \"I write to make a formal complaint regarding HMRC''s failure to process my client''s VAT registration within published timeframes, resulting in an inability to trade and £2,400 in lost input tax recovery. This complaint evidences breaches of service standards published at [gov.uk reference] and seeks specific redress totalling £3,150.\""
           },
           {
             "title": "Chronology",
@@ -189,7 +189,7 @@ SET structured_layout = '{
           },
           {
             "title": "Reference Their Rules",
-            "description": "Quote the Compliance Handbook and Taxpayers Charter directly. These aren not just documents—they are commitments HMRC must follow."
+            "description": "Quote the Compliance Handbook and Taxpayers'' Charter directly. These aren''t just documents—they''re commitments HMRC must follow."
           },
           {
             "title": "State the Impact",
@@ -237,7 +237,7 @@ SET structured_layout = '{
             "description": "Three months passed, no registration, no update"
           }
         ],
-        "quote": "The Taxpayers Charter states HMRC will treat you even-handedly, with courtesy and respect. The three-month delay, with no explanation despite repeated contact, fails this commitment."
+        "quote": "The Taxpayers'' Charter states HMRC will ''treat you even-handedly, with courtesy and respect.'' The three-month delay, with no explanation despite repeated contact, fails this commitment."
       }
     },
     {
@@ -245,7 +245,7 @@ SET structured_layout = '{
       "props": {
         "icon": "💡",
         "label": "Pro Tip",
-        "text": "The Taxpayers Charter states HMRC will treat you even-handedly, with courtesy and respect. The three-month delay, with no explanation despite repeated contact, fails this commitment.",
+        "text": "The Taxpayers'' Charter states HMRC will ''treat you even-handedly, with courtesy and respect.'' The three-month delay, with no explanation despite repeated contact, fails this commitment.",
         "variant": "blue"
       }
     },
@@ -290,7 +290,7 @@ SET structured_layout = '{
     {
       "type": "paragraph",
       "props": {
-        "text": "HMRC paid out £6,174 in professional costs through the Adjudicator last year. That a fraction of what actually claimed. Most accountants either don claim or claim incorrectly."
+        "text": "HMRC paid out £6,174 in professional costs through the Adjudicator last year. That''s a fraction of what''s actually claimed. Most accountants either don''t claim or claim incorrectly."
       }
     },
     {
@@ -332,21 +332,20 @@ SET structured_layout = '{
     {
       "type": "sectionHeading",
       "props": {
-        "title": "Making Complaints Worth the Effort"
+        "title": "Making Complaints Worth the Effort",
+        "centered": true
       }
     },
     {
-      "type": "donutChart",
+      "type": "stats",
       "props": {
-        "title": "Recovery & Success Rates",
-        "segments": [
-          { "label": "Annual Recovery", "value": 12 },
-          { "label": "Success Rate", "value": 84 },
-          { "label": "Average Rate", "value": 41 }
+        "stats": [
+          { "value": "£12K+", "label": "Annual Recovery", "description": "Typical recovery through systematic complaint management" },
+          { "value": "84%", "label": "Success Rate", "description": "Lightpoint complaint management system at Adjudicator level" },
+          { "value": "41%", "label": "Average Rate", "description": "Standard success rate at Adjudicator Office" }
         ],
-        "showLegend": true,
-        "size": 240,
-        "centerLabel": "£12K+"
+        "variant": "flat",
+        "columns": 3
       }
     },
     {
