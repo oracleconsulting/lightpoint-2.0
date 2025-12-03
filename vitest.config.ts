@@ -6,6 +6,7 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     setupFiles: ['./__tests__/setup.ts'],
+    exclude: ['node_modules', 'e2e', 'playwright-report'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov'],
