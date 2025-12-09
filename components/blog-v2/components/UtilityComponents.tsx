@@ -47,11 +47,22 @@ export function Paragraph({
     );
   }
 
+  // Clean text - remove any markdown artifacts
+  let cleanText = text
+    .replace(/\*\*/g, '') // Remove bold markers
+    .replace(/\*/g, '') // Remove italic markers
+    .replace(/__/g, '') // Remove underline markers
+    .replace(/_/g, '') // Remove italic markers
+    .replace(/^\.\s+/g, '') // Remove leading periods
+    .replace(/\n\s*\.\s+/g, '. ') // Fix periods at start of lines
+    .trim();
+  
   // Split text by double newlines to preserve paragraph structure
-  const paragraphs = text.split(/\n\n+/).filter(p => p.trim());
+  const paragraphs = cleanText.split(/\n\n+/).filter(p => p.trim());
   
   if (paragraphs.length === 1) {
     // Single paragraph - render normally
+    const finalText = cleanText.replace(/\n/g, ' '); // Replace single newlines with spaces
     return (
       <p className={`
         text-[20px] lg:text-[22px]
@@ -61,7 +72,7 @@ export function Paragraph({
         mb-1
         ${className}
       `}>
-        {text.replace(/\n/g, ' ')} {/* Replace single newlines with spaces */}
+        {finalText}
       </p>
     );
   }
@@ -69,14 +80,18 @@ export function Paragraph({
   // Multiple paragraphs - render each as separate paragraph
   return (
     <div className={`space-y-1 ${className}`}>
-      {paragraphs.map((para, index) => (
-        <p 
-          key={index}
-          className="text-[20px] lg:text-[22px] leading-[1.75] lg:leading-[1.8] text-slate-700 font-['Georgia',_'Times_New_Roman',_serif]"
-        >
-          {para.replace(/\n/g, ' ')}
-        </p>
-      ))}
+      {paragraphs.map((para, index) => {
+        const cleanPara = para.replace(/\n/g, ' ').trim();
+        if (!cleanPara) return null;
+        return (
+          <p 
+            key={index}
+            className="text-[20px] lg:text-[22px] leading-[1.75] lg:leading-[1.8] text-slate-700 font-['Georgia',_'Times_New_Roman',_serif]"
+          >
+            {cleanPara}
+          </p>
+        );
+      })}
     </div>
   );
 }

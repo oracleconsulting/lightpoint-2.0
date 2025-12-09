@@ -82,10 +82,10 @@ function VerticalSteps({ steps }: { steps: Step[] }) {
             {/* Content */}
             <div className="flex-1 pt-2 pb-4">
               <h3 className="text-[24px] lg:text-[26px] font-bold text-slate-800 mb-2 leading-[1.3]">
-                {step.title}
+                {step.title.replace(/\*\*/g, '').replace(/\*/g, '').trim()}
               </h3>
               <p className="text-[19px] lg:text-[20px] text-slate-600 leading-[1.75]">
-                {step.description}
+                {step.description.replace(/\*\*/g, '').replace(/\*/g, '').replace(/^\.\s+/, '').trim()}
               </p>
             </div>
           </div>
@@ -110,12 +110,12 @@ function GridSteps({ steps }: { steps: Step[] }) {
           
           {/* Title */}
           <h3 className="text-[19px] font-bold text-slate-800 mb-3 leading-[1.3]">
-            {step.title}
+            {step.title.replace(/\*\*/g, '').replace(/\*/g, '').trim()}
           </h3>
           
           {/* Description */}
           <p className="text-[16px] text-slate-600 leading-[1.7]">
-            {step.description}
+            {step.description.replace(/\*\*/g, '').replace(/\*/g, '').replace(/^\.\s+/, '').trim()}
           </p>
         </div>
       ))}

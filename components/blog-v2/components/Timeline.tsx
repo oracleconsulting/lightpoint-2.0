@@ -122,7 +122,7 @@ function TimelineEventItem({
         
         {/* Description */}
         <p className="text-slate-600 leading-relaxed">
-          {event.description}
+          {event.description.replace(/\*\*/g, '').replace(/\*/g, '').replace(/^\.\s+/, '').trim()}
         </p>
       </div>
 

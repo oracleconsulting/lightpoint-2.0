@@ -68,10 +68,10 @@ export function CalloutBox({
         {/* Content */}
         <div className="flex-1">
           <div className={`font-bold text-sm uppercase tracking-wider mb-3 ${style.label}`}>
-            {label}
+            {label.replace(/\*\*/g, '').replace(/\*/g, '').trim()}
           </div>
           <p className={`text-[22px] lg:text-[24px] leading-[1.8] ${style.text}`}>
-            {text}
+            {text.replace(/\*\*/g, '').replace(/\*/g, '').replace(/^\.\s+/, '').trim()}
           </p>
         </div>
       </div>

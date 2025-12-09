@@ -42,14 +42,26 @@ export function TextWithImage({
       `}>
         {/* Text column - 60% */}
         <div className="flex-1 lg:w-[60%] space-y-3">
-          {paragraphs.map((paragraph, index) => (
-            <p 
-              key={index} 
-              className="text-[20px] lg:text-[22px] text-slate-700 leading-[1.75] font-['Georgia',_'Times_New_Roman',_serif]"
-            >
-              {paragraph}
-            </p>
-          ))}
+          {paragraphs.map((paragraph, index) => {
+            // Clean paragraph text
+            const cleanParagraph = paragraph
+              .replace(/\*\*/g, '') // Remove bold markers
+              .replace(/\*/g, '') // Remove italic markers
+              .replace(/^\.\s+/, '') // Remove leading periods
+              .replace(/\n/g, ' ') // Replace newlines with spaces
+              .trim();
+            
+            if (!cleanParagraph) return null;
+            
+            return (
+              <p 
+                key={index} 
+                className="text-[20px] lg:text-[22px] text-slate-700 leading-[1.75] font-['Georgia',_'Times_New_Roman',_serif]"
+              >
+                {cleanParagraph}
+              </p>
+            );
+          })}
         </div>
 
         {/* Image column - 45% */}

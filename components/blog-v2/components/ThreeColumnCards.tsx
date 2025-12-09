@@ -93,12 +93,12 @@ function CardItem({ card, index }: { card: Card; index: number }) {
 
         {/* Title */}
         <h3 className="text-[23px] lg:text-[24px] font-bold text-slate-800 mb-3 leading-[1.3]">
-          {card.title}
+          {card.title.replace(/\*\*/g, '').replace(/\*/g, '').trim()}
         </h3>
 
         {/* Description */}
         <p className="text-[18px] lg:text-[19px] text-slate-600 leading-[1.75]">
-          {card.description}
+          {card.description.replace(/\*\*/g, '').replace(/\*/g, '').replace(/^\.\s+/, '').trim()}
         </p>
       </div>
 

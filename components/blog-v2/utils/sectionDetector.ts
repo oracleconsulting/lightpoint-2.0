@@ -74,7 +74,9 @@ export class SectionDetector {
     let text = content;
     
     // Convert block-level HTML tags to paragraph breaks
-    text = text.replace(/<\/?(p|div|br|h[1-6]|li|tr|blockquote)[^>]*>/gi, '\n\n');
+    text = text.replace(/<\/?(p|div|h[1-6]|li|tr|blockquote)[^>]*>/gi, '\n\n');
+    // Convert <br> tags to spaces (don't break sentences)
+    text = text.replace(/<br\s*\/?>/gi, ' ');
     
     // Strip remaining HTML tags
     text = text.replace(/<[^>]*>/g, ' ');
@@ -87,11 +89,54 @@ export class SectionDetector {
     text = text.replace(/&quot;/g, '"');
     text = text.replace(/&#39;/g, "'");
     
+    // Remove markdown formatting markers (bold, italic, etc.)
+    text = text.replace(/\*\*/g, ''); // Remove bold markers
+    text = text.replace(/\*/g, ''); // Remove italic markers
+    text = text.replace(/__/g, ''); // Remove underline markers
+    text = text.replace(/_/g, ''); // Remove italic markers
+    
+    // Fix sentences starting with periods (shouldn't happen)
+    text = text.replace(/\n\s*\.\s+/g, '. '); // Move period to end of previous sentence
+    text = text.replace(/\.\s+\./g, '.'); // Remove double periods
+    
     // Normalize whitespace but preserve paragraph breaks
     text = text.replace(/\n{3,}/g, '\n\n');
     text = text.replace(/[ \t]+/g, ' ');
     text = text.replace(/\n /g, '\n');
     text = text.replace(/ \n/g, '\n');
+    
+    // Remove leading/trailing spaces from each line
+    text = text.split('\n').map(line => line.trim()).join('\n');
+    
+    // Fix broken sentences - if a line ends without punctuation and next line starts lowercase, merge
+    text = text.replace(/([a-z])\n([a-z])/g, '$1 $2');
+    
+    // Fix broken words (word split across lines)
+    text = text.replace(/([a-z])\s+\n\s*([a-z]{1,3})\s/gi, (match, p1, p2) => {
+      // If second part is very short, it might be a broken word
+      if (p2.length <= 3) {
+        return p1 + p2 + ' ';
+      }
+      return match;
+    });
+    
+    // Fix sentences that were broken mid-word (like "collectors for it\n. The money")
+    text = text.replace(/([a-z])\s*\n\s*\.\s+([A-Z])/g, '$1. $2');
+    
+    // Remove duplicate consecutive lines
+    const lines = text.split('\n');
+    const deduped: string[] = [];
+    for (let i = 0; i < lines.length; i++) {
+      const trimmed = lines[i].trim();
+      if (trimmed && trimmed !== deduped[deduped.length - 1]?.trim()) {
+        // Also check if it's a substring of the previous line (avoid partial duplicates)
+        const lastLine = deduped[deduped.length - 1]?.trim() || '';
+        if (!lastLine.includes(trimmed) && !trimmed.includes(lastLine)) {
+          deduped.push(lines[i]);
+        }
+      }
+    }
+    text = deduped.join('\n');
     
     return text.trim();
   }
@@ -99,25 +144,29 @@ export class SectionDetector {
   private extractTextFromTipTap(node: any): string {
     if (!node) return '';
     
-    // Handle text nodes
+    // Handle text nodes - preserve text, strip any markdown artifacts
     if (node.type === 'text') {
-      return node.text || '';
+      let text = node.text || '';
+      // Remove any stray markdown markers that might have leaked through
+      text = text.replace(/\*\*/g, ''); // Remove bold markers
+      text = text.replace(/\*/g, ''); // Remove italic markers
+      return text;
     }
     
     // Handle paragraph nodes - add double newline for paragraph breaks
     if (node.type === 'paragraph') {
       if (node.content && Array.isArray(node.content)) {
-        const text = node.content.map((n: any) => this.extractTextFromTipTap(n)).join('');
+        const text = node.content.map((n: any) => this.extractTextFromTipTap(n)).join('').trim();
         return text ? text + '\n\n' : '';
       }
-      return '\n\n';
+      return '';
     }
     
     // Handle heading nodes - add markdown-style heading
     if (node.type && node.type.startsWith('heading')) {
       const level = node.type.replace('heading', '') || '1';
       const headingText = node.content 
-        ? node.content.map((n: any) => this.extractTextFromTipTap(n)).join('')
+        ? node.content.map((n: any) => this.extractTextFromTipTap(n)).join('').trim()
         : '';
       return headingText ? `${'#'.repeat(parseInt(level) || 1)} ${headingText}\n\n` : '';
     }
@@ -127,13 +176,13 @@ export class SectionDetector {
       if (node.content && Array.isArray(node.content)) {
         return node.content.map((n: any) => this.extractTextFromTipTap(n)).join('\n') + '\n\n';
       }
-      return '\n\n';
+      return '';
     }
     
     // Handle list items
     if (node.type === 'listItem') {
       if (node.content && Array.isArray(node.content)) {
-        const text = node.content.map((n: any) => this.extractTextFromTipTap(n)).join('');
+        const text = node.content.map((n: any) => this.extractTextFromTipTap(n)).join('').trim();
         return text ? `- ${text}\n` : '';
       }
       return '';
@@ -142,18 +191,23 @@ export class SectionDetector {
     // Handle blockquote
     if (node.type === 'blockquote') {
       if (node.content && Array.isArray(node.content)) {
-        const text = node.content.map((n: any) => this.extractTextFromTipTap(n)).join('');
+        const text = node.content.map((n: any) => this.extractTextFromTipTap(n)).join('').trim();
         return text ? `> ${text}\n\n` : '';
       }
       return '';
     }
     
-    // Handle bold/italic - preserve text
-    if (node.type === 'textStyle' || node.type === 'hardBreak') {
+    // Handle bold/italic - preserve text but strip formatting markers
+    if (node.type === 'textStyle' || node.type === 'bold' || node.type === 'italic') {
       if (node.content && Array.isArray(node.content)) {
         return node.content.map((n: any) => this.extractTextFromTipTap(n)).join('');
       }
-      return node.type === 'hardBreak' ? '\n' : '';
+      return '';
+    }
+    
+    // Handle hard breaks - convert to space (don't break sentences)
+    if (node.type === 'hardBreak') {
+      return ' '; // Convert to space instead of newline to preserve sentence flow
     }
     
     // Handle doc - process all content
@@ -173,19 +227,56 @@ export class SectionDetector {
     console.log('🔬 [SectionDetector] Normalized content length:', this.content.length);
     console.log('🔬 [SectionDetector] Content preview:', this.content.substring(0, 300));
     
-    // Split into paragraphs - try multiple strategies
+    // Split into paragraphs - preserve sentence boundaries
     let paragraphs = this.content.split(/\n\n+/).filter(p => p.trim());
+    
+    // Clean up paragraphs - ensure they don't break mid-sentence
+    paragraphs = paragraphs.map(p => {
+      let cleaned = p.trim();
+      
+      // Remove leading periods (sentences shouldn't start with periods)
+      cleaned = cleaned.replace(/^\.\s+/, '');
+      
+      // Remove trailing periods that are alone on a line
+      cleaned = cleaned.replace(/\n\.\s*$/g, '');
+      
+      // Fix broken words (word split across lines)
+      cleaned = cleaned.replace(/([a-z])\s+([a-z])/g, (match, p1, p2) => {
+        // If it looks like a broken word (very short fragments), join them
+        if (p1.length < 3 && p2.length < 3) {
+          return p1 + p2;
+        }
+        return match;
+      });
+      
+      // Remove duplicate text within paragraph
+      const sentences = cleaned.split(/(?<=[.!?])\s+/);
+      const uniqueSentences: string[] = [];
+      for (const sentence of sentences) {
+        const trimmed = sentence.trim();
+        if (trimmed && !uniqueSentences.includes(trimmed)) {
+          uniqueSentences.push(trimmed);
+        }
+      }
+      cleaned = uniqueSentences.join(' ');
+      
+      return cleaned;
+    }).filter(p => p.length > 0);
     
     // If we only got 1-2 paragraphs, try splitting by sentences for long content
     if (paragraphs.length <= 2 && this.content.length > 500) {
       console.log('🔬 [SectionDetector] Few paragraphs detected, trying sentence split');
       // Split long content into chunks of ~3-4 sentences
-      const sentences = this.content.split(/(?<=[.!?])\s+/);
+      const sentences = this.content.split(/(?<=[.!?])\s+/).filter(s => s.trim());
       paragraphs = [];
       let chunk = '';
       for (const sentence of sentences) {
-        chunk += sentence + ' ';
-        if (chunk.length > 300) {
+        const trimmed = sentence.trim();
+        if (!trimmed) continue;
+        
+        chunk += trimmed + ' ';
+        // Create paragraph every 3-4 sentences or when chunk gets long
+        if (chunk.split(/[.!?]/).length > 3 || chunk.length > 400) {
           paragraphs.push(chunk.trim());
           chunk = '';
         }
@@ -200,6 +291,15 @@ export class SectionDetector {
     for (const paragraph of paragraphs) {
       const trimmed = paragraph.trim();
       if (!trimmed || trimmed.length < 10) continue; // Skip very short paragraphs
+      
+      // Skip paragraphs that are just punctuation or formatting artifacts
+      if (/^[\.\*\s\-]+$/.test(trimmed)) continue;
+      
+      // Skip duplicate paragraphs
+      if (this.sections.length > 0) {
+        const lastSection = this.sections[this.sections.length - 1];
+        if (lastSection.content.trim() === trimmed) continue;
+      }
       
       const section = this.detectParagraphType(trimmed, currentIndex);
       if (section) {
@@ -462,10 +562,35 @@ export class SectionDetector {
       return null; // Skip very short paragraphs, they'll be merged
     }
     
+    // Clean up the text - remove any remaining markdown artifacts
+    let cleanText = trimmed;
+    
+    // Remove any remaining asterisks
+    cleanText = cleanText.replace(/\*\*/g, '').replace(/\*/g, '');
+    
+    // Fix sentences that start with periods
+    cleanText = cleanText.replace(/^\.\s+/, '');
+    
+    // Remove duplicate sentences
+    const sentences = cleanText.split(/(?<=[.!?])\s+/);
+    const uniqueSentences: string[] = [];
+    for (const sentence of sentences) {
+      const trimmedSentence = sentence.trim();
+      if (trimmedSentence && !uniqueSentences.includes(trimmedSentence)) {
+        uniqueSentences.push(trimmedSentence);
+      }
+    }
+    cleanText = uniqueSentences.join(' ');
+    
+    // Skip if text is now empty or just punctuation
+    if (!cleanText.trim() || /^[\.\*\s\-]+$/.test(cleanText.trim())) {
+      return null;
+    }
+    
     return {
       type: 'paragraph',
-      content: text,
-      data: { text: trimmed },
+      content: cleanText,
+      data: { text: cleanText },
       confidence: 0.5,
       startIndex,
       endIndex,
@@ -643,14 +768,52 @@ export class SectionDetector {
           if (hasThreeTopics && nextThree.length === 3) {
             // Convert to threeColumnCards
             const cards = nextThree.map((s, idx) => {
-              const content = s.content;
-              const titleMatch = content.match(/(?:^|\n)([A-Z][^.!?]{10,60})/);
-              const title = titleMatch ? titleMatch[1].trim() : `Point ${idx + 1}`;
+              let content = s.content.trim();
+              
+              // Clean up content
+              content = content.replace(/\*\*/g, '').replace(/\*/g, '');
+              
+              // Try to extract a meaningful title
+              // Look for patterns like "Missing the Target", "No Evidence Trail", etc.
+              const titlePatterns = [
+                /(?:^|\n)([A-Z][^.!?]{10,60}?)(?:\.|:|\n)/,
+                /(?:^|\n)(Missing|No|Wrong|The|Why|How|What|Making|Professional|States|Unreasonable|Mistake)/i,
+              ];
+              
+              let title = '';
+              for (const pattern of titlePatterns) {
+                const match = content.match(pattern);
+                if (match && match[1]) {
+                  title = match[1].trim();
+                  // Extract up to first sentence or 50 chars
+                  if (title.length > 50) {
+                    title = title.substring(0, 50).split(/[.!?]/)[0].trim();
+                  }
+                  break;
+                }
+              }
+              
+              // Fallback: use first sentence or first 40 chars
+              if (!title) {
+                const firstSentence = content.split(/[.!?]/)[0] || content;
+                title = firstSentence.substring(0, 40).trim();
+                if (title.length < 10) {
+                  title = content.substring(0, 40).trim();
+                }
+              }
+              
+              // Remove title from description
+              let description = content;
+              if (title && content.startsWith(title)) {
+                description = content.substring(title.length).trim();
+              }
+              // Remove leading punctuation
+              description = description.replace(/^[:\-–—\.]\s*/, '');
               
               return {
                 icon: ['🎯', '📋', '⚖️'][idx] || '📌',
-                title,
-                description: content.substring(title.length).trim().substring(0, 200),
+                title: title || `Point ${idx + 1}`,
+                description: description.substring(0, 200),
               };
             });
             
@@ -679,6 +842,7 @@ export class SectionDetector {
   /**
    * Process a group of consecutive paragraphs
    * Merge short paragraphs together, insert images strategically
+   * Ensures sentences aren't broken
    */
   private processParagraphGroup(paragraphs: DetectedSection[]): DetectedSection[] {
     if (paragraphs.length === 0) return [];
@@ -694,72 +858,132 @@ export class SectionDetector {
     
     for (let i = 0; i < paragraphs.length; i++) {
       const paragraph = paragraphs[i];
-      const content = paragraph.content.trim();
+      let content = paragraph.content.trim();
+      
+      // Clean up content - remove markdown artifacts
+      content = content.replace(/\*\*/g, '').replace(/\*/g, '');
+      content = content.replace(/^\.\s+/, ''); // Remove leading periods
+      
+      // Fix broken sentences (like "collectors for it\n. The money")
+      content = content.replace(/([a-z])\s*\n\s*\.\s+([A-Z])/g, '$1. $2');
+      
+      // Fix broken words
+      content = content.replace(/([a-z])\s+([a-z]{1,3})\s/gi, (match, p1, p2) => {
+        // If it looks like a broken word (very short second part), join them
+        if (p2.length <= 2 && p1.length > 3) {
+          return p1 + p2 + ' ';
+        }
+        return match;
+      });
+      
+      // Skip empty or artifact-only paragraphs
+      if (!content || /^[\.\*\s\-]+$/.test(content)) continue;
       
       // If paragraph is short, merge with previous
       if (content.length < MIN_PARAGRAPH_LENGTH && mergedParagraphs.length > 0) {
-        mergedParagraphs.push(content);
+        // Ensure we're not breaking a sentence - check if previous ends with punctuation
+        const lastMerged = mergedParagraphs[mergedParagraphs.length - 1];
+        const endsWithPunctuation = /[.!?]$/.test(lastMerged.trim());
+        
+        if (endsWithPunctuation) {
+          // Previous paragraph ends properly, safe to add new paragraph
+          mergedParagraphs.push(content);
+        } else {
+          // Previous doesn't end properly, merge as continuation
+          mergedParagraphs[mergedParagraphs.length - 1] = lastMerged + ' ' + content;
+        }
         mergedEndIndex = paragraph.endIndex;
         continue;
       }
       
       // Flush merged paragraphs if we have them
       if (mergedParagraphs.length > 0) {
-        const mergedContent = mergedParagraphs.join('\n\n');
+        const mergedContent = mergedParagraphs.join('\n\n').trim();
         
-        // Every Nth merged block, convert to textWithImage
-        if (imageCounter > 0 && imageCounter % IMAGE_FREQUENCY === 0 && mergedContent.length > 200) {
-          result.push({
-            type: 'textWithImage',
-            content: mergedContent,
-            data: {
-              paragraphs: mergedParagraphs,
-              imageAlt: this.generateImageAlt(mergedContent),
-              imagePosition: imageCounter % 2 === 0 ? 'right' : 'left',
-            },
-            confidence: 0.7,
-            startIndex: mergedStartIndex,
-            endIndex: mergedEndIndex,
-          });
-        } else {
-          // Merge into single paragraph component
-          result.push({
-            type: 'paragraph',
-            content: mergedContent,
-            data: { text: mergedContent },
-            confidence: 0.5,
-            startIndex: mergedStartIndex,
-            endIndex: mergedEndIndex,
-          });
+        // Clean up merged content
+        let cleanMerged = mergedContent
+          .replace(/\*\*/g, '')
+          .replace(/\*/g, '')
+          .replace(/^\.\s+/g, '')
+          .replace(/\n\s*\.\s+/g, '. '); // Fix periods at start of lines
+        
+        // Remove duplicate sentences
+        const sentences = cleanMerged.split(/(?<=[.!?])\s+/);
+        const uniqueSentences: string[] = [];
+        for (const sentence of sentences) {
+          const trimmed = sentence.trim();
+          if (trimmed && !uniqueSentences.includes(trimmed)) {
+            uniqueSentences.push(trimmed);
+          }
+        }
+        cleanMerged = uniqueSentences.join(' ');
+        
+        if (cleanMerged && cleanMerged.length > 20) {
+          // Every Nth merged block, convert to textWithImage
+          if (imageCounter > 0 && imageCounter % IMAGE_FREQUENCY === 0 && cleanMerged.length > 200) {
+            result.push({
+              type: 'textWithImage',
+              content: cleanMerged,
+              data: {
+                paragraphs: mergedParagraphs.filter(p => p.trim()),
+                imageAlt: this.generateImageAlt(cleanMerged),
+                imagePosition: imageCounter % 2 === 0 ? 'right' : 'left',
+              },
+              confidence: 0.7,
+              startIndex: mergedStartIndex,
+              endIndex: mergedEndIndex,
+            });
+          } else {
+            // Merge into single paragraph component
+            result.push({
+              type: 'paragraph',
+              content: cleanMerged,
+              data: { text: cleanMerged },
+              confidence: 0.5,
+              startIndex: mergedStartIndex,
+              endIndex: mergedEndIndex,
+            });
+          }
         }
         
         imageCounter++;
         mergedParagraphs = [];
       }
       
-      // Start new merge group
+      // Start new merge group or add long paragraph
       if (content.length < MIN_PARAGRAPH_LENGTH) {
         mergedParagraphs.push(content);
         mergedStartIndex = paragraph.startIndex;
         mergedEndIndex = paragraph.endIndex;
       } else {
-        // Long paragraph - add as-is
-        result.push(paragraph);
+        // Long paragraph - add as-is (but cleaned)
+        result.push({
+          ...paragraph,
+          content,
+          data: { text: content },
+        });
         imageCounter++;
       }
     }
     
     // Flush any remaining merged paragraphs
     if (mergedParagraphs.length > 0) {
-      const mergedContent = mergedParagraphs.join('\n\n');
-      result.push({
-        type: 'paragraph',
-        content: mergedContent,
-        data: { text: mergedContent },
-        confidence: 0.5,
-        startIndex: mergedStartIndex,
-        endIndex: mergedEndIndex,
-      });
+      const mergedContent = mergedParagraphs.join('\n\n').trim();
+      let cleanMerged = mergedContent
+        .replace(/\*\*/g, '')
+        .replace(/\*/g, '')
+        .replace(/^\.\s+/g, '');
+      
+      if (cleanMerged && cleanMerged.length > 20) {
+        result.push({
+          type: 'paragraph',
+          content: cleanMerged,
+          data: { text: cleanMerged },
+          confidence: 0.5,
+          startIndex: mergedStartIndex,
+          endIndex: mergedEndIndex,
+        });
+      }
     }
     
     return result;
@@ -855,35 +1079,71 @@ export class SectionDetector {
   }
 
   private parseNumberedStep(text: string): { number: number; title: string; description: string } {
+    // Clean text first
+    let cleanText = text
+      .replace(/\*\*/g, '')
+      .replace(/\*/g, '')
+      .replace(/^\.\s+/, '')
+      .trim();
+    
     // Match various formats: "1.", "01", "Step 1:", "First,", etc.
     let number = 1;
-    let content = text;
+    let content = cleanText;
     
     // Try to extract number
-    const numberMatch = text.match(/^(\d+)\.|^0?(\d+)\s|Step\s+(\d+):/i);
+    const numberMatch = cleanText.match(/^(\d+)\.|^0?(\d+)\s|Step\s+(\d+):/i);
     if (numberMatch) {
       number = parseInt(numberMatch[1] || numberMatch[2] || numberMatch[3] || '1', 10);
-      content = text.replace(/^(?:\d+\.|0?\d+\s|Step\s+\d+:)\s*/i, '');
+      content = cleanText.replace(/^(?:\d+\.|0?\d+\s|Step\s+\d+:)\s*/i, '');
     } else {
       // Check for ordinal words
       const ordinalMap: Record<string, number> = {
         'first': 1, 'second': 2, 'third': 3, 'fourth': 4, 'fifth': 5,
         'sixth': 6, 'seventh': 7, 'eighth': 8, 'ninth': 9, 'tenth': 10,
       };
-      const ordinalMatch = text.match(/^(First|Second|Third|Fourth|Fifth|Sixth|Seventh|Eighth|Ninth|Tenth),?\s+/i);
+      const ordinalMatch = cleanText.match(/^(First|Second|Third|Fourth|Fifth|Sixth|Seventh|Eighth|Ninth|Tenth),?\s+/i);
       if (ordinalMatch) {
         number = ordinalMap[ordinalMatch[1].toLowerCase()] || 1;
-        content = text.replace(/^(?:First|Second|Third|Fourth|Fifth|Sixth|Seventh|Eighth|Ninth|Tenth),?\s+/i, '');
+        content = cleanText.replace(/^(?:First|Second|Third|Fourth|Fifth|Sixth|Seventh|Eighth|Ninth|Tenth),?\s+/i, '');
       }
     }
     
-    // Split by colon, dash, or newline
-    const parts = content.split(/[:\-–—\n]\s*/);
+    // Split by colon, dash, or newline - but preserve sentence structure
+    const colonIndex = content.indexOf(':');
+    const dashIndex = content.search(/[–—\-]\s/);
+    
+    let title = '';
+    let description = '';
+    
+    if (colonIndex > 0 && colonIndex < 100) {
+      // Has a colon - use it as separator
+      title = content.substring(0, colonIndex).trim();
+      description = content.substring(colonIndex + 1).trim();
+    } else if (dashIndex > 0 && dashIndex < 100) {
+      // Has a dash - use it as separator
+      title = content.substring(0, dashIndex).trim();
+      description = content.substring(dashIndex + 1).trim();
+    } else {
+      // No clear separator - use first sentence as title, rest as description
+      const firstSentenceMatch = content.match(/^([^.!?]+[.!?])/);
+      if (firstSentenceMatch) {
+        title = firstSentenceMatch[1].trim();
+        description = content.substring(firstSentenceMatch[0].length).trim();
+      } else {
+        // Fallback: first 50 chars as title
+        title = content.substring(0, 50).trim();
+        description = content.substring(50).trim();
+      }
+    }
+    
+    // Clean up title and description
+    title = title.replace(/\*\*/g, '').replace(/\*/g, '').replace(/^\.\s+/, '').trim();
+    description = description.replace(/\*\*/g, '').replace(/\*/g, '').replace(/^\.\s+/, '').trim();
     
     return {
       number,
-      title: parts[0]?.trim() || '',
-      description: parts.slice(1).join(' ').trim() || content.trim(),
+      title: title || 'Step',
+      description: description || content.trim(),
     };
   }
 
