@@ -205,12 +205,23 @@ function sectionToComponent(section: DetectedSection): LayoutComponent | null {
       };
     
     case 'textWithImage':
+      // Ensure paragraphs is always an array
+      let paragraphs = section.data?.paragraphs;
+      if (!paragraphs || !Array.isArray(paragraphs)) {
+        // Split content by double newlines to create paragraphs
+        paragraphs = section.content.split(/\n\n+/).filter(p => p.trim());
+        if (paragraphs.length === 0) {
+          paragraphs = [section.content];
+        }
+      }
+      
       return {
         type: 'textWithImage',
         props: {
-          paragraphs: section.data?.paragraphs || [section.content],
+          paragraphs,
           imageAlt: section.data?.imageAlt || 'Illustration',
           imagePosition: section.data?.imagePosition || 'right',
+          imageSrc: section.data?.imageSrc, // Preserve existing image if any
         },
       };
     

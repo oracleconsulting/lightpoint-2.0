@@ -98,10 +98,69 @@ export class SectionDetector {
 
   private extractTextFromTipTap(node: any): string {
     if (!node) return '';
-    if (node.type === 'text') return node.text || '';
-    if (node.content && Array.isArray(node.content)) {
-      return node.content.map((n: any) => this.extractTextFromTipTap(n)).join('\n');
+    
+    // Handle text nodes
+    if (node.type === 'text') {
+      return node.text || '';
     }
+    
+    // Handle paragraph nodes - add double newline for paragraph breaks
+    if (node.type === 'paragraph') {
+      if (node.content && Array.isArray(node.content)) {
+        const text = node.content.map((n: any) => this.extractTextFromTipTap(n)).join('');
+        return text ? text + '\n\n' : '';
+      }
+      return '\n\n';
+    }
+    
+    // Handle heading nodes - add markdown-style heading
+    if (node.type && node.type.startsWith('heading')) {
+      const level = node.type.replace('heading', '') || '1';
+      const headingText = node.content 
+        ? node.content.map((n: any) => this.extractTextFromTipTap(n)).join('')
+        : '';
+      return headingText ? `${'#'.repeat(parseInt(level) || 1)} ${headingText}\n\n` : '';
+    }
+    
+    // Handle bullet lists
+    if (node.type === 'bulletList' || node.type === 'orderedList') {
+      if (node.content && Array.isArray(node.content)) {
+        return node.content.map((n: any) => this.extractTextFromTipTap(n)).join('\n') + '\n\n';
+      }
+      return '\n\n';
+    }
+    
+    // Handle list items
+    if (node.type === 'listItem') {
+      if (node.content && Array.isArray(node.content)) {
+        const text = node.content.map((n: any) => this.extractTextFromTipTap(n)).join('');
+        return text ? `- ${text}\n` : '';
+      }
+      return '';
+    }
+    
+    // Handle blockquote
+    if (node.type === 'blockquote') {
+      if (node.content && Array.isArray(node.content)) {
+        const text = node.content.map((n: any) => this.extractTextFromTipTap(n)).join('');
+        return text ? `> ${text}\n\n` : '';
+      }
+      return '';
+    }
+    
+    // Handle bold/italic - preserve text
+    if (node.type === 'textStyle' || node.type === 'hardBreak') {
+      if (node.content && Array.isArray(node.content)) {
+        return node.content.map((n: any) => this.extractTextFromTipTap(n)).join('');
+      }
+      return node.type === 'hardBreak' ? '\n' : '';
+    }
+    
+    // Handle doc - process all content
+    if (node.type === 'doc' || (node.content && Array.isArray(node.content))) {
+      return node.content.map((n: any) => this.extractTextFromTipTap(n)).join('');
+    }
+    
     return '';
   }
 
@@ -140,7 +199,7 @@ export class SectionDetector {
     
     for (const paragraph of paragraphs) {
       const trimmed = paragraph.trim();
-      if (!trimmed) continue;
+      if (!trimmed || trimmed.length < 10) continue; // Skip very short paragraphs
       
       const section = this.detectParagraphType(trimmed, currentIndex);
       if (section) {
@@ -373,7 +432,11 @@ export class SectionDetector {
       }
     }
     
-    // Default: paragraph - PRESERVE ALL TEXT
+    // Default: paragraph - but skip very short ones (they'll be merged)
+    if (trimmed.length < 20) {
+      return null; // Skip very short paragraphs, they'll be merged
+    }
+    
     return {
       type: 'paragraph',
       content: text,
@@ -470,33 +533,88 @@ export class SectionDetector {
 
   /**
    * Process a group of consecutive paragraphs
-   * Every 3-4 paragraphs, insert a textWithImage component for visual variety
+   * Merge short paragraphs together, insert images strategically
    */
   private processParagraphGroup(paragraphs: DetectedSection[]): DetectedSection[] {
+    if (paragraphs.length === 0) return [];
+    
     const result: DetectedSection[] = [];
-    const IMAGE_FREQUENCY = 3; // Insert image every N paragraphs
+    const MIN_PARAGRAPH_LENGTH = 100; // Merge paragraphs shorter than this
+    const IMAGE_FREQUENCY = 4; // Insert image every N merged paragraphs
+    
+    let mergedParagraphs: string[] = [];
+    let mergedStartIndex = paragraphs[0]?.startIndex || 0;
+    let mergedEndIndex = paragraphs[0]?.endIndex || 0;
+    let imageCounter = 0;
     
     for (let i = 0; i < paragraphs.length; i++) {
       const paragraph = paragraphs[i];
+      const content = paragraph.content.trim();
       
-      // Every Nth paragraph after the first, convert to text-with-image
-      if (i > 0 && i % IMAGE_FREQUENCY === 0 && paragraph.content.length > 150) {
-        // Convert to textWithImage
-        result.push({
-          type: 'textWithImage',
-          content: paragraph.content,
-          data: {
-            paragraphs: [paragraph.content],
-            imageAlt: this.generateImageAlt(paragraph.content),
-            imagePosition: i % 2 === 0 ? 'right' : 'left',
-          },
-          confidence: 0.7,
-          startIndex: paragraph.startIndex,
-          endIndex: paragraph.endIndex,
-        });
-      } else {
-        result.push(paragraph);
+      // If paragraph is short, merge with previous
+      if (content.length < MIN_PARAGRAPH_LENGTH && mergedParagraphs.length > 0) {
+        mergedParagraphs.push(content);
+        mergedEndIndex = paragraph.endIndex;
+        continue;
       }
+      
+      // Flush merged paragraphs if we have them
+      if (mergedParagraphs.length > 0) {
+        const mergedContent = mergedParagraphs.join('\n\n');
+        
+        // Every Nth merged block, convert to textWithImage
+        if (imageCounter > 0 && imageCounter % IMAGE_FREQUENCY === 0 && mergedContent.length > 200) {
+          result.push({
+            type: 'textWithImage',
+            content: mergedContent,
+            data: {
+              paragraphs: mergedParagraphs,
+              imageAlt: this.generateImageAlt(mergedContent),
+              imagePosition: imageCounter % 2 === 0 ? 'right' : 'left',
+            },
+            confidence: 0.7,
+            startIndex: mergedStartIndex,
+            endIndex: mergedEndIndex,
+          });
+        } else {
+          // Merge into single paragraph component
+          result.push({
+            type: 'paragraph',
+            content: mergedContent,
+            data: { text: mergedContent },
+            confidence: 0.5,
+            startIndex: mergedStartIndex,
+            endIndex: mergedEndIndex,
+          });
+        }
+        
+        imageCounter++;
+        mergedParagraphs = [];
+      }
+      
+      // Start new merge group
+      if (content.length < MIN_PARAGRAPH_LENGTH) {
+        mergedParagraphs.push(content);
+        mergedStartIndex = paragraph.startIndex;
+        mergedEndIndex = paragraph.endIndex;
+      } else {
+        // Long paragraph - add as-is
+        result.push(paragraph);
+        imageCounter++;
+      }
+    }
+    
+    // Flush any remaining merged paragraphs
+    if (mergedParagraphs.length > 0) {
+      const mergedContent = mergedParagraphs.join('\n\n');
+      result.push({
+        type: 'paragraph',
+        content: mergedContent,
+        data: { text: mergedContent },
+        confidence: 0.5,
+        startIndex: mergedStartIndex,
+        endIndex: mergedEndIndex,
+      });
     }
     
     return result;

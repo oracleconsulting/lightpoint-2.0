@@ -47,17 +47,37 @@ export function Paragraph({
     );
   }
 
+  // Split text by double newlines to preserve paragraph structure
+  const paragraphs = text.split(/\n\n+/).filter(p => p.trim());
+  
+  if (paragraphs.length === 1) {
+    // Single paragraph - render normally
+    return (
+      <p className={`
+        text-[20px] lg:text-[22px]
+        leading-[1.75] lg:leading-[1.8]
+        text-slate-700 
+        font-['Georgia',_'Times_New_Roman',_serif]
+        mb-1
+        ${className}
+      `}>
+        {text.replace(/\n/g, ' ')} {/* Replace single newlines with spaces */}
+      </p>
+    );
+  }
+  
+  // Multiple paragraphs - render each as separate paragraph
   return (
-    <p className={`
-      text-[20px] lg:text-[22px]
-      leading-[1.75] lg:leading-[1.8]
-      text-slate-700 
-      font-['Georgia',_'Times_New_Roman',_serif]
-      mb-1
-      ${className}
-    `}>
-      {text}
-    </p>
+    <div className={`space-y-1 ${className}`}>
+      {paragraphs.map((para, index) => (
+        <p 
+          key={index}
+          className="text-[20px] lg:text-[22px] leading-[1.75] lg:leading-[1.8] text-slate-700 font-['Georgia',_'Times_New_Roman',_serif]"
+        >
+          {para.replace(/\n/g, ' ')}
+        </p>
+      ))}
+    </div>
   );
 }
 
