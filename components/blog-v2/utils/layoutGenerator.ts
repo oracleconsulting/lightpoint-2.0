@@ -162,8 +162,8 @@ function sectionToComponent(section: DetectedSection): LayoutComponent | null {
       return {
         type: 'callout',
         props: {
-          icon: section.data?.variant === 'gold' ? 'alert' : 'lightbulb',
-          label: section.data?.variant === 'gold' ? 'Warning' : 'Pro Tip',
+          icon: section.data?.icon || (section.data?.variant === 'gold' ? 'alert' : 'lightbulb'),
+          label: section.data?.label || (section.data?.variant === 'gold' ? 'Warning' : 'Pro Tip'),
           text: section.data?.text || section.content,
           variant: section.data?.variant || 'blue',
         },
@@ -184,6 +184,14 @@ function sectionToComponent(section: DetectedSection): LayoutComponent | null {
         props: {
           leftCard: section.data?.leftCard,
           rightCard: section.data?.rightCard,
+        },
+      };
+    
+    case 'threeColumnCards':
+      return {
+        type: 'threeColumnCards',
+        props: {
+          cards: section.data?.cards || [],
         },
       };
     
