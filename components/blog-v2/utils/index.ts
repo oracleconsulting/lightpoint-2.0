@@ -13,3 +13,9 @@ export {
 } from './layoutGenerator';
 export type { GenerateLayoutOptions } from './layoutGenerator';
 
+export {
+  generateImagesForLayout,
+  layoutNeedsImages,
+  generateImagesInBackground,
+} from './autoImageGenerator';
+

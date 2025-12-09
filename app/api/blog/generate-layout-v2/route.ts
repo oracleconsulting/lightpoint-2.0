@@ -17,6 +17,8 @@ interface V2LayoutRequest {
   author?: string;
   includeHero?: boolean;
   includeCTA?: boolean;
+  slug?: string;
+  autoGenerateImages?: boolean;
 }
 
 export async function POST(req: NextRequest) {
@@ -35,14 +37,18 @@ export async function POST(req: NextRequest) {
     console.log('📄 [V2 Layout] Content length:', content.length);
 
     // Generate the layout using pattern detection
-    const layout = generateLayout({
+    const slug = body.slug || title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const autoGenerateImages = body.autoGenerateImages !== false; // Default true
+    
+    const layout = await generateLayout({
       title,
       content,
       excerpt,
       author,
       includeHero,
       includeCTA,
-    });
+      slug,
+    }, autoGenerateImages);
 
     console.log('✅ [V2 Layout] Generated', layout.components.length, 'components');
     console.log('📄 [V2 Layout] Component types:', layout.components.map(c => c.type).join(', '));

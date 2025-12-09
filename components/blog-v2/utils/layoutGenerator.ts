@@ -5,6 +5,7 @@
 
 import type { BlogLayout, LayoutComponent, ComponentType } from '../types';
 import { detectSections, DetectedSection } from './sectionDetector';
+import { generateImagesForLayout } from './autoImageGenerator';
 
 // ============================================================================
 // MAIN GENERATOR FUNCTION
@@ -18,12 +19,19 @@ export interface GenerateLayoutOptions {
   readingTime?: string;
   includeHero?: boolean;
   includeCTA?: boolean;
+  slug?: string; // Required for auto image generation
 }
 
 /**
  * Generate a complete V2 BlogLayout from markdown/text content
+ * 
+ * @param options Layout generation options
+ * @param autoGenerateImages If true, automatically generates images for textWithImage components (async)
  */
-export function generateLayout(options: GenerateLayoutOptions): BlogLayout {
+export async function generateLayout(
+  options: GenerateLayoutOptions,
+  autoGenerateImages: boolean = false
+): Promise<BlogLayout> {
   const {
     title,
     content,
@@ -81,13 +89,25 @@ export function generateLayout(options: GenerateLayoutOptions): BlogLayout {
     });
   }
   
-  return {
+  const layout: BlogLayout = {
     theme: {
       mode: 'light',
       name: 'lightpoint',
     },
     components,
   };
+
+  // Auto-generate images if requested
+  if (autoGenerateImages && options.slug) {
+    try {
+      return await generateImagesForLayout(layout, options.title, options.slug);
+    } catch (error) {
+      console.error('❌ Image generation failed, returning layout without images:', error);
+      return layout;
+    }
+  }
+
+  return layout;
 }
 
 // ============================================================================
@@ -286,7 +306,11 @@ export function stripFrontmatter(markdown: string): string {
 /**
  * Full pipeline: markdown → BlogLayout
  */
-export function markdownToLayout(markdown: string): BlogLayout {
+export async function markdownToLayout(
+  markdown: string,
+  autoGenerateImages: boolean = false,
+  slug?: string
+): Promise<BlogLayout> {
   const meta = extractMeta(markdown);
   
   return generateLayout({
@@ -294,6 +318,7 @@ export function markdownToLayout(markdown: string): BlogLayout {
     content: meta.content,
     excerpt: meta.excerpt,
     author: meta.author,
-  });
+    slug,
+  }, autoGenerateImages);
 }
 

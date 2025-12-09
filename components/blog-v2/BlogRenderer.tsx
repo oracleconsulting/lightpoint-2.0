@@ -120,10 +120,10 @@ function getSectionStyle(type: ComponentType, index: number): SectionStyle {
     };
   }
 
-  // Default: WIDE container with MINIMAL padding
+  // Default: WIDE container with TIGHT spacing for readability
   return {
     background: 'bg-white',
-    padding: 'py-1 lg:py-2',  // MINIMAL - almost no gap
+    padding: 'py-3 lg:py-4',  // TIGHT but readable spacing
     container: 'max-w-6xl mx-auto px-6 lg:px-10',  // WIDE (1152px)
   };
 }

@@ -249,9 +249,38 @@ export const blogRouter = router({
         updateData.structured_layout = input.data.structuredLayout;
         // Debug: Log what we're saving
         console.log('💾 [tRPC blog.update] Saving structured_layout:');
-        console.log('💾 Component count:', input.data.structuredLayout?.layout?.length || 0);
-        console.log('💾 TextSection count:', input.data.structuredLayout?.layout?.filter((c: any) => c.type === 'TextSection').length || 0);
-        console.log('💾 Component types:', input.data.structuredLayout?.layout?.map((c: any) => c.type) || []);
+        console.log('💾 Component count:', input.data.structuredLayout?.components?.length || input.data.structuredLayout?.layout?.length || 0);
+        console.log('💾 Component types:', input.data.structuredLayout?.components?.map((c: any) => c.type) || input.data.structuredLayout?.layout?.map((c: any) => c.type) || []);
+        
+        // Auto-generate images if publishing and layout has textWithImage components without images
+        if (input.data.isPublished && input.data.structuredLayout?.components) {
+          const needsImages = input.data.structuredLayout.components.some(
+            (c: any) => c.type === 'textWithImage' && !c.props?.imageSrc
+          );
+          
+          if (needsImages) {
+            console.log('🎨 [tRPC blog.update] Layout needs images, triggering background generation...');
+            // Trigger background image generation (non-blocking)
+            const { generateImagesInBackground } = await import('@/components/blog-v2/utils');
+            const post = await supabase.from('blog_posts').select('slug, title').eq('id', input.id).single();
+            
+            if (post.data) {
+              generateImagesInBackground(
+                input.data.structuredLayout,
+                post.data.title,
+                post.data.slug,
+                async (updatedLayout) => {
+                  // Update the post with images
+                  await supabase
+                    .from('blog_posts')
+                    .update({ structured_layout: updatedLayout })
+                    .eq('id', input.id);
+                  console.log('✅ [tRPC blog.update] Images generated and saved');
+                }
+              );
+            }
+          }
+        }
       }
       if (input.data.gammaUrl !== undefined) {
         updateData.gamma_url = input.data.gammaUrl;

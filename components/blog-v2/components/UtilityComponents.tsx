@@ -53,7 +53,7 @@ export function Paragraph({
       leading-[1.75] lg:leading-[1.8]
       text-slate-700 
       font-['Georgia',_'Times_New_Roman',_serif]
-      mb-2
+      mb-1
       ${className}
     `}>
       {text}
@@ -82,7 +82,7 @@ export function SectionHeading({
   decorated = false,
 }: SectionHeadingProps) {
   return (
-    <div className={`mt-6 mb-4 ${centered ? 'text-center' : ''}`}>
+    <div className={`mt-4 mb-3 ${centered ? 'text-center' : ''}`}>
       {/* Optional decorative line */}
       {decorated && (
         <div className={`w-24 h-1.5 bg-blue-500 mb-4 ${centered ? 'mx-auto' : ''}`} />
