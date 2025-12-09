@@ -123,17 +123,23 @@ export class SectionDetector {
     // Fix sentences that were broken mid-word (like "collectors for it\n. The money")
     text = text.replace(/([a-z])\s*\n\s*\.\s+([A-Z])/g, '$1. $2');
     
-    // Remove duplicate consecutive lines
+    // Remove duplicate consecutive lines (but be less aggressive)
     const lines = text.split('\n');
     const deduped: string[] = [];
     for (let i = 0; i < lines.length; i++) {
       const trimmed = lines[i].trim();
-      if (trimmed && trimmed !== deduped[deduped.length - 1]?.trim()) {
-        // Also check if it's a substring of the previous line (avoid partial duplicates)
-        const lastLine = deduped[deduped.length - 1]?.trim() || '';
-        if (!lastLine.includes(trimmed) && !trimmed.includes(lastLine)) {
+      if (!trimmed) {
+        // Keep empty lines if they're not consecutive
+        if (deduped[deduped.length - 1]?.trim()) {
           deduped.push(lines[i]);
         }
+        continue;
+      }
+      
+      // Only skip if it's exactly the same as the previous line
+      const lastLine = deduped[deduped.length - 1]?.trim();
+      if (lastLine !== trimmed) {
+        deduped.push(lines[i]);
       }
     }
     text = deduped.join('\n');
@@ -249,16 +255,21 @@ export class SectionDetector {
         return match;
       });
       
-      // Remove duplicate text within paragraph
+      // Remove duplicate sentences within paragraph (but be less aggressive)
+      // Only remove if sentence appears multiple times in a row
       const sentences = cleaned.split(/(?<=[.!?])\s+/);
-      const uniqueSentences: string[] = [];
-      for (const sentence of sentences) {
-        const trimmed = sentence.trim();
-        if (trimmed && !uniqueSentences.includes(trimmed)) {
-          uniqueSentences.push(trimmed);
+      const dedupedSentences: string[] = [];
+      for (let i = 0; i < sentences.length; i++) {
+        const trimmed = sentences[i].trim();
+        if (!trimmed) continue;
+        
+        // Only skip if it's the same as the immediately previous sentence
+        if (i > 0 && dedupedSentences[dedupedSentences.length - 1] === trimmed) {
+          continue; // Skip consecutive duplicates
         }
+        dedupedSentences.push(trimmed);
       }
-      cleaned = uniqueSentences.join(' ');
+      cleaned = dedupedSentences.join(' ');
       
       return cleaned;
     }).filter(p => p.length > 0);
@@ -290,24 +301,34 @@ export class SectionDetector {
     
     for (const paragraph of paragraphs) {
       const trimmed = paragraph.trim();
-      if (!trimmed || trimmed.length < 10) continue; // Skip very short paragraphs
+      if (!trimmed || trimmed.length < 5) continue; // Reduced from 10 to 5 - be less aggressive
       
       // Skip paragraphs that are just punctuation or formatting artifacts
       if (/^[\.\*\s\-]+$/.test(trimmed)) continue;
       
-      // Skip duplicate paragraphs
+      // Skip duplicate paragraphs (only if exact match and very recent)
       if (this.sections.length > 0) {
         const lastSection = this.sections[this.sections.length - 1];
-        if (lastSection.content.trim() === trimmed) continue;
+        // Only skip if it's an exact match AND the last section was also a paragraph
+        // This prevents skipping legitimate repeated content
+        if (lastSection.type === 'paragraph' && lastSection.content.trim() === trimmed) {
+          console.log('🔬 [SectionDetector] Skipping duplicate paragraph:', trimmed.substring(0, 50));
+          continue;
+        }
       }
       
       const section = this.detectParagraphType(trimmed, currentIndex);
       if (section) {
+        console.log('🔬 [SectionDetector] Detected section:', section.type, trimmed.substring(0, 50));
         this.sections.push(section);
+      } else {
+        console.log('🔬 [SectionDetector] No section detected for:', trimmed.substring(0, 50));
       }
       
       currentIndex += paragraph.length + 2; // +2 for \n\n
     }
+    
+    console.log('🔬 [SectionDetector] Total sections detected:', this.sections.length);
     
     console.log('🔬 [SectionDetector] Sections before post-process:', this.sections.length);
     
@@ -558,7 +579,8 @@ export class SectionDetector {
     }
     
     // Default: paragraph - but skip very short ones (they'll be merged)
-    if (trimmed.length < 20) {
+    // Reduced threshold to be less aggressive
+    if (trimmed.length < 10) {
       return null; // Skip very short paragraphs, they'll be merged
     }
     
@@ -571,16 +593,20 @@ export class SectionDetector {
     // Fix sentences that start with periods
     cleanText = cleanText.replace(/^\.\s+/, '');
     
-    // Remove duplicate sentences
+    // Remove only consecutive duplicate sentences (not all duplicates)
     const sentences = cleanText.split(/(?<=[.!?])\s+/);
-    const uniqueSentences: string[] = [];
-    for (const sentence of sentences) {
-      const trimmedSentence = sentence.trim();
-      if (trimmedSentence && !uniqueSentences.includes(trimmedSentence)) {
-        uniqueSentences.push(trimmedSentence);
+    const dedupedSentences: string[] = [];
+    for (let i = 0; i < sentences.length; i++) {
+      const trimmed = sentences[i].trim();
+      if (!trimmed) continue;
+      
+      // Only skip if it's the same as the immediately previous sentence
+      if (i > 0 && dedupedSentences[dedupedSentences.length - 1] === trimmed) {
+        continue; // Skip consecutive duplicates only
       }
+      dedupedSentences.push(trimmed);
     }
-    cleanText = uniqueSentences.join(' ');
+    cleanText = dedupedSentences.join(' ');
     
     // Skip if text is now empty or just punctuation
     if (!cleanText.trim() || /^[\.\*\s\-]+$/.test(cleanText.trim())) {
@@ -907,16 +933,20 @@ export class SectionDetector {
           .replace(/^\.\s+/g, '')
           .replace(/\n\s*\.\s+/g, '. '); // Fix periods at start of lines
         
-        // Remove duplicate sentences
+        // Remove only consecutive duplicate sentences
         const sentences = cleanMerged.split(/(?<=[.!?])\s+/);
-        const uniqueSentences: string[] = [];
-        for (const sentence of sentences) {
-          const trimmed = sentence.trim();
-          if (trimmed && !uniqueSentences.includes(trimmed)) {
-            uniqueSentences.push(trimmed);
+        const dedupedSentences: string[] = [];
+        for (let i = 0; i < sentences.length; i++) {
+          const trimmed = sentences[i].trim();
+          if (!trimmed) continue;
+          
+          // Only skip if it's the same as the immediately previous sentence
+          if (i > 0 && dedupedSentences[dedupedSentences.length - 1] === trimmed) {
+            continue; // Skip consecutive duplicates only
           }
+          dedupedSentences.push(trimmed);
         }
-        cleanMerged = uniqueSentences.join(' ');
+        cleanMerged = dedupedSentences.join(' ');
         
         if (cleanMerged && cleanMerged.length > 20) {
           // Every Nth merged block, convert to textWithImage
