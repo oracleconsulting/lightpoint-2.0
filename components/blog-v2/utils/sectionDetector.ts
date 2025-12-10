@@ -57,7 +57,16 @@ export class SectionDetector {
   private sections: DetectedSection[] = [];
 
   constructor(content: string) {
+    console.log('🔬 [SectionDetector] Constructor - Input type:', typeof content);
+    console.log('🔬 [SectionDetector] Constructor - Input length:', typeof content === 'string' ? content.length : 'N/A');
+    if (typeof content === 'string') {
+      console.log('🔬 [SectionDetector] Constructor - First 300 chars:', content.substring(0, 300));
+    } else {
+      console.log('🔬 [SectionDetector] Constructor - Input is object:', JSON.stringify(content).substring(0, 300));
+    }
     this.content = this.normalizeContent(content);
+    console.log('🔬 [SectionDetector] Constructor - After normalization length:', this.content.length);
+    console.log('🔬 [SectionDetector] Constructor - After normalization preview:', this.content.substring(0, 300));
   }
 
   /**
@@ -381,15 +390,29 @@ export class SectionDetector {
       // Check for three-column cards (3 consecutive paragraphs with similar structure)
       if (i + 2 < paragraphs.length) {
         const nextThree = paragraphs.slice(i, i + 3);
+        console.log('🔬 [SectionDetector] Checking for threeColumnCards at index', i);
+        console.log('🔬 [SectionDetector] Next 3 paragraphs:', nextThree.map((p, idx) => ({
+          index: idx,
+          length: p.length,
+          preview: p.substring(0, 100),
+          hasBold: p.includes('**'),
+          hasEmoji: /[🎯📋⚖️🔑💡✅❌📧📝📜💰⚠️📅]/.test(p),
+        })));
         const threeColumnSection = this.detectThreeColumnCards(nextThree, currentIndex);
         if (threeColumnSection) {
-          console.log('🔬 [SectionDetector] Detected threeColumnCards:', {
-            cards: threeColumnSection.data?.cards?.map((c: any) => ({ title: c.title?.substring(0, 40), hasDescription: !!c.description })),
+          console.log('🔬 [SectionDetector] ✅ Detected threeColumnCards:', {
+            cards: threeColumnSection.data?.cards?.map((c: any) => ({ 
+              title: c.title?.substring(0, 40), 
+              descriptionLength: c.description?.length || 0,
+              hasCallout: !!c.callout,
+            })),
           });
           sections.push(threeColumnSection);
           i += 3;
           currentIndex += nextThree.reduce((sum, p) => sum + p.length + 2, 0);
           continue;
+        } else {
+          console.log('🔬 [SectionDetector] ❌ Three-column cards NOT detected');
         }
       }
       
@@ -470,7 +493,11 @@ export class SectionDetector {
    * IMPROVED: Handles multiple content formats including TipTap output
    */
   private detectThreeColumnCards(paragraphs: string[], startIndex: number): DetectedSection | null {
-    if (paragraphs.length < 3) return null;
+    console.log('🔬 [detectThreeColumnCards] Called with', paragraphs.length, 'paragraphs');
+    if (paragraphs.length < 3) {
+      console.log('🔬 [detectThreeColumnCards] ❌ Not enough paragraphs');
+      return null;
+    }
     
     // Process up to 3 paragraphs
     const candidateParagraphs = paragraphs.slice(0, 3);
@@ -597,6 +624,7 @@ export class SectionDetector {
     
     // Require exactly 3 cards for three-column layout
     if (cards.length === 3) {
+      console.log('🔬 [detectThreeColumnCards] ✅ Found 3 cards:', cards.map(c => ({ title: c.title?.substring(0, 30), descLength: c.description?.length || 0 })));
       const combinedText = candidateParagraphs.join('\n\n');
       return {
         type: 'threeColumnCards',
@@ -608,6 +636,8 @@ export class SectionDetector {
       };
     }
     
+    console.log('🔬 [detectThreeColumnCards] ❌ Only found', cards.length, 'cards, need 3');
+    console.log('🔬 [detectThreeColumnCards] Cards found:', cards.map(c => ({ title: c.title?.substring(0, 30) || 'NO TITLE' })));
     return null;
   }
   

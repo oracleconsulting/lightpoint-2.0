@@ -43,7 +43,8 @@ export async function generateLayout(
   } = options;
 
   console.log('🔍 [V2 Layout] Input content length:', content?.length || 0);
-  console.log('🔍 [V2 Layout] Content preview:', content?.substring(0, 200));
+  console.log('🔍 [V2 Layout] Content type:', typeof content);
+  console.log('🔍 [V2 Layout] Content preview:', typeof content === 'string' ? content?.substring(0, 500) : JSON.stringify(content).substring(0, 500));
 
   // Detect sections from content
   const sections = detectSections(content);

@@ -35,6 +35,8 @@ export async function POST(req: NextRequest) {
 
     console.log('📄 [V2 Layout] Generating layout for:', title.substring(0, 50));
     console.log('📄 [V2 Layout] Content length:', content.length);
+    console.log('📄 [V2 Layout] Content type:', typeof content);
+    console.log('📄 [V2 Layout] Content preview (first 500 chars):', typeof content === 'string' ? content.substring(0, 500) : JSON.stringify(content).substring(0, 500));
 
     // Generate the layout using pattern detection
     const slug = body.slug || title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
