@@ -226,6 +226,7 @@ export class SectionDetector {
 
   /**
    * Run all detectors and return sections
+   * NEW APPROACH: Group paragraphs first, then detect component types
    */
   detect(): DetectedSection[] {
     this.sections = [];
@@ -297,47 +298,334 @@ export class SectionDetector {
     
     console.log('🔬 [SectionDetector] Paragraphs found:', paragraphs.length);
     
-    let currentIndex = 0;
+    // NEW APPROACH: Group paragraphs first, then detect
+    const groupedSections = this.groupAndDetect(paragraphs);
     
-    for (const paragraph of paragraphs) {
-      const trimmed = paragraph.trim();
-      if (!trimmed || trimmed.length < 5) continue; // Reduced from 10 to 5 - be less aggressive
-      
-      // Skip paragraphs that are just punctuation or formatting artifacts
-      if (/^[\.\*\s\-]+$/.test(trimmed)) continue;
-      
-      // Skip duplicate paragraphs (only if exact match and very recent)
-      if (this.sections.length > 0) {
-        const lastSection = this.sections[this.sections.length - 1];
-        // Only skip if it's an exact match AND the last section was also a paragraph
-        // This prevents skipping legitimate repeated content
-        if (lastSection.type === 'paragraph' && lastSection.content.trim() === trimmed) {
-          console.log('🔬 [SectionDetector] Skipping duplicate paragraph:', trimmed.substring(0, 50));
-          continue;
-        }
-      }
-      
-      const section = this.detectParagraphType(trimmed, currentIndex);
-      if (section) {
-        console.log('🔬 [SectionDetector] Detected section:', section.type, trimmed.substring(0, 50));
-        this.sections.push(section);
-      } else {
-        console.log('🔬 [SectionDetector] No section detected for:', trimmed.substring(0, 50));
-      }
-      
-      currentIndex += paragraph.length + 2; // +2 for \n\n
-    }
-    
-    console.log('🔬 [SectionDetector] Total sections detected:', this.sections.length);
-    
-    console.log('🔬 [SectionDetector] Sections before post-process:', this.sections.length);
+    console.log('🔬 [SectionDetector] Total sections detected:', groupedSections.length);
     
     // Post-process: merge adjacent stats, group numbered steps
+    this.sections = groupedSections;
     this.postProcess();
     
     console.log('🔬 [SectionDetector] Final sections:', this.sections.length);
     
     return this.sections;
+  }
+  
+  /**
+   * Group paragraphs intelligently before detecting component types
+   * This ensures related content is grouped together (e.g., 3 paragraphs = threeColumnCards)
+   */
+  private groupAndDetect(paragraphs: string[]): DetectedSection[] {
+    const sections: DetectedSection[] = [];
+    let currentIndex = 0;
+    let i = 0;
+    
+    while (i < paragraphs.length) {
+      const trimmed = paragraphs[i].trim();
+      if (!trimmed || trimmed.length < 5) {
+        i++;
+        currentIndex += paragraphs[i]?.length + 2 || 0;
+        continue;
+      }
+      
+      // Skip paragraphs that are just punctuation or formatting artifacts
+      if (/^[\.\*\s\-]+$/.test(trimmed)) {
+        i++;
+        currentIndex += paragraphs[i]?.length + 2 || 0;
+        continue;
+      }
+      
+      // Check for special single-paragraph components first (headings, callouts, etc.)
+      const singleSection = this.detectParagraphType(trimmed, currentIndex);
+      if (singleSection && singleSection.type !== 'paragraph') {
+        // It's a special component (heading, callout, etc.) - add it
+        sections.push(singleSection);
+        i++;
+        currentIndex += trimmed.length + 2;
+        continue;
+      }
+      
+      // Look ahead to group related paragraphs
+      // Check for three-column cards (3 consecutive paragraphs with similar structure)
+      if (i + 2 < paragraphs.length) {
+        const nextThree = paragraphs.slice(i, i + 3);
+        const threeColumnSection = this.detectThreeColumnCards(nextThree, currentIndex);
+        if (threeColumnSection) {
+          sections.push(threeColumnSection);
+          i += 3;
+          currentIndex += nextThree.reduce((sum, p) => sum + p.length + 2, 0);
+          continue;
+        }
+      }
+      
+      // Check for numbered steps (multiple consecutive numbered items)
+      const numberedSteps = this.detectNumberedStepsGroup(paragraphs, i, currentIndex);
+      if (numberedSteps && numberedSteps.count > 1) {
+        sections.push(numberedSteps.section);
+        i += numberedSteps.count;
+        currentIndex += numberedSteps.totalLength;
+        continue;
+      }
+      
+      // Check for timeline (multiple paragraphs with dates)
+      const timeline = this.detectTimelineGroup(paragraphs, i, currentIndex);
+      if (timeline && timeline.count >= 2) {
+        sections.push(timeline.section);
+        i += timeline.count;
+        currentIndex += timeline.totalLength;
+        continue;
+      }
+      
+      // Check for stats (multiple paragraphs with stats)
+      const stats = this.detectStatsGroup(paragraphs, i, currentIndex);
+      if (stats && stats.count >= 3) {
+        sections.push(stats.section);
+        i += stats.count;
+        currentIndex += stats.totalLength;
+        continue;
+      }
+      
+      // Default: process as single paragraph
+      const section = this.detectParagraphType(trimmed, currentIndex);
+      if (section) {
+        sections.push(section);
+      }
+      
+      i++;
+      currentIndex += trimmed.length + 2;
+    }
+    
+    return sections;
+  }
+  
+  /**
+   * Detect three-column cards from 3 consecutive paragraphs
+   */
+  private detectThreeColumnCards(paragraphs: string[], startIndex: number): DetectedSection | null {
+    if (paragraphs.length !== 3) return null;
+    
+    // Clean paragraphs
+    const cleaned = paragraphs.map(p => {
+      let text = p.trim();
+      text = text.replace(/\*\*/g, '').replace(/\*/g, '');
+      text = text.replace(/^\.\s+/, '');
+      return text;
+    });
+    
+    // All paragraphs should be similar length and structure
+    const lengths = cleaned.map(p => p.length);
+    const avgLength = lengths.reduce((a, b) => a + b, 0) / 3;
+    const lengthVariance = lengths.every(l => Math.abs(l - avgLength) < avgLength * 0.7); // More lenient
+    
+    // Check if they look like distinct points/cards
+    // Look for patterns that suggest card-like structure
+    const hasCardStructure = cleaned.some(p => {
+      const lower = p.toLowerCase();
+      // Check for title-like patterns at start
+      return /^(?:missing|no|wrong|the|why|how|what|making|professional|states|unreasonable|mistake|point|first|second|third|don't|do|the key|recoverable|not recoverable)/i.test(p.trim()) ||
+             // Or check if first sentence is short (like a title)
+             (p.split(/[.!?]/)[0]?.length || 0) < 80;
+    });
+    
+    // Check if they're not too long (cards should be concise)
+    const allReasonableLength = cleaned.every(p => p.length < 500);
+    
+    // Check if they have distinct content (not all the same)
+    const firstWords = cleaned.map(p => p.split(/\s+/)[0]?.toLowerCase() || '');
+    const hasDistinctContent = new Set(firstWords).size >= 2;
+    
+    if ((lengthVariance || hasCardStructure) && allReasonableLength && hasDistinctContent) {
+      const combinedText = cleaned.join('\n\n');
+      const cards = cleaned.map((content, idx) => {
+        // Extract title - look for first sentence or first phrase before colon/dash
+        let title = '';
+        let description = content;
+        
+        // Check for colon or dash separator (title: description)
+        const colonMatch = content.match(/^([^:]{10,80}?)[:–—]\s*(.+)/);
+        if (colonMatch) {
+          title = colonMatch[1].trim();
+          description = colonMatch[2].trim();
+        } else {
+          // Extract first sentence as title if it's short
+          const firstSentence = content.split(/[.!?]/)[0] || content;
+          if (firstSentence.length < 80 && firstSentence.length > 10) {
+            title = firstSentence.trim();
+            description = content.substring(firstSentence.length).trim();
+            description = description.replace(/^[.!?]\s*/, '');
+          } else {
+            // Use first 50-60 chars as title
+            title = content.substring(0, 60).trim();
+            // Try to break at word boundary
+            const lastSpace = title.lastIndexOf(' ');
+            if (lastSpace > 30) {
+              title = title.substring(0, lastSpace);
+            }
+            description = content.substring(title.length).trim();
+          }
+        }
+        
+        // Clean up description
+        description = description.replace(/^[:\-–—\.]\s*/, '');
+        if (description.length > 250) {
+          description = description.substring(0, 247) + '...';
+        }
+        
+        // Ensure title is meaningful
+        if (!title || title.length < 5) {
+          title = `Point ${idx + 1}`;
+        }
+        
+        return {
+          icon: ['🎯', '📋', '⚖️'][idx] || '📌',
+          title: title,
+          description: description || '',
+        };
+      });
+      
+      return {
+        type: 'threeColumnCards',
+        content: combinedText,
+        data: { cards },
+        confidence: 0.8,
+        startIndex,
+        endIndex: startIndex + combinedText.length,
+      };
+    }
+    
+    return null;
+  }
+  
+  /**
+   * Detect numbered steps group
+   */
+  private detectNumberedStepsGroup(paragraphs: string[], startIndex: number, currentIndex: number): { section: DetectedSection; count: number; totalLength: number } | null {
+    const steps: Array<{ title: string; description: string }> = [];
+    let i = startIndex;
+    let totalLength = 0;
+    
+    while (i < paragraphs.length && steps.length < 10) {
+      const trimmed = paragraphs[i].trim();
+      const numberedPattern = /^(?:\d+\.|Step\s+\d+:|0?\d+\s|(?:First|Second|Third|Fourth|Fifth|Sixth|Seventh|Eighth|Ninth|Tenth),?\s+)/i;
+      
+      if (numberedPattern.test(trimmed)) {
+        const stepData = this.parseNumberedStep(trimmed);
+        if (stepData.title || stepData.description) {
+          steps.push({
+            title: stepData.title || `Step ${steps.length + 1}`,
+            description: stepData.description || '',
+          });
+          totalLength += trimmed.length + 2;
+          i++;
+        } else {
+          break;
+        }
+      } else {
+        break;
+      }
+    }
+    
+    if (steps.length >= 2) {
+      return {
+        section: {
+          type: 'numberedSteps',
+          content: paragraphs.slice(startIndex, i).join('\n\n'),
+          data: { steps },
+          confidence: 0.85,
+          startIndex: currentIndex,
+          endIndex: currentIndex + totalLength,
+        },
+        count: steps.length,
+        totalLength,
+      };
+    }
+    
+    return null;
+  }
+  
+  /**
+   * Detect timeline group
+   */
+  private detectTimelineGroup(paragraphs: string[], startIndex: number, currentIndex: number): { section: DetectedSection; count: number; totalLength: number } | null {
+    const datePattern = /(?:\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}|Day\s+\d+|Week\s+\d+)/gi;
+    const events: Array<{ date: string; title: string; description: string }> = [];
+    let i = startIndex;
+    let totalLength = 0;
+    
+    while (i < paragraphs.length && events.length < 10) {
+      const trimmed = paragraphs[i].trim();
+      const dateMatches = [...trimmed.matchAll(datePattern)];
+      
+      if (dateMatches.length > 0) {
+        const eventData = this.extractTimelineEvents(trimmed);
+        if (eventData.length > 0) {
+          events.push(...eventData);
+          totalLength += trimmed.length + 2;
+          i++;
+        } else {
+          break;
+        }
+      } else {
+        break;
+      }
+    }
+    
+    if (events.length >= 2) {
+      return {
+        section: {
+          type: 'timeline',
+          content: paragraphs.slice(startIndex, i).join('\n\n'),
+          data: { events },
+          confidence: 0.85,
+          startIndex: currentIndex,
+          endIndex: currentIndex + totalLength,
+        },
+        count: events.length,
+        totalLength,
+      };
+    }
+    
+    return null;
+  }
+  
+  /**
+   * Detect stats group
+   */
+  private detectStatsGroup(paragraphs: string[], startIndex: number, currentIndex: number): { section: DetectedSection; count: number; totalLength: number } | null {
+    const statMatches: Array<{ value: string; label: string; description?: string }> = [];
+    let i = startIndex;
+    let totalLength = 0;
+    
+    while (i < paragraphs.length && statMatches.length < 6) {
+      const trimmed = paragraphs[i].trim();
+      const stats = this.extractStats(trimmed);
+      
+      if (stats.length >= 1) {
+        statMatches.push(...stats);
+        totalLength += trimmed.length + 2;
+        i++;
+      } else {
+        break;
+      }
+    }
+    
+    if (statMatches.length >= 3) {
+      return {
+        section: {
+          type: 'stats',
+          content: paragraphs.slice(startIndex, i).join('\n\n'),
+          data: { stats: statMatches, variant: 'flat', columns: Math.min(statMatches.length, 4) },
+          confidence: 0.8,
+          startIndex: currentIndex,
+          endIndex: currentIndex + totalLength,
+        },
+        count: statMatches.length,
+        totalLength,
+      };
+    }
+    
+    return null;
   }
 
   /**
