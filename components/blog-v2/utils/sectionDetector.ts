@@ -121,9 +121,10 @@ export class SectionDetector {
     
     // CRITICAL: Fix words that got stuck together (common when HTML/structure is removed)
     // Pattern: lowercase letter followed by uppercase letter = missing space
-    text = text.replace(/([a-z])([A-Z])/g, '$1 $2');
-    // Pattern: word ending with lowercase followed by word starting with capital = missing space
+    // But be careful - don't break acronyms or proper nouns
     text = text.replace(/([a-z]{2,})([A-Z][a-z]{2,})/g, '$1 $2');
+    // Pattern: word ending with lowercase followed by word starting with capital = missing space
+    text = text.replace(/([a-z])([A-Z][a-z])/g, '$1 $2');
     
     // Fix broken sentences - if a line ends without punctuation and next line starts lowercase, merge
     text = text.replace(/([a-z])\n([a-z])/g, '$1 $2');
@@ -182,10 +183,24 @@ export class SectionDetector {
     }
     
     // Handle paragraph nodes - add double newline for paragraph breaks
+    // CRITICAL: Preserve spaces between text nodes
     if (node.type === 'paragraph') {
       if (node.content && Array.isArray(node.content)) {
-        const text = node.content.map((n: any) => this.extractTextFromTipTap(n)).join('').trim();
-        return text ? text + '\n\n' : '';
+        // Join text nodes with spaces to preserve word boundaries
+        let text = '';
+        for (let i = 0; i < node.content.length; i++) {
+          const childText = this.extractTextFromTipTap(node.content[i]);
+          if (childText) {
+            // Add space before if previous node was text and this is text
+            if (text && !text.endsWith(' ') && !text.endsWith('\n') && 
+                node.content[i]?.type === 'text' && 
+                (i === 0 || node.content[i-1]?.type === 'text')) {
+              text += ' ';
+            }
+            text += childText;
+          }
+        }
+        return text.trim() ? text.trim() + '\n\n' : '';
       }
       return '';
     }
@@ -260,9 +275,16 @@ export class SectionDetector {
       return ' '; // Convert to space instead of newline to preserve sentence flow
     }
     
-    // Handle doc - process all content
+    // Handle doc - process all content, preserve spaces
     if (node.type === 'doc' || (node.content && Array.isArray(node.content))) {
-      return node.content.map((n: any) => this.extractTextFromTipTap(n)).join('');
+      let result = '';
+      for (let i = 0; i < node.content.length; i++) {
+        const childText = this.extractTextFromTipTap(node.content[i]);
+        if (childText) {
+          result += childText;
+        }
+      }
+      return result;
     }
     
     return '';
@@ -504,6 +526,7 @@ export class SectionDetector {
   /**
    * Detect three-column cards from 3 consecutive paragraphs
    * IMPROVED: Handles multiple content formats including TipTap output
+   * Matches patterns: bold titles, emoji prefixes, colon-separated, numbered points
    */
   private detectThreeColumnCards(paragraphs: string[], startIndex: number): DetectedSection | null {
     console.log('🔬 [detectThreeColumnCards] Called with', paragraphs.length, 'paragraphs');
@@ -512,7 +535,7 @@ export class SectionDetector {
       return null;
     }
     
-    // Process up to 3 paragraphs
+    // Process exactly 3 paragraphs
     const candidateParagraphs = paragraphs.slice(0, 3);
     const cards: Array<{ icon?: string; title: string; description: string; callout?: { label: string; text: string } }> = [];
     
@@ -520,45 +543,126 @@ export class SectionDetector {
       const paragraph = candidateParagraphs[i];
       let content = paragraph.trim();
       
-      // Don't strip ** markers yet - we need them for detection
-      // Only strip for final output
+      // Skip empty paragraphs
+      if (!content || content.length < 10) {
+        continue;
+      }
       
       let title = '';
       let description = '';
       let icon: string | undefined;
       let callout: { label: string; text: string } | undefined;
       
+      // Split content into lines for multi-line processing
+      const lines = content.split('\n').map(l => l.trim()).filter(l => l);
+      
       // Pattern 1: Bold title - "**Title**: description" or "- **Title**: description"
-      const boldPattern = content.match(/^[-•*]?\s*\*\*([^*]+)\*\*[:\s]*(.*)/);
+      const boldPattern = content.match(/^[-•*]?\s*\*\*([^*]+)\*\*[:\s]*(.*)/s);
       
       // Pattern 2: Emoji prefix - "🎯 Title: description" or "📋 Title: description"
-      const emojiPattern = content.match(/^([🎯📋⚖️🔑💡✅❌📧📝📜💰⚠️📅])\s*(.+?)(?::\s*(.*))?$/);
+      const emojiPattern = content.match(/^([🎯📋⚖️🔑💡✅❌📧📝📜💰⚠️📅])\s*(.+?)(?::\s*(.*))?$/s);
       
       // Pattern 3: Simple numbered - "Point 1: description" - but extract better title
-      const pointPattern = content.match(/^Point\s+\d+[:\s]*(.*)/i);
+      const pointPattern = content.match(/^Point\s+\d+[:\s]*(.*)/is);
       
       // Pattern 4: Colon-separated - "Title: longer description text"
-      const colonPattern = content.match(/^([A-Z][^:]{5,60}?):\s+(.+)/);
+      const colonPattern = content.match(/^([A-Z][^:]{5,60}?):\s+(.+)/s);
       
       if (boldPattern) {
         title = boldPattern[1].trim();
         description = boldPattern[2]?.trim() || '';
+        // Gather additional description from following lines
+        for (let j = 1; j < lines.length; j++) {
+          const line = lines[j];
+          // Stop if we hit another card pattern
+          if (line.match(/^[-•*]?\s*\*\*/) || line.match(/^[🎯📋⚖️]/) || line.match(/^[A-Z][^:]{5,60}:\s/)) {
+            break;
+          }
+          // Check for "Instead:" callout
+          if (line.match(/^(Instead:|Rather:|Better:|COMPARE THAT TO:)/i)) {
+            const calloutMatch = line.match(/^(Instead:|Rather:|Better:|COMPARE THAT TO:)\s*(.*)/i);
+            if (calloutMatch) {
+              callout = {
+                label: calloutMatch[1],
+                text: calloutMatch[2] || '',
+              };
+              // Gather more callout text from following lines
+              for (let k = j + 1; k < lines.length; k++) {
+                const calloutLine = lines[k];
+                if (!calloutLine || calloutLine.match(/^[-•*]?\s*\*\*/) || calloutLine.match(/^[🎯📋⚖️]/)) break;
+                if (callout) {
+                  callout.text += ' ' + calloutLine;
+                }
+              }
+              break;
+            }
+          }
+          description += ' ' + line;
+        }
       } else if (emojiPattern) {
         icon = emojiPattern[1];
-        // Split by colon if present, otherwise use whole text as title
+        // Split by colon if present
         if (emojiPattern[3]) {
           title = emojiPattern[2].trim();
           description = emojiPattern[3].trim();
         } else {
-          // Extract title from text
+          // Extract title from text (first sentence or first 50 chars)
           title = this.extractTitleFromText(emojiPattern[2], 50);
           description = emojiPattern[2].substring(title.length).trim();
+        }
+        // Gather additional description from following lines
+        for (let j = 1; j < lines.length; j++) {
+          const line = lines[j];
+          if (line.match(/^[🎯📋⚖️]/) || line.match(/^[-•*]?\s*\*\*/) || line.match(/^[A-Z][^:]{5,60}:\s/)) break;
+          // Check for "Instead:" callout
+          if (line.match(/^(Instead:|Rather:|Better:|COMPARE THAT TO:)/i)) {
+            const calloutMatch = line.match(/^(Instead:|Rather:|Better:|COMPARE THAT TO:)\s*(.*)/i);
+            if (calloutMatch) {
+              callout = {
+                label: calloutMatch[1],
+                text: calloutMatch[2] || '',
+              };
+              for (let k = j + 1; k < lines.length; k++) {
+                const calloutLine = lines[k];
+                if (!calloutLine || calloutLine.match(/^[-•*]?\s*\*\*/) || calloutLine.match(/^[🎯📋⚖️]/)) break;
+                if (callout) {
+                  callout.text += ' ' + calloutLine;
+                }
+              }
+              break;
+            }
+          }
+          description += ' ' + line;
         }
       } else if (colonPattern && !pointPattern) {
         title = colonPattern[1].trim();
         description = colonPattern[2].trim();
+        // Gather additional description from following lines
+        for (let j = 1; j < lines.length; j++) {
+          const line = lines[j];
+          if (line.match(/^[A-Z][^:]{5,60}:\s/) || line.match(/^[🎯📋⚖️]/) || line.match(/^[-•*]?\s*\*\*/)) break;
+          // Check for "Instead:" callout
+          if (line.match(/^(Instead:|Rather:|Better:|COMPARE THAT TO:)/i)) {
+            const calloutMatch = line.match(/^(Instead:|Rather:|Better:|COMPARE THAT TO:)\s*(.*)/i);
+            if (calloutMatch) {
+              callout = {
+                label: calloutMatch[1],
+                text: calloutMatch[2] || '',
+              };
+              for (let k = j + 1; k < lines.length; k++) {
+                const calloutLine = lines[k];
+                if (!calloutLine || calloutLine.match(/^[-•*]?\s*\*\*/) || calloutLine.match(/^[🎯📋⚖️]/)) break;
+                if (callout) {
+                  callout.text += ' ' + calloutLine;
+                }
+              }
+              break;
+            }
+          }
+          description += ' ' + line;
+        }
       } else if (pointPattern) {
-        // For "Point X:" patterns, try to extract meaningful title from description
+        // For "Point X:" patterns, extract meaningful title from description
         const desc = pointPattern[1].trim();
         // Look for first sentence or meaningful phrase
         const firstSentence = desc.split(/[.!?]/)[0] || desc;
@@ -566,9 +670,33 @@ export class SectionDetector {
           title = firstSentence.trim();
           description = desc.substring(firstSentence.length).trim();
         } else {
-          // Use first meaningful words
+          // Use first meaningful words (respect word boundaries)
           title = this.extractTitleFromText(desc, 50);
           description = desc.substring(title.length).trim();
+        }
+        // Gather additional description
+        for (let j = 1; j < lines.length; j++) {
+          const line = lines[j];
+          if (line.match(/^Point\s+\d+/i) || line.match(/^[🎯📋⚖️]/) || line.match(/^[-•*]?\s*\*\*/)) break;
+          // Check for "Instead:" callout
+          if (line.match(/^(Instead:|Rather:|Better:|COMPARE THAT TO:)/i)) {
+            const calloutMatch = line.match(/^(Instead:|Rather:|Better:|COMPARE THAT TO:)\s*(.*)/i);
+            if (calloutMatch) {
+              callout = {
+                label: calloutMatch[1],
+                text: calloutMatch[2] || '',
+              };
+              for (let k = j + 1; k < lines.length; k++) {
+                const calloutLine = lines[k];
+                if (!calloutLine || calloutLine.match(/^[-•*]?\s*\*\*/) || calloutLine.match(/^[🎯📋⚖️]/)) break;
+                if (callout) {
+                  callout.text += ' ' + calloutLine;
+                }
+              }
+              break;
+            }
+          }
+          description += ' ' + line;
         }
       } else {
         // Try to extract title from first sentence or phrase
@@ -578,9 +706,18 @@ export class SectionDetector {
           description = content.substring(firstSentence.length).trim();
           description = description.replace(/^[.!?]\s*/, '');
         } else {
-          // Use first meaningful words as title
+          // Use first meaningful words as title (respect word boundaries)
           title = this.extractTitleFromText(content, 60);
           description = content.substring(title.length).trim();
+        }
+        // Check for "Instead:" callout in description
+        const insteadMatch = description.match(/(?:Instead|Rather|Better|COMPARE THAT TO):\s*(.+)/is);
+        if (insteadMatch) {
+          callout = {
+            label: 'Instead:',
+            text: insteadMatch[1] || '',
+          };
+          description = description.replace(/(?:Instead|Rather|Better|COMPARE THAT TO):\s*.+/is, '').trim();
         }
       }
       
@@ -589,23 +726,12 @@ export class SectionDetector {
       description = description.replace(/\*\*/g, '').replace(/\*/g, '').trim();
       description = description.replace(/^[:\-–—\.]\s*/, '');
       
-      // Check for "Instead:" callout in description
-      const insteadMatch = description.match(/(?:Instead|Rather|Better|COMPARE THAT TO):\s*(.+)/i);
-      if (insteadMatch) {
-        callout = {
-          label: insteadMatch[1] ? 'Instead:' : 'Note:',
-          text: insteadMatch[1] || insteadMatch[0],
-        };
-        // Remove callout from description
-        description = description.replace(/(?:Instead|Rather|Better|COMPARE THAT TO):\s*.+/i, '').trim();
-      }
-      
       // Truncate description at word boundary if too long
       if (description.length > 250) {
         description = this.truncateAtWordBoundary(description, 250);
       }
       
-      // Ensure title is meaningful - never use "Point X" fallback
+      // Ensure title is meaningful - NEVER use "Point X" fallback
       if (!title || title.length < 5 || /^Point\s+\d+$/i.test(title)) {
         // Extract from description instead
         const descTitle = this.extractTitleFromText(description, 50);
@@ -624,6 +750,7 @@ export class SectionDetector {
       
       // Skip if we still don't have a good title
       if (!title || title.length < 5) {
+        console.log('🔬 [detectThreeColumnCards] Skipping paragraph', i, '- no good title found');
         continue;
       }
       
@@ -637,7 +764,11 @@ export class SectionDetector {
     
     // Require exactly 3 cards for three-column layout
     if (cards.length === 3) {
-      console.log('🔬 [detectThreeColumnCards] ✅ Found 3 cards:', cards.map(c => ({ title: c.title?.substring(0, 30), descLength: c.description?.length || 0 })));
+      console.log('🔬 [detectThreeColumnCards] ✅ Found 3 cards:', cards.map(c => ({ 
+        title: c.title?.substring(0, 40), 
+        descLength: c.description?.length || 0,
+        hasCallout: !!c.callout,
+      })));
       const combinedText = candidateParagraphs.join('\n\n');
       return {
         type: 'threeColumnCards',
@@ -650,7 +781,9 @@ export class SectionDetector {
     }
     
     console.log('🔬 [detectThreeColumnCards] ❌ Only found', cards.length, 'cards, need 3');
-    console.log('🔬 [detectThreeColumnCards] Cards found:', cards.map(c => ({ title: c.title?.substring(0, 30) || 'NO TITLE' })));
+    if (cards.length > 0) {
+      console.log('🔬 [detectThreeColumnCards] Cards found:', cards.map(c => ({ title: c.title?.substring(0, 30) || 'NO TITLE' })));
+    }
     return null;
   }
   
