@@ -61,12 +61,12 @@ export class SectionDetector {
   }
 
   /**
-   * Normalize content - strip HTML, normalize whitespace
+   * Normalize content - PRESERVE detection markers (bold, etc.) until after detection
    */
   private normalizeContent(content: string): string {
     if (!content) return '';
     
-    // If TipTap JSON, extract text
+    // If TipTap JSON, extract text (preserving bold markers)
     if (typeof content === 'object') {
       return this.extractTextFromTipTap(content);
     }
@@ -75,8 +75,8 @@ export class SectionDetector {
     
     // Convert block-level HTML tags to paragraph breaks
     text = text.replace(/<\/?(p|div|h[1-6]|li|tr|blockquote)[^>]*>/gi, '\n\n');
-    // Convert <br> tags to spaces (don't break sentences)
-    text = text.replace(/<br\s*\/?>/gi, ' ');
+    // Convert <br> tags to newlines (preserve structure)
+    text = text.replace(/<br\s*\/?>/gi, '\n');
     
     // Strip remaining HTML tags
     text = text.replace(/<[^>]*>/g, ' ');
@@ -89,11 +89,13 @@ export class SectionDetector {
     text = text.replace(/&quot;/g, '"');
     text = text.replace(/&#39;/g, "'");
     
-    // Remove markdown formatting markers (bold, italic, etc.)
-    text = text.replace(/\*\*/g, ''); // Remove bold markers
-    text = text.replace(/\*/g, ''); // Remove italic markers
-    text = text.replace(/__/g, ''); // Remove underline markers
-    text = text.replace(/_/g, ''); // Remove italic markers
+    // DO NOT remove markdown formatting markers here - they're needed for detection
+    // Bold markers (**) will be preserved until after detection
+    // Only remove them in component rendering
+    
+    // Fix sentences starting with periods (shouldn't happen)
+    text = text.replace(/\n\s*\.\s+/g, '. '); // Move period to end of previous sentence
+    text = text.replace(/\.\s+\./g, '.'); // Remove double periods
     
     // Fix sentences starting with periods (shouldn't happen)
     text = text.replace(/\n\s*\.\s+/g, '. '); // Move period to end of previous sentence
@@ -150,12 +152,17 @@ export class SectionDetector {
   private extractTextFromTipTap(node: any): string {
     if (!node) return '';
     
-    // Handle text nodes - preserve text, strip any markdown artifacts
+    // Handle text nodes - PRESERVE bold markers for detection
     if (node.type === 'text') {
       let text = node.text || '';
-      // Remove any stray markdown markers that might have leaked through
-      text = text.replace(/\*\*/g, ''); // Remove bold markers
-      text = text.replace(/\*/g, ''); // Remove italic markers
+      // Preserve bold markers - they're needed for detection
+      // Check if this text has bold marks
+      if (node.marks && Array.isArray(node.marks)) {
+        const hasBold = node.marks.some((m: any) => m.type === 'bold');
+        if (hasBold) {
+          text = `**${text}**`;
+        }
+      }
       return text;
     }
     
@@ -203,8 +210,30 @@ export class SectionDetector {
       return '';
     }
     
-    // Handle bold/italic - preserve text but strip formatting markers
-    if (node.type === 'textStyle' || node.type === 'bold' || node.type === 'italic') {
+    // Handle bold/italic - preserve bold markers for detection
+    if (node.type === 'bold') {
+      if (node.content && Array.isArray(node.content)) {
+        const content = node.content.map((n: any) => this.extractTextFromTipTap(n)).join('');
+        return `**${content}**`;
+      }
+      return '';
+    }
+    
+    // Handle textStyle (may contain bold)
+    if (node.type === 'textStyle') {
+      if (node.content && Array.isArray(node.content)) {
+        const content = node.content.map((n: any) => this.extractTextFromTipTap(n)).join('');
+        // Check if textStyle has bold attribute
+        if (node.attrs?.bold) {
+          return `**${content}**`;
+        }
+        return content;
+      }
+      return '';
+    }
+    
+    // Handle italic - just return content without markers
+    if (node.type === 'italic') {
       if (node.content && Array.isArray(node.content)) {
         return node.content.map((n: any) => this.extractTextFromTipTap(n)).join('');
       }
@@ -231,6 +260,7 @@ export class SectionDetector {
   detect(): DetectedSection[] {
     this.sections = [];
     
+    console.log('🔬 [SectionDetector] Starting detection');
     console.log('🔬 [SectionDetector] Normalized content length:', this.content.length);
     console.log('🔬 [SectionDetector] Content preview:', this.content.substring(0, 300));
     
@@ -297,6 +327,7 @@ export class SectionDetector {
     }
     
     console.log('🔬 [SectionDetector] Paragraphs found:', paragraphs.length);
+    console.log('🔬 [SectionDetector] First 3 paragraphs preview:', paragraphs.slice(0, 3).map(p => p.substring(0, 100)));
     
     // NEW APPROACH: Group paragraphs first, then detect
     const groupedSections = this.groupAndDetect(paragraphs);
@@ -352,6 +383,9 @@ export class SectionDetector {
         const nextThree = paragraphs.slice(i, i + 3);
         const threeColumnSection = this.detectThreeColumnCards(nextThree, currentIndex);
         if (threeColumnSection) {
+          console.log('🔬 [SectionDetector] Detected threeColumnCards:', {
+            cards: threeColumnSection.data?.cards?.map((c: any) => ({ title: c.title?.substring(0, 40), hasDescription: !!c.description })),
+          });
           sections.push(threeColumnSection);
           i += 3;
           currentIndex += nextThree.reduce((sum, p) => sum + p.length + 2, 0);
@@ -400,95 +434,175 @@ export class SectionDetector {
   }
   
   /**
+   * Truncate text at word boundary
+   */
+  private truncateAtWordBoundary(text: string, maxLength: number): string {
+    if (!text || text.length <= maxLength) return text || '';
+    const truncated = text.substring(0, maxLength);
+    const lastSpace = truncated.lastIndexOf(' ');
+    // Only break at word boundary if we found a reasonable break point (at least 60% of maxLength)
+    return lastSpace > maxLength * 0.6 ? truncated.substring(0, lastSpace) : truncated;
+  }
+
+  /**
+   * Extract title from text, respecting word boundaries
+   */
+  private extractTitleFromText(text: string, maxLength: number = 60): string {
+    const cleaned = text.replace(/\*\*/g, '').trim();
+    
+    // If text is short enough, use it all
+    if (cleaned.length <= maxLength) {
+      return cleaned;
+    }
+    
+    // Find last space before maxLength
+    const lastSpace = cleaned.lastIndexOf(' ', maxLength);
+    if (lastSpace > maxLength * 0.5) {
+      return cleaned.substring(0, lastSpace).trim();
+    }
+    
+    // Fallback: break at maxLength but add ellipsis
+    return cleaned.substring(0, maxLength - 3).trim() + '...';
+  }
+
+  /**
    * Detect three-column cards from 3 consecutive paragraphs
+   * IMPROVED: Handles multiple content formats including TipTap output
    */
   private detectThreeColumnCards(paragraphs: string[], startIndex: number): DetectedSection | null {
-    if (paragraphs.length !== 3) return null;
+    if (paragraphs.length < 3) return null;
     
-    // Clean paragraphs
-    const cleaned = paragraphs.map(p => {
-      let text = p.trim();
-      text = text.replace(/\*\*/g, '').replace(/\*/g, '');
-      text = text.replace(/^\.\s+/, '');
-      return text;
-    });
+    // Process up to 3 paragraphs
+    const candidateParagraphs = paragraphs.slice(0, 3);
+    const cards: Array<{ icon?: string; title: string; description: string; callout?: { label: string; text: string } }> = [];
     
-    // All paragraphs should be similar length and structure
-    const lengths = cleaned.map(p => p.length);
-    const avgLength = lengths.reduce((a, b) => a + b, 0) / 3;
-    const lengthVariance = lengths.every(l => Math.abs(l - avgLength) < avgLength * 0.7); // More lenient
-    
-    // Check if they look like distinct points/cards
-    // Look for patterns that suggest card-like structure
-    const hasCardStructure = cleaned.some(p => {
-      const lower = p.toLowerCase();
-      // Check for title-like patterns at start
-      return /^(?:missing|no|wrong|the|why|how|what|making|professional|states|unreasonable|mistake|point|first|second|third|don't|do|the key|recoverable|not recoverable)/i.test(p.trim()) ||
-             // Or check if first sentence is short (like a title)
-             (p.split(/[.!?]/)[0]?.length || 0) < 80;
-    });
-    
-    // Check if they're not too long (cards should be concise)
-    const allReasonableLength = cleaned.every(p => p.length < 500);
-    
-    // Check if they have distinct content (not all the same)
-    const firstWords = cleaned.map(p => p.split(/\s+/)[0]?.toLowerCase() || '');
-    const hasDistinctContent = new Set(firstWords).size >= 2;
-    
-    if ((lengthVariance || hasCardStructure) && allReasonableLength && hasDistinctContent) {
-      const combinedText = cleaned.join('\n\n');
-      const cards = cleaned.map((content, idx) => {
-        // Extract title - look for first sentence or first phrase before colon/dash
-        let title = '';
-        let description = content;
-        
-        // Check for colon or dash separator (title: description)
-        const colonMatch = content.match(/^([^:]{10,80}?)[:–—]\s*(.+)/);
-        if (colonMatch) {
-          title = colonMatch[1].trim();
-          description = colonMatch[2].trim();
+    for (let i = 0; i < candidateParagraphs.length; i++) {
+      const paragraph = candidateParagraphs[i];
+      let content = paragraph.trim();
+      
+      // Don't strip ** markers yet - we need them for detection
+      // Only strip for final output
+      
+      let title = '';
+      let description = '';
+      let icon: string | undefined;
+      let callout: { label: string; text: string } | undefined;
+      
+      // Pattern 1: Bold title - "**Title**: description" or "- **Title**: description"
+      const boldPattern = content.match(/^[-•*]?\s*\*\*([^*]+)\*\*[:\s]*(.*)/);
+      
+      // Pattern 2: Emoji prefix - "🎯 Title: description" or "📋 Title: description"
+      const emojiPattern = content.match(/^([🎯📋⚖️🔑💡✅❌📧📝📜💰⚠️📅])\s*(.+?)(?::\s*(.*))?$/);
+      
+      // Pattern 3: Simple numbered - "Point 1: description" - but extract better title
+      const pointPattern = content.match(/^Point\s+\d+[:\s]*(.*)/i);
+      
+      // Pattern 4: Colon-separated - "Title: longer description text"
+      const colonPattern = content.match(/^([A-Z][^:]{5,60}?):\s+(.+)/);
+      
+      if (boldPattern) {
+        title = boldPattern[1].trim();
+        description = boldPattern[2]?.trim() || '';
+      } else if (emojiPattern) {
+        icon = emojiPattern[1];
+        // Split by colon if present, otherwise use whole text as title
+        if (emojiPattern[3]) {
+          title = emojiPattern[2].trim();
+          description = emojiPattern[3].trim();
         } else {
-          // Extract first sentence as title if it's short
-          const firstSentence = content.split(/[.!?]/)[0] || content;
-          if (firstSentence.length < 80 && firstSentence.length > 10) {
-            title = firstSentence.trim();
-            description = content.substring(firstSentence.length).trim();
-            description = description.replace(/^[.!?]\s*/, '');
-          } else {
-            // Use first 50-60 chars as title
-            title = content.substring(0, 60).trim();
-            // Try to break at word boundary
-            const lastSpace = title.lastIndexOf(' ');
-            if (lastSpace > 30) {
-              title = title.substring(0, lastSpace);
-            }
-            description = content.substring(title.length).trim();
+          // Extract title from text
+          title = this.extractTitleFromText(emojiPattern[2], 50);
+          description = emojiPattern[2].substring(title.length).trim();
+        }
+      } else if (colonPattern && !pointPattern) {
+        title = colonPattern[1].trim();
+        description = colonPattern[2].trim();
+      } else if (pointPattern) {
+        // For "Point X:" patterns, try to extract meaningful title from description
+        const desc = pointPattern[1].trim();
+        // Look for first sentence or meaningful phrase
+        const firstSentence = desc.split(/[.!?]/)[0] || desc;
+        if (firstSentence.length > 10 && firstSentence.length < 60) {
+          title = firstSentence.trim();
+          description = desc.substring(firstSentence.length).trim();
+        } else {
+          // Use first meaningful words
+          title = this.extractTitleFromText(desc, 50);
+          description = desc.substring(title.length).trim();
+        }
+      } else {
+        // Try to extract title from first sentence or phrase
+        const firstSentence = content.split(/[.!?]/)[0] || content;
+        if (firstSentence.length > 10 && firstSentence.length < 80) {
+          title = firstSentence.trim();
+          description = content.substring(firstSentence.length).trim();
+          description = description.replace(/^[.!?]\s*/, '');
+        } else {
+          // Use first meaningful words as title
+          title = this.extractTitleFromText(content, 60);
+          description = content.substring(title.length).trim();
+        }
+      }
+      
+      // Clean up title and description - remove markdown artifacts
+      title = title.replace(/\*\*/g, '').replace(/\*/g, '').trim();
+      description = description.replace(/\*\*/g, '').replace(/\*/g, '').trim();
+      description = description.replace(/^[:\-–—\.]\s*/, '');
+      
+      // Check for "Instead:" callout in description
+      const insteadMatch = description.match(/(?:Instead|Rather|Better|COMPARE THAT TO):\s*(.+)/i);
+      if (insteadMatch) {
+        callout = {
+          label: insteadMatch[1] ? 'Instead:' : 'Note:',
+          text: insteadMatch[1] || insteadMatch[0],
+        };
+        // Remove callout from description
+        description = description.replace(/(?:Instead|Rather|Better|COMPARE THAT TO):\s*.+/i, '').trim();
+      }
+      
+      // Truncate description at word boundary if too long
+      if (description.length > 250) {
+        description = this.truncateAtWordBoundary(description, 250);
+      }
+      
+      // Ensure title is meaningful - never use "Point X" fallback
+      if (!title || title.length < 5 || /^Point\s+\d+$/i.test(title)) {
+        // Extract from description instead
+        const descTitle = this.extractTitleFromText(description, 50);
+        if (descTitle && descTitle.length > 5) {
+          title = descTitle;
+          description = description.substring(descTitle.length).trim();
+        } else {
+          // Last resort: use first words of description
+          const words = description.split(/\s+/).slice(0, 5).join(' ');
+          if (words.length > 5) {
+            title = words;
+            description = description.substring(words.length).trim();
           }
         }
-        
-        // Clean up description
-        description = description.replace(/^[:\-–—\.]\s*/, '');
-        if (description.length > 250) {
-          description = description.substring(0, 247) + '...';
-        }
-        
-        // Ensure title is meaningful
-        if (!title || title.length < 5) {
-          title = `Point ${idx + 1}`;
-        }
-        
-        return {
-          icon: ['🎯', '📋', '⚖️'][idx] || '📌',
-          title: title,
-          description: description || '',
-        };
-      });
+      }
       
+      // Skip if we still don't have a good title
+      if (!title || title.length < 5) {
+        continue;
+      }
+      
+      cards.push({
+        icon: icon || ['🎯', '📋', '⚖️'][i] || '📌',
+        title: title,
+        description: description || '',
+        callout,
+      });
+    }
+    
+    // Require exactly 3 cards for three-column layout
+    if (cards.length === 3) {
+      const combinedText = candidateParagraphs.join('\n\n');
       return {
         type: 'threeColumnCards',
         content: combinedText,
         data: { cards },
-        confidence: 0.8,
+        confidence: 0.85,
         startIndex,
         endIndex: startIndex + combinedText.length,
       };

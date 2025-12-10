@@ -188,10 +188,36 @@ function sectionToComponent(section: DetectedSection): LayoutComponent | null {
       };
     
     case 'threeColumnCards':
+      // Ensure cards have proper titles, not "Point X"
+      const processedCards = (section.data?.cards || []).map((card: any, idx: number) => {
+        // If title is generic "Point X", extract from description
+        if (!card.title || card.title.match(/^Point\s+\d+$/i)) {
+          // Extract title from first sentence of description
+          const firstSentence = card.description?.split(/[.!?]/)[0] || '';
+          if (firstSentence && firstSentence.length > 10 && firstSentence.length < 60) {
+            return {
+              ...card,
+              title: firstSentence.trim(),
+              description: card.description?.substring(firstSentence.length + 1).trim() || card.description || '',
+            };
+          }
+          // Fallback: use first meaningful words
+          const words = card.description?.split(/\s+/).slice(0, 5).join(' ') || '';
+          if (words.length > 5) {
+            return {
+              ...card,
+              title: words,
+              description: card.description?.substring(words.length).trim() || '',
+            };
+          }
+        }
+        return card;
+      });
+      
       return {
         type: 'threeColumnCards',
         props: {
-          cards: section.data?.cards || [],
+          cards: processedCards,
         },
       };
     

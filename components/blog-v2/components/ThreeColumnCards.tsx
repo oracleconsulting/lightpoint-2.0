@@ -71,6 +71,24 @@ function CardItem({ card, index }: { card: Card; index: number }) {
     'from-amber-500 to-amber-600',
   ];
 
+  // Clean text helper - removes markdown artifacts and fixes broken text
+  const cleanText = (text: string): string => {
+    if (!text) return '';
+    return text
+      .replace(/\*\*/g, '')      // Remove bold markers
+      .replace(/\*/g, '')        // Remove italic markers
+      .replace(/__/g, '')        // Remove underline markers
+      .replace(/_/g, '')         // Remove italic markers
+      .replace(/^\.\s+/, '')     // Remove leading periods
+      .replace(/\n\s*\.\s+/g, '. ') // Fix periods at start of lines
+      .replace(/\s+/g, ' ')      // Normalize whitespace
+      .trim();
+  };
+
+  // Clean title and description
+  const cleanTitle = cleanText(card.title);
+  const cleanDescription = cleanText(card.description);
+
   return (
     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-xl transition-shadow duration-300">
       {/* Card content */}
@@ -93,12 +111,12 @@ function CardItem({ card, index }: { card: Card; index: number }) {
 
         {/* Title */}
         <h3 className="text-[23px] lg:text-[24px] font-bold text-slate-800 mb-3 leading-[1.3]">
-          {card.title.replace(/\*\*/g, '').replace(/\*/g, '').trim()}
+          {cleanTitle}
         </h3>
 
         {/* Description */}
         <p className="text-[18px] lg:text-[19px] text-slate-600 leading-[1.75]">
-          {card.description.replace(/\*\*/g, '').replace(/\*/g, '').replace(/^\.\s+/, '').trim()}
+          {cleanDescription}
         </p>
       </div>
 
@@ -107,11 +125,11 @@ function CardItem({ card, index }: { card: Card; index: number }) {
         <div className="px-7 lg:px-8 py-4 bg-slate-50 border-t border-slate-100">
           <div className="flex items-start gap-2 mb-2">
             <span className="text-sm font-bold text-blue-600 uppercase tracking-wider flex-shrink-0">
-              {card.callout.label}
+              {cleanText(card.callout.label)}
             </span>
           </div>
           <p className="text-[17px] lg:text-[18px] text-slate-700 italic leading-[1.75]">
-            &quot;{card.callout.text}&quot;
+            &quot;{cleanText(card.callout.text)}&quot;
           </p>
         </div>
       )}
