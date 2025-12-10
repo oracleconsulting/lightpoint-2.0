@@ -64,9 +64,72 @@ export class SectionDetector {
     } else {
       console.log('🔬 [SectionDetector] Constructor - Input is object:', JSON.stringify(content).substring(0, 300));
     }
-    this.content = this.normalizeContent(content);
-    console.log('🔬 [SectionDetector] Constructor - After normalization length:', this.content.length);
-    console.log('🔬 [SectionDetector] Constructor - After normalization preview:', this.content.substring(0, 300));
+    const normalized = this.normalizeContent(content);
+    // CRITICAL: Preprocess to merge short lines into paragraphs BEFORE detection
+    this.content = this.preprocessContent(normalized);
+    console.log('🔬 [SectionDetector] Constructor - After preprocessing length:', this.content.length);
+    console.log('🔬 [SectionDetector] Constructor - After preprocessing preview:', this.content.substring(0, 300));
+  }
+
+  /**
+   * Preprocess content - merge short consecutive lines into paragraphs
+   * This prevents the "card explosion" bug where every 3 lines becomes a card
+   */
+  private preprocessContent(content: string): string {
+    const lines = content.split('\n');
+    const processed: string[] = [];
+    let currentParagraph: string[] = [];
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmed = line.trim();
+      
+      // Empty line = paragraph break
+      if (!trimmed) {
+        if (currentParagraph.length > 0) {
+          processed.push(currentParagraph.join(' '));
+          currentParagraph = [];
+        }
+        continue;
+      }
+      
+      // Check if this line is a "continuation" or a "new section"
+      const isHeader = trimmed.match(/^#+\s/) || trimmed.match(/^[A-Z][^.!?]*:$/);
+      const isListItem = trimmed.match(/^[-•*]\s/) || trimmed.match(/^\d+[.)]\s/);
+      const isMonthHeader = trimmed.match(/^(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec):$/i);
+      const isDateLine = trimmed.match(/^(?:Day\s+\d+|Week\s+\d+|\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4})/i);
+      const isCardMarker = trimmed.match(/^[-•*]?\s*\*\*[^*]+\*\*[:\s]/) || trimmed.match(/^[🎯📋⚖️🔑💡✅❌📧📝📜💰⚠️📅]\s/);
+      
+      // These start new sections
+      if (isHeader || isListItem || isMonthHeader || isDateLine || isCardMarker) {
+        if (currentParagraph.length > 0) {
+          processed.push(currentParagraph.join(' '));
+          currentParagraph = [];
+        }
+        processed.push(trimmed);
+        continue;
+      }
+      
+      // Short lines (under 60 chars, no ending punctuation that suggests completion)
+      // should be merged with the next line
+      const endsWithCompletePunctuation = trimmed.match(/[.!?]$/);
+      const isShortLine = trimmed.length < 60;
+      
+      currentParagraph.push(trimmed);
+      
+      // If it's a complete sentence and not short, consider it a paragraph
+      if (endsWithCompletePunctuation && !isShortLine) {
+        processed.push(currentParagraph.join(' '));
+        currentParagraph = [];
+      }
+    }
+    
+    // Don't forget the last paragraph
+    if (currentParagraph.length > 0) {
+      processed.push(currentParagraph.join(' '));
+    }
+    
+    return processed.join('\n\n');
   }
 
   /**
@@ -414,26 +477,54 @@ export class SectionDetector {
         continue;
       }
       
-      // Look ahead to group related paragraphs
-      // Check for three-column cards (3 consecutive paragraphs with similar structure)
-      // BUT: Only if they look like actual cards (have titles, not just random text)
+      // CRITICAL: Check for timeline FIRST (month headers like "May:", "June:")
+      // This must come BEFORE three-column cards to prevent false positives
+      const timeline = this.detectTimelineGroup(paragraphs, i, currentIndex);
+      if (timeline && timeline.count >= 3) {
+        sections.push(timeline.section);
+        i += timeline.count;
+        currentIndex += timeline.totalLength;
+        continue;
+      }
+      
+      // Check for numbered steps BEFORE cards
+      const numberedSteps = this.detectNumberedStepsGroup(paragraphs, i, currentIndex);
+      if (numberedSteps && numberedSteps.count > 1) {
+        sections.push(numberedSteps.section);
+        i += numberedSteps.count;
+        currentIndex += numberedSteps.totalLength;
+        continue;
+      }
+      
+      // Check for stats BEFORE cards
+      const stats = this.detectStatsGroup(paragraphs, i, currentIndex);
+      if (stats && stats.count >= 3) {
+        sections.push(stats.section);
+        i += stats.count;
+        currentIndex += stats.totalLength;
+        continue;
+      }
+      
+      // LAST: Check for three-column cards - ONLY if they have EXPLICIT card markers
+      // This prevents the "card explosion" bug where every 3 lines becomes a card
       if (i + 2 < paragraphs.length) {
         const nextThree = paragraphs.slice(i, i + 3);
         
-        // Pre-check: Do these paragraphs look like cards?
-        // They should have some structure (bold titles, emojis, colons, or short first sentences)
-        const looksLikeCards = nextThree.some(p => {
+        // STRICT PRE-CHECK: Must have explicit card markers on ALL 3 paragraphs
+        // Pattern 1: Bold title - "**Title**: description"
+        // Pattern 2: Emoji prefix - "🎯 Title: description"
+        // Pattern 3: Colon-separated title - "Title: description" (but must be title-like)
+        const allHaveCardMarkers = nextThree.every(p => {
           const trimmed = p.trim();
           return (
-            trimmed.includes('**') || // Has bold markers
-            /[🎯📋⚖️🔑💡✅❌📧📝📜💰⚠️📅]/.test(trimmed) || // Has emoji
-            /^[A-Z][^:]{5,60}:\s/.test(trimmed) || // Starts with title-like pattern and colon
-            (trimmed.split(/[.!?]/)[0]?.length || 999) < 60 // First sentence is short (like a title)
+            trimmed.match(/^[-•*]?\s*\*\*[^*]+\*\*[:\s]/) || // Bold title pattern
+            trimmed.match(/^[🎯📋⚖️🔑💡✅❌📧📝📜💰⚠️📅]\s/) || // Emoji prefix
+            (trimmed.match(/^[A-Z][^:]{5,60}:\s/) && trimmed.length < 200) // Short colon-separated (title-like)
           );
         });
         
-        if (looksLikeCards) {
-          console.log('🔬 [SectionDetector] Checking for threeColumnCards at index', i);
+        if (allHaveCardMarkers) {
+          console.log('🔬 [SectionDetector] Checking for threeColumnCards at index', i, '- all have card markers');
           const threeColumnSection = this.detectThreeColumnCards(nextThree, currentIndex);
           if (threeColumnSection) {
             console.log('🔬 [SectionDetector] ✅ Detected threeColumnCards:', {
@@ -451,32 +542,6 @@ export class SectionDetector {
         }
       }
       
-      // Check for numbered steps (multiple consecutive numbered items)
-      const numberedSteps = this.detectNumberedStepsGroup(paragraphs, i, currentIndex);
-      if (numberedSteps && numberedSteps.count > 1) {
-        sections.push(numberedSteps.section);
-        i += numberedSteps.count;
-        currentIndex += numberedSteps.totalLength;
-        continue;
-      }
-      
-      // Check for timeline (multiple paragraphs with dates)
-      const timeline = this.detectTimelineGroup(paragraphs, i, currentIndex);
-      if (timeline && timeline.count >= 2) {
-        sections.push(timeline.section);
-        i += timeline.count;
-        currentIndex += timeline.totalLength;
-        continue;
-      }
-      
-      // Check for stats (multiple paragraphs with stats)
-      const stats = this.detectStatsGroup(paragraphs, i, currentIndex);
-      if (stats && stats.count >= 3) {
-        sections.push(stats.section);
-        i += stats.count;
-        currentIndex += stats.totalLength;
-        continue;
-      }
       
       // Default: process as single paragraph
       const section = this.detectParagraphType(trimmed, currentIndex);
@@ -597,7 +662,7 @@ export class SectionDetector {
               break;
             }
           }
-          description += ' ' + line;
+          description += (description ? ' ' : '') + line;
         }
       } else if (emojiPattern) {
         icon = emojiPattern[1];
@@ -632,7 +697,7 @@ export class SectionDetector {
               break;
             }
           }
-          description += ' ' + line;
+          description += (description ? ' ' : '') + line;
         }
       } else if (colonPattern && !pointPattern) {
         title = colonPattern[1].trim();
@@ -659,7 +724,7 @@ export class SectionDetector {
               break;
             }
           }
-          description += ' ' + line;
+          description += (description ? ' ' : '') + line;
         }
       } else if (pointPattern) {
         // For "Point X:" patterns, extract meaningful title from description
@@ -696,7 +761,7 @@ export class SectionDetector {
               break;
             }
           }
-          description += ' ' + line;
+          description += (description ? ' ' : '') + line;
         }
       } else {
         // Try to extract title from first sentence or phrase
@@ -835,18 +900,68 @@ export class SectionDetector {
   }
   
   /**
-   * Detect timeline group
+   * Detect timeline group - handles both date patterns and month headers (May:, June:, etc.)
    */
   private detectTimelineGroup(paragraphs: string[], startIndex: number, currentIndex: number): { section: DetectedSection; count: number; totalLength: number } | null {
-    const datePattern = /(?:\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}|Day\s+\d+|Week\s+\d+)/gi;
     const events: Array<{ date: string; title: string; description: string }> = [];
     let i = startIndex;
     let totalLength = 0;
     
-    while (i < paragraphs.length && events.length < 10) {
+    // Pattern 1: Month headers like "May:", "June:", "July:"
+    const monthPattern = /^(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec):/i;
+    
+    // Pattern 2: Full dates like "12 May 2024", "Day 1", "Week 3"
+    const datePattern = /(?:\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}|Day\s+\d+|Week\s+\d+)/gi;
+    
+    while (i < paragraphs.length && events.length < 15) {
       const trimmed = paragraphs[i].trim();
-      const dateMatches = [...trimmed.matchAll(datePattern)];
       
+      // Check for month header pattern first (most common in user's content)
+      const monthMatch = trimmed.match(monthPattern);
+      if (monthMatch) {
+        const month = monthMatch[1];
+        const description = trimmed.substring(monthMatch[0].length).trim();
+        
+        // Extract title from first sentence or phrase
+        const firstSentence = description.split(/[.!?]/)[0] || description;
+        const title = firstSentence.length > 60 ? firstSentence.substring(0, 60).trim() : firstSentence.trim();
+        const desc = description.substring(title.length).trim();
+        
+        events.push({
+          date: month,
+          title: title || '',
+          description: desc || description,
+        });
+        
+        totalLength += trimmed.length + 2;
+        i++;
+        
+        // Gather continuation lines (until next month header or section break)
+        while (i < paragraphs.length) {
+          const nextLine = paragraphs[i]?.trim();
+          if (!nextLine) {
+            i++;
+            continue;
+          }
+          
+          // Stop conditions
+          if (nextLine.match(monthPattern)) break; // Next month
+          if (nextLine.match(/^#+\s/)) break; // Header
+          if (nextLine.match(/^[-•*]?\s*\*\*[^*]+\*\*[:\s]/)) break; // Card marker
+          if (nextLine.match(/^[🎯📋⚖️🔑💡✅❌📧📝📜💰⚠️📅]\s/)) break; // Emoji marker
+          
+          // Add to description
+          if (events.length > 0) {
+            events[events.length - 1].description += ' ' + nextLine;
+          }
+          totalLength += nextLine.length + 2;
+          i++;
+        }
+        continue;
+      }
+      
+      // Check for date pattern
+      const dateMatches = [...trimmed.matchAll(datePattern)];
       if (dateMatches.length > 0) {
         const eventData = this.extractTimelineEvents(trimmed);
         if (eventData.length > 0) {
@@ -861,13 +976,14 @@ export class SectionDetector {
       }
     }
     
-    if (events.length >= 2) {
+    // Need at least 3 events for a timeline
+    if (events.length >= 3) {
       return {
         section: {
           type: 'timeline',
           content: paragraphs.slice(startIndex, i).join('\n\n'),
           data: { events },
-          confidence: 0.85,
+          confidence: 0.9,
           startIndex: currentIndex,
           endIndex: currentIndex + totalLength,
         },
