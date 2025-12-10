@@ -750,7 +750,7 @@ function stripHtml(content: any): string {
       }
       
       // Get children content - preserve spaces between text nodes
-      const children = node.content ? node.content.map(extractNode).join('') : '';
+      const children = node.content ? node.content.map(extractNode).join(' ') : '';
       
       // Handle different node types with proper formatting
       switch (node.type) {

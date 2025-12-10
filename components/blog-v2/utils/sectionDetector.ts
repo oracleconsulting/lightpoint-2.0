@@ -288,7 +288,7 @@ export class SectionDetector {
     // Handle list items
     if (node.type === 'listItem') {
       if (node.content && Array.isArray(node.content)) {
-        const text = node.content.map((n: any) => this.extractTextFromTipTap(n)).join('').trim();
+        const text = node.content.map((n: any) => this.extractTextFromTipTap(n)).join(' ').trim();
         return text ? `- ${text}\n` : '';
       }
       return '';
@@ -297,7 +297,7 @@ export class SectionDetector {
     // Handle blockquote
     if (node.type === 'blockquote') {
       if (node.content && Array.isArray(node.content)) {
-        const text = node.content.map((n: any) => this.extractTextFromTipTap(n)).join('').trim();
+        const text = node.content.map((n: any) => this.extractTextFromTipTap(n)).join(' ').trim();
         return text ? `> ${text}\n\n` : '';
       }
       return '';
@@ -328,7 +328,7 @@ export class SectionDetector {
     // Handle italic - just return content without markers
     if (node.type === 'italic') {
       if (node.content && Array.isArray(node.content)) {
-        return node.content.map((n: any) => this.extractTextFromTipTap(n)).join('');
+        return node.content.map((n: any) => this.extractTextFromTipTap(n)).join(' ');
       }
       return '';
     }
@@ -1434,7 +1434,9 @@ export class SectionDetector {
     }
     
     // Second pass: detect patterns that span multiple sections
-    this.sections = this.detectCrossSectionPatterns(grouped);
+    // DISABLED: Second-pass card detection was too aggressive - converted normal paragraphs to cards
+    // this.sections = this.detectCrossSectionPatterns(grouped);
+    this.sections = grouped;
   }
   
   /**
@@ -1477,15 +1479,79 @@ export class SectionDetector {
         }
       }
       
-      // DISABLED: Second-pass three-column card detection
-      // This was too aggressive - converting ANY 3 paragraphs with common words into cards
-      // Card detection is now handled strictly in groupAndDetect() with explicit markers only
-      // If we need second-pass detection, it should require the same strict markers:
-      // - Bold titles: **Title**: description
-      // - Emoji prefixes: 🎯 Title: description
-      // - Short colon-separated titles: Title: description (<200 chars)
-      
-      // REMOVED: Aggressive pattern matching that created false positives
+      // Check for three-column card pattern (three consecutive paragraphs with similar structure)
+      if (i < sections.length - 2) {
+        const nextThree = sections.slice(i, i + 3);
+        if (nextThree.every(s => s.type === 'paragraph' || s.type === 'callout')) {
+          const combinedText = nextThree.map(s => s.content).join('\n\n');
+          // Check for three distinct topics/points
+          const hasThreeTopics = /(?:first|second|third|1\.|2\.|3\.|missing|evidence|wrong|target|trail|resolution)/i.test(combinedText);
+          
+          if (hasThreeTopics && nextThree.length === 3) {
+            // Convert to threeColumnCards
+            const cards = nextThree.map((s, idx) => {
+              let content = s.content.trim();
+              
+              // Clean up content
+              content = content.replace(/\*\*/g, '').replace(/\*/g, '');
+              
+              // Try to extract a meaningful title
+              // Look for patterns like "Missing the Target", "No Evidence Trail", etc.
+              const titlePatterns = [
+                /(?:^|\n)([A-Z][^.!?]{10,60}?)(?:\.|:|\n)/,
+                /(?:^|\n)(Missing|No|Wrong|The|Why|How|What|Making|Professional|States|Unreasonable|Mistake)/i,
+              ];
+              
+              let title = '';
+              for (const pattern of titlePatterns) {
+                const match = content.match(pattern);
+                if (match && match[1]) {
+                  title = match[1].trim();
+                  // Extract up to first sentence or 50 chars
+                  if (title.length > 50) {
+                    title = title.substring(0, 50).split(/[.!?]/)[0].trim();
+                  }
+                  break;
+                }
+              }
+              
+              // Fallback: use first sentence or first 40 chars
+              if (!title) {
+                const firstSentence = content.split(/[.!?]/)[0] || content;
+                title = firstSentence.substring(0, 40).trim();
+                if (title.length < 10) {
+                  title = content.substring(0, 40).trim();
+                }
+              }
+              
+              // Remove title from description
+              let description = content;
+              if (title && content.startsWith(title)) {
+                description = content.substring(title.length).trim();
+              }
+              // Remove leading punctuation
+              description = description.replace(/^[:\-–—\.]\s*/, '');
+              
+              return {
+                icon: ['🎯', '📋', '⚖️'][idx] || '📌',
+                title: title || `Point ${idx + 1}`,
+                description: description.substring(0, 200),
+              };
+            });
+            
+            result.push({
+              type: 'threeColumnCards',
+              content: combinedText,
+              data: { cards },
+              confidence: 0.75,
+              startIndex: nextThree[0].startIndex,
+              endIndex: nextThree[nextThree.length - 1].endIndex,
+            });
+            i += 3;
+            continue;
+          }
+        }
+      }
       
       // Default: add section as-is
       result.push(sections[i]);
