@@ -183,9 +183,20 @@ export function VisualTransformer({
     if (v2Layout) {
       console.log('📦 [VisualTransformer] Applying V2 layout...');
       console.log('📦 Component count:', v2Layout.components?.length || 0);
+      console.log('📦 Layout structure:', {
+        hasTheme: !!v2Layout.theme,
+        hasComponents: !!v2Layout.components,
+        componentsLength: v2Layout.components?.length || 0,
+        componentTypes: v2Layout.components?.slice(0, 5).map((c: any) => c.type) || [],
+      });
       
       // V2 layouts have { theme, components } structure
       const layoutToSave = JSON.parse(JSON.stringify(v2Layout));
+      console.log('📦 [VisualTransformer] Layout to save:', {
+        hasTheme: !!layoutToSave.theme,
+        hasComponents: !!layoutToSave.components,
+        componentsLength: layoutToSave.components?.length || 0,
+      });
       onTransformed(layoutToSave);
       setShowV2Preview(false);
     }

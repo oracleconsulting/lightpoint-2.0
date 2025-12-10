@@ -148,9 +148,12 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
     // Debug: Log what we're about to save
     console.log('💾 [BlogPostForm] Saving blog post...');
     console.log('💾 structuredLayout exists:', !!structuredLayout);
-    console.log('💾 structuredLayout component count:', structuredLayout?.layout?.length || 0);
-    console.log('💾 TextSection count:', structuredLayout?.layout?.filter((c: any) => c.type === 'TextSection').length || 0);
-    console.log('💾 Component types:', structuredLayout?.layout?.map((c: any) => c.type) || []);
+    console.log('💾 structuredLayout keys:', structuredLayout ? Object.keys(structuredLayout) : []);
+    // Handle both V1 (layout.layout) and V2 (layout.components) formats
+    const components = structuredLayout?.components || structuredLayout?.layout || [];
+    console.log('💾 Layout format:', structuredLayout?.components ? 'V2' : structuredLayout?.layout ? 'V1' : 'none');
+    console.log('💾 structuredLayout component count:', components.length);
+    console.log('💾 Component types (first 10):', components.slice(0, 10).map((c: any) => c.type));
     
     try {
       const postData = {
@@ -173,7 +176,9 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
         gammaPdfUrl: gammaPdfUrl || undefined, // Gamma PDF export URL
       };
       
-      console.log('💾 postData.structuredLayout component count:', postData.structuredLayout?.layout?.length || 0);
+      const savedComponents = postData.structuredLayout?.components || postData.structuredLayout?.layout || [];
+      console.log('💾 postData.structuredLayout component count:', savedComponents.length);
+      console.log('💾 postData.structuredLayout format:', postData.structuredLayout?.components ? 'V2' : postData.structuredLayout?.layout ? 'V1' : 'none');
 
       if (postId) {
         // Update existing post
@@ -419,9 +424,18 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
               existingGammaUrl={gammaUrl}
               onTransformed={(layout) => {
                 console.log('📥 [BlogPostForm] Received layout from VisualTransformer');
-                console.log('📥 Layout component count:', layout?.layout?.length || 0);
-                console.log('📥 TextSection count:', layout?.layout?.filter((c: any) => c.type === 'TextSection').length || 0);
-                console.log('📥 All component types:', layout?.layout?.map((c: any) => c.type) || []);
+                console.log('📥 [BlogPostForm] Raw layout:', {
+                  keys: Object.keys(layout || {}),
+                  hasComponents: !!layout?.components,
+                  hasLayout: !!layout?.layout,
+                  componentsLength: layout?.components?.length || 0,
+                  layoutLength: layout?.layout?.length || 0,
+                });
+                // Handle both V1 (layout.layout) and V2 (layout.components) formats
+                const components = layout?.components || layout?.layout || [];
+                console.log('📥 Layout format:', layout?.components ? 'V2' : layout?.layout ? 'V1' : 'unknown');
+                console.log('📥 Layout component count:', components.length);
+                console.log('📥 Component types:', components.slice(0, 10).map((c: any) => c.type));
                 setStructuredLayout(layout);
                 alert('✨ Layout applied! You can now fine-tune the placement below, or save the post to keep this visual layout.');
               }}

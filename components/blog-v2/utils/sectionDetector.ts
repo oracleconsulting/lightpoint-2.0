@@ -116,8 +116,14 @@ export class SectionDetector {
     text = text.replace(/\n /g, '\n');
     text = text.replace(/ \n/g, '\n');
     
-    // Remove leading/trailing spaces from each line
+    // Remove leading/trailing spaces from each line (but preserve spaces within lines!)
     text = text.split('\n').map(line => line.trim()).join('\n');
+    
+    // CRITICAL: Fix words that got stuck together (common when HTML/structure is removed)
+    // Pattern: lowercase letter followed by uppercase letter = missing space
+    text = text.replace(/([a-z])([A-Z])/g, '$1 $2');
+    // Pattern: word ending with lowercase followed by word starting with capital = missing space
+    text = text.replace(/([a-z]{2,})([A-Z][a-z]{2,})/g, '$1 $2');
     
     // Fix broken sentences - if a line ends without punctuation and next line starts lowercase, merge
     text = text.replace(/([a-z])\n([a-z])/g, '$1 $2');
@@ -388,31 +394,38 @@ export class SectionDetector {
       
       // Look ahead to group related paragraphs
       // Check for three-column cards (3 consecutive paragraphs with similar structure)
+      // BUT: Only if they look like actual cards (have titles, not just random text)
       if (i + 2 < paragraphs.length) {
         const nextThree = paragraphs.slice(i, i + 3);
-        console.log('🔬 [SectionDetector] Checking for threeColumnCards at index', i);
-        console.log('🔬 [SectionDetector] Next 3 paragraphs:', nextThree.map((p, idx) => ({
-          index: idx,
-          length: p.length,
-          preview: p.substring(0, 100),
-          hasBold: p.includes('**'),
-          hasEmoji: /[🎯📋⚖️🔑💡✅❌📧📝📜💰⚠️📅]/.test(p),
-        })));
-        const threeColumnSection = this.detectThreeColumnCards(nextThree, currentIndex);
-        if (threeColumnSection) {
-          console.log('🔬 [SectionDetector] ✅ Detected threeColumnCards:', {
-            cards: threeColumnSection.data?.cards?.map((c: any) => ({ 
-              title: c.title?.substring(0, 40), 
-              descriptionLength: c.description?.length || 0,
-              hasCallout: !!c.callout,
-            })),
-          });
-          sections.push(threeColumnSection);
-          i += 3;
-          currentIndex += nextThree.reduce((sum, p) => sum + p.length + 2, 0);
-          continue;
-        } else {
-          console.log('🔬 [SectionDetector] ❌ Three-column cards NOT detected');
+        
+        // Pre-check: Do these paragraphs look like cards?
+        // They should have some structure (bold titles, emojis, colons, or short first sentences)
+        const looksLikeCards = nextThree.some(p => {
+          const trimmed = p.trim();
+          return (
+            trimmed.includes('**') || // Has bold markers
+            /[🎯📋⚖️🔑💡✅❌📧📝📜💰⚠️📅]/.test(trimmed) || // Has emoji
+            /^[A-Z][^:]{5,60}:\s/.test(trimmed) || // Starts with title-like pattern and colon
+            (trimmed.split(/[.!?]/)[0]?.length || 999) < 60 // First sentence is short (like a title)
+          );
+        });
+        
+        if (looksLikeCards) {
+          console.log('🔬 [SectionDetector] Checking for threeColumnCards at index', i);
+          const threeColumnSection = this.detectThreeColumnCards(nextThree, currentIndex);
+          if (threeColumnSection) {
+            console.log('🔬 [SectionDetector] ✅ Detected threeColumnCards:', {
+              cards: threeColumnSection.data?.cards?.map((c: any) => ({ 
+                title: c.title?.substring(0, 40), 
+                descriptionLength: c.description?.length || 0,
+                hasCallout: !!c.callout,
+              })),
+            });
+            sections.push(threeColumnSection);
+            i += 3;
+            currentIndex += nextThree.reduce((sum, p) => sum + p.length + 2, 0);
+            continue;
+          }
         }
       }
       
