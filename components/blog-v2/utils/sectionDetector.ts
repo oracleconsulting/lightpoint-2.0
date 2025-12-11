@@ -154,18 +154,41 @@ export class SectionDetector {
     
     let text = content;
     
-    // Convert block-level HTML tags to paragraph breaks
-    text = text.replace(/<\/?(p|div|h[1-6]|li|tr|blockquote)[^>]*>/gi, '\n\n');
-    // Convert <br> tags to newlines (preserve structure)
-    text = text.replace(/<br\s*\/?>/gi, '\n');
+    // Check if content is already plain text (no HTML tags) - skip HTML processing
+    const hasHtmlTags = /<[^>]+>/.test(text);
+    console.log('🔴 [normalizeContent] Has HTML tags:', hasHtmlTags);
     
-    // 🔴 DIAGNOSTIC: Check after HTML tag replacement
-    if (text.includes('sentdebtcollectorsforit')) {
-      console.log('🔴🔴🔴 [normalizeContent] CONTENT BROKEN AFTER HTML TAG REPLACEMENT! 🔴🔴🔴');
+    if (hasHtmlTags) {
+      // Content still has HTML - process it
+      // Convert block-level HTML tags to paragraph breaks
+      text = text.replace(/<\/?(p|div|h[1-6]|li|tr|blockquote)[^>]*>/gi, '\n\n');
+      // Convert <br> tags to newlines (preserve structure)
+      text = text.replace(/<br\s*\/?>/gi, '\n');
+      
+      // 🔴 DIAGNOSTIC: Check after HTML tag replacement
+      if (text.includes('sentdebtcollectorsforit')) {
+        console.log('🔴🔴🔴 [normalizeContent] CONTENT BROKEN AFTER HTML TAG REPLACEMENT! 🔴🔴🔴');
+      }
+      
+      // Strip remaining HTML tags - REPLACE WITH SPACE to preserve word boundaries
+      text = text.replace(/<[^>]*>/g, ' ');
+      
+      // 🔴 DIAGNOSTIC: Check after stripping HTML
+      if (text.includes('sentdebtcollectorsforit')) {
+        console.log('🔴🔴🔴 [normalizeContent] CONTENT BROKEN AFTER STRIPPING HTML! 🔴🔴🔴');
+      }
+      
+      // Decode HTML entities
+      text = text.replace(/&nbsp;/g, ' ');
+      text = text.replace(/&amp;/g, '&');
+      text = text.replace(/&lt;/g, '<');
+      text = text.replace(/&gt;/g, '>');
+      text = text.replace(/&quot;/g, '"');
+      text = text.replace(/&#39;/g, "'");
+    } else {
+      // Content is already plain text - just normalize whitespace
+      console.log('🔴 [normalizeContent] Content is already plain text, skipping HTML processing');
     }
-    
-    // Strip remaining HTML tags - REPLACE WITH SPACE to preserve word boundaries
-    text = text.replace(/<[^>]*>/g, ' ');
     
     // 🔴 DIAGNOSTIC: Check after stripping HTML
     if (text.includes('sentdebtcollectorsforit')) {
