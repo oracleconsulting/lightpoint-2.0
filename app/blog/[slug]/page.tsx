@@ -323,6 +323,22 @@ export default function BlogPostPage() {
   // V2 Layout: Clean, light theme - skip the dark wrapper entirely
   if (hasV2Layout) {
     console.log('🎨 [BlogPostPage] ✅ Rendering V2 Layout with', post.structured_layout?.components?.length, 'components');
+    
+    // 🔴 DEBUG: Check if any paragraph text in saved layout is broken
+    const paragraphComponents = post.structured_layout?.components?.filter((c: any) => c.type === 'paragraph') || [];
+    const brokenParagraphs = paragraphComponents.filter((c: any) => 
+      c.props?.text?.match(/[a-z][A-Z]/) || c.props?.text?.match(/\w{25,}/)
+    );
+    if (brokenParagraphs.length > 0) {
+      console.log('🔴🔴🔴 [BlogPostPage] BROKEN PARAGRAPHS IN SAVED LAYOUT:', {
+        count: brokenParagraphs.length,
+        examples: brokenParagraphs.slice(0, 3).map((c: any) => ({
+          preview: c.props?.text?.substring(0, 100),
+          brokenWord: c.props?.text?.match(/\S*[a-z][A-Z]\S*/)?.[0] || c.props?.text?.match(/\w{25,}/)?.[0],
+        })),
+      });
+    }
+    
     return (
       <div className="min-h-screen bg-white">
         {/* JSON-LD Structured Data for SEO and AI Search */}

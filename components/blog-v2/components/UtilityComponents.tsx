@@ -20,6 +20,15 @@ export function Paragraph({
   dropcap = false,
   className = '',
 }: ParagraphProps) {
+  // 🔴 DEBUG: Log paragraph text to see if it's broken when received
+  if (typeof window !== 'undefined' && (text?.match(/[a-z][A-Z]/) || text?.match(/\w{25,}/))) {
+    console.log('🔴🔴🔴 [Paragraph Component] RECEIVED BROKEN TEXT:', {
+      preview: text?.substring(0, 100),
+      hasNoSpaces: text?.match(/[a-z][A-Z]/)?.[0],
+      longWord: text?.match(/\w{25,}/)?.[0],
+    });
+  }
+  
   if (highlight) {
     return (
       <p className={`
