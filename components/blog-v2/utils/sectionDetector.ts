@@ -557,6 +557,15 @@ export class SectionDetector {
         continue;
       }
       
+      // Check for comparison cards (Recoverable: vs Not recoverable:, Do vs Don't)
+      const comparison = this.detectComparisonGroup(paragraphs, i, currentIndex);
+      if (comparison) {
+        sections.push(comparison.section);
+        i += comparison.count;
+        currentIndex += comparison.totalLength;
+        continue;
+      }
+      
       // Check for numbered steps BEFORE cards
       const numberedSteps = this.detectNumberedStepsGroup(paragraphs, i, currentIndex);
       if (numberedSteps && numberedSteps.count > 1) {
@@ -583,13 +592,15 @@ export class SectionDetector {
         // STRICT PRE-CHECK: Must have explicit card markers on ALL 3 paragraphs
         // Pattern 1: Bold title - "**Title**: description"
         // Pattern 2: Emoji prefix - "🎯 Title: description"
-        // Pattern 3: Colon-separated title - "Title: description" (but must be title-like)
+        // Pattern 3: Colon-separated title - "Title: description" (but NOT months!)
+        const monthNames = /^(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec):/i;
         const allHaveCardMarkers = nextThree.every(p => {
           const trimmed = p.trim();
+          // EXCLUDE month patterns - these should be timeline, not cards!
+          if (monthNames.test(trimmed)) return false;
           return (
             trimmed.match(/^[-•*]?\s*\*\*[^*]+\*\*[:\s]/) || // Bold title pattern
-            trimmed.match(/^[🎯📋⚖️🔑💡✅❌📧📝📜💰⚠️📅]\s/) || // Emoji prefix
-            (trimmed.match(/^[A-Z][^:]{5,60}:\s/) && trimmed.length < 200) // Short colon-separated (title-like)
+            trimmed.match(/^[🎯📋⚖️🔑💡✅❌📧📝📜💰⚠️📅]\s/) // Emoji prefix only (removed colon pattern - too aggressive)
           );
         });
         
@@ -1120,6 +1131,122 @@ export class SectionDetector {
   }
   
   /**
+   * Detect comparison cards group (Recoverable vs Not recoverable, Do vs Don't, etc.)
+   */
+  private detectComparisonGroup(paragraphs: string[], startIndex: number, currentIndex: number): { section: DetectedSection; count: number; totalLength: number } | null {
+    // Look for patterns like:
+    // "Recoverable:" followed by bullet list
+    // "Not recoverable:" followed by bullet list
+    const comparisonHeaders = [
+      { positive: /^(?:\*\*)?Recoverable(?:\*\*)?:?$/i, negative: /^(?:\*\*)?Not\s+recoverable(?:\*\*)?:?$/i },
+      { positive: /^(?:\*\*)?Do(?:\*\*)?:?$/i, negative: /^(?:\*\*)?Don'?t(?:\*\*)?:?$/i },
+      { positive: /^(?:\*\*)?Yes(?:\*\*)?:?$/i, negative: /^(?:\*\*)?No(?:\*\*)?:?$/i },
+      { positive: /^(?:\*\*)?(?:The\s+)?New\s+Way(?:\*\*)?:?$/i, negative: /^(?:\*\*)?(?:The\s+)?Old\s+Way(?:\*\*)?:?$/i },
+      { positive: /^(?:\*\*)?(?:Do\s+)?Claim(?:\*\*)?:?$/i, negative: /^(?:\*\*)?(?:Don'?t\s+)?Claim(?:\*\*)?:?$/i },
+    ];
+    
+    if (startIndex >= paragraphs.length) return null;
+    
+    const firstPara = paragraphs[startIndex]?.trim();
+    if (!firstPara) return null;
+    
+    // Check if first paragraph is a comparison header
+    for (const { positive, negative } of comparisonHeaders) {
+      const isPositiveHeader = positive.test(firstPara);
+      const isNegativeHeader = negative.test(firstPara);
+      
+      if (isPositiveHeader || isNegativeHeader) {
+        // Found a comparison header! Now gather the list items
+        let i = startIndex + 1;
+        let totalLength = firstPara.length + 2;
+        const firstItems: string[] = [];
+        
+        // Collect bullet items for first section
+        while (i < paragraphs.length) {
+          const line = paragraphs[i]?.trim();
+          if (!line) { i++; continue; }
+          
+          // Check if it's a bullet item
+          if (/^[-•*]\s+/.test(line)) {
+            firstItems.push(line.replace(/^[-•*]\s+/, '').trim());
+            totalLength += line.length + 2;
+            i++;
+          } else {
+            break; // Not a bullet, stop collecting
+          }
+        }
+        
+        // Now look for the opposite header
+        if (i < paragraphs.length && firstItems.length > 0) {
+          const secondHeader = paragraphs[i]?.trim();
+          const expectedPattern = isPositiveHeader ? negative : positive;
+          
+          if (expectedPattern.test(secondHeader)) {
+            totalLength += secondHeader.length + 2;
+            i++;
+            
+            const secondItems: string[] = [];
+            
+            // Collect bullet items for second section
+            while (i < paragraphs.length) {
+              const line = paragraphs[i]?.trim();
+              if (!line) { i++; continue; }
+              
+              if (/^[-•*]\s+/.test(line)) {
+                secondItems.push(line.replace(/^[-•*]\s+/, '').trim());
+                totalLength += line.length + 2;
+                i++;
+              } else {
+                break;
+              }
+            }
+            
+            if (secondItems.length > 0) {
+              // Check for optional footer (paragraph after the lists)
+              let footer: string | undefined;
+              if (i < paragraphs.length) {
+                const nextLine = paragraphs[i]?.trim();
+                if (nextLine && !nextLine.match(/^[-•*]\s+/) && nextLine.length < 200) {
+                  footer = nextLine;
+                  totalLength += nextLine.length + 2;
+                  i++;
+                }
+              }
+              
+              return {
+                section: {
+                  type: 'comparisonCards',
+                  content: paragraphs.slice(startIndex, i).join('\n\n'),
+                  data: {
+                    leftCard: {
+                      title: isPositiveHeader ? firstPara.replace(/[*:]/g, '').trim() : secondHeader.replace(/[*:]/g, '').trim(),
+                      items: isPositiveHeader ? firstItems : secondItems,
+                      variant: 'positive',
+                    },
+                    rightCard: {
+                      title: isNegativeHeader ? firstPara.replace(/[*:]/g, '').trim() : secondHeader.replace(/[*:]/g, '').trim(),
+                      items: isNegativeHeader ? firstItems : secondItems,
+                      variant: 'negative',
+                    },
+                    footer,
+                  },
+                  confidence: 0.85,
+                  startIndex: currentIndex,
+                  endIndex: currentIndex + totalLength,
+                },
+                count: i - startIndex,
+                totalLength,
+              };
+            }
+          }
+        }
+      }
+    }
+    
+    return null;
+  }
+  
+  /**
    * Detect stats group
    */
   private detectStatsGroup(paragraphs: string[], startIndex: number, currentIndex: number): { section: DetectedSection; count: number; totalLength: number } | null {
@@ -1167,13 +1294,19 @@ export class SectionDetector {
     const trimmed = text.trim();
     
     // Check for explicit callout markers (must start with marker)
-    // Also check for patterns like "THE KEY:", "Compare that to:", "But this builds:", etc.
+    // Also check for patterns like "THE KEY:", "Compare that to:", quotes, etc.
     const calloutPatterns = [
-      /^(?:💡|⚠️|✅|❌|📌|🔑)\s*(?:Pro Tip|Note|Warning|Important|Key Point|Remember|Tip):/i,
+      /^(?:💡|⚠️|✅|❌|📌|🔑|📋|💰)\s*(?:Pro Tip|Note|Warning|Important|Key Point|Remember|Tip)?:?/i,
       /^THE\s+(?:KEY|PROBLEM|SOLUTION|ANSWER):/i,
       /^(?:Compare\s+that\s+to|But\s+this\s+builds|Specific\s+requests\s+get\s+results):/i,
       /^(?:Quote\s+Them\s+Directly|State\s+the\s+Impact\s+Clearly|Make\s+Specific\s+Demands|Close\s+Professionally):/i,
       /^(?:Coming\s+Next\s+Week|Next\s+Week):/i,
+      /^Final\s+settlement:/i,
+      /^That'?s\s+what\s+CRG\d+\s+exists\s+for/i,
+      /^CRG\d+:/i,
+      /^HMRC'?s\s+internal\s+guidance/i,
+      /^Both\s+applied[.:]?$/i,
+      /^Not\s+anger[.:]?\s*(?:Evidence)?[.:]?$/i,
     ];
     
     for (const pattern of calloutPatterns) {
