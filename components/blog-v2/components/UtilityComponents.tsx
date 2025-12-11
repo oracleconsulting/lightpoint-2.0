@@ -56,15 +56,34 @@ export function Paragraph({
     );
   }
 
-  // Clean text - remove any markdown artifacts
+  // Clean text but PRESERVE formatting markers for rendering
   let cleanText = text
-    .replace(/\*\*/g, '') // Remove bold markers
-    .replace(/\*/g, '') // Remove italic markers
-    .replace(/__/g, '') // Remove underline markers
-    .replace(/_/g, '') // Remove italic markers
+    .replace(/__/g, '**') // Convert underline to bold format for consistency
     .replace(/^\.\s+/g, '') // Remove leading periods
     .replace(/\n\s*\.\s+/g, '. ') // Fix periods at start of lines
     .trim();
+  
+  // Helper function to render text with bold markers as actual bold
+  const renderFormattedText = (input: string) => {
+    // Split by **bold** markers and render alternating normal/bold
+    const parts = input.split(/(\*\*[^*]+\*\*)/g);
+    return parts.map((part, idx) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        // This is bold text - extract content and render as <strong>
+        const boldContent = part.slice(2, -2);
+        return <strong key={idx} className="font-bold text-slate-900">{boldContent}</strong>;
+      }
+      // Regular text - clean single asterisks for italics
+      const italicParts = part.split(/(\*[^*]+\*)/g);
+      return italicParts.map((iPart, iIdx) => {
+        if (iPart.startsWith('*') && iPart.endsWith('*') && !iPart.startsWith('**')) {
+          const italicContent = iPart.slice(1, -1);
+          return <em key={`${idx}-${iIdx}`}>{italicContent}</em>;
+        }
+        return <span key={`${idx}-${iIdx}`}>{iPart}</span>;
+      });
+    });
+  };
   
   // Split text by double newlines to preserve paragraph structure
   const paragraphs = cleanText.split(/\n\n+/).filter(p => p.trim());
@@ -81,7 +100,7 @@ export function Paragraph({
         mb-1
         ${className}
       `}>
-        {finalText}
+        {renderFormattedText(finalText)}
       </p>
     );
   }
@@ -97,7 +116,7 @@ export function Paragraph({
             key={index}
             className="text-[20px] lg:text-[22px] leading-[1.75] lg:leading-[1.8] text-slate-700 font-['Georgia',_'Times_New_Roman',_serif]"
           >
-            {cleanPara}
+            {renderFormattedText(cleanPara)}
           </p>
         );
       })}

@@ -1242,13 +1242,19 @@ export class SectionDetector {
     // Check for section heading patterns (The X trap, Why X fails, How to X, etc.)
     const headingPatterns = [
       /^The\s+\w+\s+(?:trap|problem|issue|challenge|solution|answer|key|secret)/i,
-      /^Why\s+(?:most|your|the)?\s*\w+\s+(?:fail|work|matter)/i,
+      /^Why\s+(?:most|your|the|this)?\s*\w+\s*(?:fail|work|matter|was|were)/i,
       /^How\s+to\s+/i,
-      /^What\s+(?:actually|really)\s+works/i,
+      /^What\s+(?:actually|really)\s+(?:works|happened|matters)/i,
       /^Making\s+\w+\s+worth/i,
       /^Professional\s+fee\s+recovery/i,
       /^The\s+October\s+2024\s+change/i,
       /^The\s+structure\s+that\s+(?:actually\s+)?works/i,
+      /^Documentation\s+that\s+/i,
+      /^The\s+language\s+that\s+/i,
+      /^The\s+Economics/i,
+      /^The\s+Real\s+Figure/i,
+      /^Start\s+Now/i,
+      /^Counter-strategy/i,
     ];
     
     for (const pattern of headingPatterns) {
@@ -1711,9 +1717,9 @@ export class SectionDetector {
       const paragraph = paragraphs[i];
       let content = paragraph.content.trim();
       
-      // Clean up content - remove markdown artifacts
-      content = content.replace(/\*\*/g, '').replace(/\*/g, '');
-      content = content.replace(/^\.\s+/, ''); // Remove leading periods
+      // Clean up content - PRESERVE bold markers for rendering!
+      // Bold markers (**text**) will be rendered as <strong> by the Paragraph component
+      content = content.replace(/^\.\s+/, ''); // Remove leading periods only
       
       // Fix broken sentences (like "collectors for it\n. The money")
       content = content.replace(/([a-z])\s*\n\s*\.\s+([A-Z])/g, '$1. $2');
@@ -1724,10 +1730,9 @@ export class SectionDetector {
       // Check if this is a complete sentence/paragraph (ends with . ! ?)
       const isCompleteParagraph = /[.!?]$/.test(content.trim());
       
-      // If incomplete, try to merge with next paragraph
+      // If incomplete, try to merge with next paragraph (preserve bold markers)
       if (!isCompleteParagraph && i + 1 < paragraphs.length) {
-        let nextContent = paragraphs[i + 1].content.trim()
-          .replace(/\*\*/g, '').replace(/\*/g, '');
+        let nextContent = paragraphs[i + 1].content.trim();
         content = content + ' ' + nextContent;
         i++; // Skip next paragraph since we merged it
       }
