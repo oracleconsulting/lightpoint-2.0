@@ -30,9 +30,15 @@ export async function POST(req: NextRequest) {
     // 🔴 CRITICAL DIAGNOSTIC: Check content at API entry point
     console.log('🔴 [API] Content type:', typeof content);
     console.log('🔴 [API] Content is object:', typeof content === 'object');
+    console.log('🔴 [API] Content length:', typeof content === 'string' ? content.length : 'N/A');
     if (typeof content === 'string') {
       console.log('🔴 [API] Content (first 500 chars):', content.substring(0, 500));
-      if (content.includes('sentdebtcollectorsforit')) {
+      // Check if spaces are preserved
+      console.log('🔴 [API] Has "sent debt collectors":', content.includes('sent debt collectors'));
+      console.log('🔴 [API] Has "sentdebtcollectors":', content.includes('sentdebtcollectors'));
+      console.log('🔴 [API] Newline count:', (content.match(/\n/g) || []).length);
+      console.log('🔴 [API] Space count:', (content.match(/ /g) || []).length);
+      if (content.includes('sentdebtcollectorsforit') || !content.includes('sent debt')) {
         console.log('🔴🔴🔴 [API] CONTENT ALREADY BROKEN AT API ENTRY POINT! 🔴🔴🔴');
       }
     } else if (typeof content === 'object') {
