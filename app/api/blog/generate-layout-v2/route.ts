@@ -22,6 +22,7 @@ interface V2LayoutRequest {
 }
 
 export async function POST(req: NextRequest) {
+  console.log('🔴🔴🔴 V2 ROUTE CALLED 🔴🔴🔴');
   try {
     const body: V2LayoutRequest = await req.json();
     const { title, content, excerpt, author, includeHero = true, includeCTA = true } = body;

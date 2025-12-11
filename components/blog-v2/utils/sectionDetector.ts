@@ -360,9 +360,9 @@ export class SectionDetector {
   detect(): DetectedSection[] {
     this.sections = [];
     
-    console.log('🔬 [SectionDetector] Starting detection');
-    console.log('🔬 [SectionDetector] Normalized content length:', this.content.length);
-    console.log('🔬 [SectionDetector] Content preview:', this.content.substring(0, 300));
+    console.log('🔍 [SectionDetector] Starting detection...');
+    console.log('🔍 [SectionDetector] Content length:', this.content.length);
+    console.log('🔍 [SectionDetector] First 200 chars:', this.content.substring(0, 200));
     
     // Split into paragraphs - preserve sentence boundaries
     let paragraphs = this.content.split(/\n\n+/).filter(p => p.trim());
@@ -438,7 +438,9 @@ export class SectionDetector {
     this.sections = groupedSections;
     this.postProcess();
     
-    console.log('🔬 [SectionDetector] Final sections:', this.sections.length);
+    console.log('🔍 [SectionDetector] Sections detected:', this.sections.length);
+    console.log('🔍 [SectionDetector] Section types:', this.sections.map(s => s.type));
+    console.log('🔍 [SectionDetector] Three-column cards count:', this.sections.filter(s => s.type === 'threeColumnCards').length);
     
     return this.sections;
   }
@@ -1435,6 +1437,8 @@ export class SectionDetector {
     
     // Second pass: detect patterns that span multiple sections
     // DISABLED: Second-pass card detection was too aggressive - converted normal paragraphs to cards
+    console.log('🔍 [SectionDetector] postProcess: Skipping detectCrossSectionPatterns (disabled)');
+    console.log('🔍 [SectionDetector] postProcess: Using grouped sections directly, count:', grouped.length);
     // this.sections = this.detectCrossSectionPatterns(grouped);
     this.sections = grouped;
   }
