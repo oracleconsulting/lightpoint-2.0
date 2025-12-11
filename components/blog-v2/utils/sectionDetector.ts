@@ -722,8 +722,19 @@ export class SectionDetector {
           description = emojiPattern[3].trim();
         } else {
           // Extract title from text (first sentence or first 50 chars)
-          title = this.extractTitleFromText(emojiPattern[2], 50);
-          description = emojiPattern[2].substring(title.length).trim();
+          const extractedTitle = this.extractTitleFromText(emojiPattern[2], 50);
+          title = extractedTitle;
+          // Find the title in the original text to get correct substring position
+          const titleIndex = emojiPattern[2].indexOf(extractedTitle);
+          if (titleIndex >= 0) {
+            description = emojiPattern[2].substring(titleIndex + extractedTitle.length).trim();
+          } else {
+            // Fallback: use split by words
+            const words = emojiPattern[2].split(/\s+/);
+            const titleWords = extractedTitle.split(/\s+/);
+            const titleWordCount = titleWords.length;
+            description = words.slice(titleWordCount).join(' ').trim();
+          }
         }
         // Gather additional description from following lines
         for (let j = 1; j < lines.length; j++) {
