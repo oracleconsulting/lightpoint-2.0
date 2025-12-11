@@ -138,6 +138,15 @@ export class SectionDetector {
   private normalizeContent(content: string): string {
     if (!content) return '';
     
+    // 🔴 DIAGNOSTIC: Log input to normalizeContent
+    console.log('🔴 [normalizeContent] Input type:', typeof content);
+    if (typeof content === 'string') {
+      console.log('🔴 [normalizeContent] Input (first 500 chars):', content.substring(0, 500));
+      if (content.includes('sentdebtcollectorsforit')) {
+        console.log('🔴🔴🔴 [normalizeContent] CONTENT ALREADY BROKEN AT INPUT! 🔴🔴🔴');
+      }
+    }
+    
     // If TipTap JSON, extract text (preserving bold markers)
     if (typeof content === 'object') {
       return this.extractTextFromTipTap(content);
@@ -150,8 +159,18 @@ export class SectionDetector {
     // Convert <br> tags to newlines (preserve structure)
     text = text.replace(/<br\s*\/?>/gi, '\n');
     
-    // Strip remaining HTML tags
+    // 🔴 DIAGNOSTIC: Check after HTML tag replacement
+    if (text.includes('sentdebtcollectorsforit')) {
+      console.log('🔴🔴🔴 [normalizeContent] CONTENT BROKEN AFTER HTML TAG REPLACEMENT! 🔴🔴🔴');
+    }
+    
+    // Strip remaining HTML tags - REPLACE WITH SPACE to preserve word boundaries
     text = text.replace(/<[^>]*>/g, ' ');
+    
+    // 🔴 DIAGNOSTIC: Check after stripping HTML
+    if (text.includes('sentdebtcollectorsforit')) {
+      console.log('🔴🔴🔴 [normalizeContent] CONTENT BROKEN AFTER STRIPPING HTML! 🔴🔴🔴');
+    }
     
     // Decode HTML entities
     text = text.replace(/&nbsp;/g, ' ');
@@ -224,6 +243,12 @@ export class SectionDetector {
       }
     }
     text = deduped.join('\n');
+    
+    // 🔴 DIAGNOSTIC: Check final output
+    if (text.includes('sentdebtcollectorsforit')) {
+      console.log('🔴🔴🔴 [normalizeContent] CONTENT BROKEN IN FINAL OUTPUT! 🔴🔴🔴');
+    }
+    console.log('🔴 [normalizeContent] Final output (first 500 chars):', text.substring(0, 500));
     
     return text.trim();
   }
