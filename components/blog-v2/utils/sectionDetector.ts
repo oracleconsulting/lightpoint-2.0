@@ -57,33 +57,46 @@ export class SectionDetector {
   private sections: DetectedSection[] = [];
 
   constructor(content: string) {
-    console.log('🔬 [SectionDetector] Constructor - Input type:', typeof content);
-    console.log('🔬 [SectionDetector] Constructor - Input length:', typeof content === 'string' ? content.length : 'N/A');
-    if (typeof content === 'string') {
-      console.log('🔬 [SectionDetector] Constructor - First 300 chars:', content.substring(0, 300));
-    } else {
-      console.log('🔬 [SectionDetector] Constructor - Input is object:', JSON.stringify(content).substring(0, 300));
+    // 🔴🔴🔴 CRITICAL: Check content at VERY FIRST entry point
+    const hasProperSpaces = content.includes('sent debt collectors');
+    const hasBrokenWords = content.includes('sentdebtcollectors');
+    console.log('🔴🔴🔴 [SectionDetector] CONSTRUCTOR ENTRY:', {
+      hasProperSpaces,
+      hasBrokenWords,
+      spaceCount: (content.match(/ /g) || []).length,
+      newlineCount: (content.match(/\n/g) || []).length,
+      first100: content.substring(0, 100),
+    });
+    
+    if (hasBrokenWords || !hasProperSpaces) {
+      console.log('🔴🔴🔴🔴🔴 CONTENT ALREADY BROKEN AT CONSTRUCTOR! 🔴🔴🔴🔴🔴');
     }
+    
     const normalized = this.normalizeContent(content);
     
-    // 🔴 DEBUG: Check for word concatenation after normalization  
-    if (normalized.match(/[a-z][A-Z]/) || normalized.match(/\w{25,}/)) {
+    // Check after normalization
+    const normalizedHasSpaces = normalized.includes('sent debt collectors');
+    const normalizedBroken = normalized.includes('sentdebtcollectors');
+    if (normalizedBroken || !normalizedHasSpaces) {
       console.log('🔴🔴🔴 [SectionDetector] CONTENT BROKEN AFTER NORMALIZATION:', {
-        example: normalized.match(/\S*[a-z][A-Z]\S*/g)?.slice(0, 5),
-        longWords: normalized.match(/\w{25,}/g)?.slice(0, 5),
+        hadSpaces: hasProperSpaces,
+        nowHasSpaces: normalizedHasSpaces,
+        wasBroken: hasBrokenWords,
+        nowBroken: normalizedBroken,
       });
     }
     
-    // CRITICAL: Preprocess to merge short lines into paragraphs BEFORE detection
     this.content = this.preprocessContent(normalized);
-    console.log('🔬 [SectionDetector] Constructor - After preprocessing length:', this.content.length);
-    console.log('🔬 [SectionDetector] Constructor - After preprocessing preview:', this.content.substring(0, 300));
     
-    // 🔴 DEBUG: Check for word concatenation after preprocessing
-    if (this.content.match(/[a-z][A-Z]/) || this.content.match(/\w{25,}/)) {
+    // Check after preprocessing
+    const preprocessedHasSpaces = this.content.includes('sent debt collectors');
+    const preprocessedBroken = this.content.includes('sentdebtcollectors');
+    if (preprocessedBroken || !preprocessedHasSpaces) {
       console.log('🔴🔴🔴 [SectionDetector] CONTENT BROKEN AFTER PREPROCESSING:', {
-        example: this.content.match(/\S*[a-z][A-Z]\S*/g)?.slice(0, 5),
-        longWords: this.content.match(/\w{25,}/g)?.slice(0, 5),
+        hadSpaces: normalizedHasSpaces,
+        nowHasSpaces: preprocessedHasSpaces,
+        wasBroken: normalizedBroken,
+        nowBroken: preprocessedBroken,
       });
     }
   }
@@ -1425,14 +1438,8 @@ export class SectionDetector {
       return null;
     }
     
-    // 🔴 DEBUG: Check for word concatenation before returning paragraph
-    if (cleanText.match(/[a-z][A-Z]/) || cleanText.match(/\w{25,}/)) {
-      console.log('🔴🔴🔴 [detectParagraphType] BROKEN TEXT:', {
-        preview: cleanText.substring(0, 200),
-        hasNoSpaces: cleanText.match(/[a-z][A-Z]/)?.[0],
-        longWord: cleanText.match(/\w{25,}/)?.[0],
-      });
-    }
+    // Removed per-paragraph logging to avoid Railway rate limits
+    // Issue is traced to constructor/normalization level
     
     return {
       type: 'paragraph',
