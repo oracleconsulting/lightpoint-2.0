@@ -271,7 +271,7 @@ export default function BlogPostPage() {
           return text;
         }
         
-        const content = node.content?.map(renderNode).join('') || '';
+        const content = node.content?.map(renderNode).join(' ') || '';
         
         switch (node.type) {
           case 'paragraph':
@@ -297,7 +297,7 @@ export default function BlogPostPage() {
         }
       };
       
-      const html = post.content?.content?.map(renderNode).join('') || '<p>No content available</p>';
+      const html = post.content?.content?.map(renderNode).join(' ') || '<p>No content available</p>';
       return <div dangerouslySetInnerHTML={{ __html: html }} />;
     }
   };

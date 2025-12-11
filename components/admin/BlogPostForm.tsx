@@ -463,7 +463,7 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
                 typeof content === 'string' 
                   ? content.split('\n\n').filter(Boolean)
                   : (content as any)?.content?.map((node: any) => 
-                      node.content?.map((n: any) => n.text || '').join('') || ''
+                      node.content?.map((n: any) => n.text || '').join(' ') || ''
                     ).filter(Boolean) || []
               }
               visualElements={structuredLayout.layout || []}
