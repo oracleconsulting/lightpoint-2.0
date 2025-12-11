@@ -786,8 +786,19 @@ export class SectionDetector {
           description = desc.substring(firstSentence.length).trim();
         } else {
           // Use first meaningful words (respect word boundaries)
-          title = this.extractTitleFromText(desc, 50);
-          description = desc.substring(title.length).trim();
+          const extractedTitle = this.extractTitleFromText(desc, 50);
+          title = extractedTitle;
+          // Find the title in the original text to get correct substring position
+          const titleIndex = desc.indexOf(extractedTitle);
+          if (titleIndex >= 0) {
+            description = desc.substring(titleIndex + extractedTitle.length).trim();
+          } else {
+            // Fallback: use split by words
+            const words = desc.split(/\s+/);
+            const titleWords = extractedTitle.split(/\s+/);
+            const titleWordCount = titleWords.length;
+            description = words.slice(titleWordCount).join(' ').trim();
+          }
         }
         // Gather additional description
         for (let j = 1; j < lines.length; j++) {
@@ -822,8 +833,19 @@ export class SectionDetector {
           description = description.replace(/^[.!?]\s*/, '');
         } else {
           // Use first meaningful words as title (respect word boundaries)
-          title = this.extractTitleFromText(content, 60);
-          description = content.substring(title.length).trim();
+          const extractedTitle = this.extractTitleFromText(content, 60);
+          title = extractedTitle;
+          // Find the title in the original text to get correct substring position
+          const titleIndex = content.indexOf(extractedTitle);
+          if (titleIndex >= 0) {
+            description = content.substring(titleIndex + extractedTitle.length).trim();
+          } else {
+            // Fallback: use split by words
+            const words = content.split(/\s+/);
+            const titleWords = extractedTitle.split(/\s+/);
+            const titleWordCount = titleWords.length;
+            description = words.slice(titleWordCount).join(' ').trim();
+          }
         }
         // Check for "Instead:" callout in description
         const insteadMatch = description.match(/(?:Instead|Rather|Better|COMPARE THAT TO):\s*(.+)/is);
@@ -852,13 +874,31 @@ export class SectionDetector {
         const descTitle = this.extractTitleFromText(description, 50);
         if (descTitle && descTitle.length > 5) {
           title = descTitle;
-          description = description.substring(descTitle.length).trim();
+          // Find the title in the original description to get correct substring position
+          const titleIndex = description.indexOf(descTitle);
+          if (titleIndex >= 0) {
+            description = description.substring(titleIndex + descTitle.length).trim();
+          } else {
+            // Fallback: use split by words
+            const words = description.split(/\s+/);
+            const titleWords = descTitle.split(/\s+/);
+            const titleWordCount = titleWords.length;
+            description = words.slice(titleWordCount).join(' ').trim();
+          }
         } else {
           // Last resort: use first words of description
           const words = description.split(/\s+/).slice(0, 5).join(' ');
           if (words.length > 5) {
             title = words;
-            description = description.substring(words.length).trim();
+            // Find the words in the original description
+            const wordsIndex = description.indexOf(words);
+            if (wordsIndex >= 0) {
+              description = description.substring(wordsIndex + words.length).trim();
+            } else {
+              // Fallback: use split
+              const descWords = description.split(/\s+/);
+              description = descWords.slice(5).join(' ').trim();
+            }
           }
         }
       }
