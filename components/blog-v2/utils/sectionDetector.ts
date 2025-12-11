@@ -261,17 +261,12 @@ export class SectionDetector {
     // Pattern: word ending with lowercase followed by word starting with capital = missing space
     text = text.replace(/([a-z])([A-Z][a-z])/g, '$1 $2');
     
-    // Fix broken sentences - if a line ends without punctuation and next line starts lowercase, merge
+    // Fix broken sentences - if a line ends without punctuation and next line starts lowercase, merge with SPACE
     text = text.replace(/([a-z])\n([a-z])/g, '$1 $2');
     
-    // Fix broken words (word split across lines)
-    text = text.replace(/([a-z])\s+\n\s*([a-z]{1,3})\s/gi, (match, p1, p2) => {
-      // If second part is very short, it might be a broken word
-      if (p2.length <= 3) {
-        return p1 + p2 + ' ';
-      }
-      return match;
-    });
+    // REMOVED: The "broken words" fix was too aggressive and was stripping spaces!
+    // It was matching "sent \nfor " and turning it into "sentfor " (missing space)
+    // This was causing the word concatenation bug.
     
     // Fix sentences that were broken mid-word (like "collectors for it\n. The money")
     text = text.replace(/([a-z])\s*\n\s*\.\s+([A-Z])/g, '$1. $2');
@@ -455,14 +450,9 @@ export class SectionDetector {
       // Remove trailing periods that are alone on a line
       cleaned = cleaned.replace(/\n\.\s*$/g, '');
       
-      // Fix broken words (word split across lines)
-      cleaned = cleaned.replace(/([a-z])\s+([a-z])/g, (match, p1, p2) => {
-        // If it looks like a broken word (very short fragments), join them
-        if (p1.length < 3 && p2.length < 3) {
-          return p1 + p2;
-        }
-        return match;
-      });
+      // REMOVED: This "broken words" fix was stripping ALL spaces between words!
+      // The regex /([a-z])\s+([a-z])/g matches any two letters with space between
+      // and was joining them without space, causing "sent debt" → "sentdebt"
       
       // Remove duplicate sentences within paragraph (but be less aggressive)
       // Only remove if sentence appears multiple times in a row
@@ -1725,14 +1715,8 @@ export class SectionDetector {
       // Fix broken sentences (like "collectors for it\n. The money")
       content = content.replace(/([a-z])\s*\n\s*\.\s+([A-Z])/g, '$1. $2');
       
-      // Fix broken words
-      content = content.replace(/([a-z])\s+([a-z]{1,3})\s/gi, (match, p1, p2) => {
-        // If it looks like a broken word (very short second part), join them
-        if (p2.length <= 2 && p1.length > 3) {
-          return p1 + p2 + ' ';
-        }
-        return match;
-      });
+      // REMOVED: This "broken words" fix was stripping spaces incorrectly!
+      // It was matching "t \nfor " and turning it into "tfor " (missing space)
       
       // Skip empty or artifact-only paragraphs
       if (!content || /^[\.\*\s\-]+$/.test(content)) continue;
