@@ -320,7 +320,7 @@ export class SectionDetector {
     if (node.type && node.type.startsWith('heading')) {
       const level = node.type.replace('heading', '') || '1';
       const headingText = node.content 
-        ? node.content.map((n: any) => this.extractTextFromTipTap(n)).join('').trim()
+        ? node.content.map((n: any) => this.extractTextFromTipTap(n)).join(' ').trim()
         : '';
       return headingText ? `${'#'.repeat(parseInt(level) || 1)} ${headingText}\n\n` : '';
     }
@@ -354,7 +354,7 @@ export class SectionDetector {
     // Handle bold/italic - preserve bold markers for detection
     if (node.type === 'bold') {
       if (node.content && Array.isArray(node.content)) {
-        const content = node.content.map((n: any) => this.extractTextFromTipTap(n)).join('');
+        const content = node.content.map((n: any) => this.extractTextFromTipTap(n)).join(' ');
         return `**${content}**`;
       }
       return '';
@@ -363,7 +363,7 @@ export class SectionDetector {
     // Handle textStyle (may contain bold)
     if (node.type === 'textStyle') {
       if (node.content && Array.isArray(node.content)) {
-        const content = node.content.map((n: any) => this.extractTextFromTipTap(n)).join('');
+        const content = node.content.map((n: any) => this.extractTextFromTipTap(n)).join(' ');
         // Check if textStyle has bold attribute
         if (node.attrs?.bold) {
           return `**${content}**`;
