@@ -137,11 +137,45 @@ export function VisualTransformer({
       return;
     }
 
+    // 🔴 DIAGNOSTIC: Log content BEFORE stripHtml
+    console.log('🔴 [VisualTransformer] handleGenerateV2 called');
+    console.log('🔴 [VisualTransformer] Content type:', typeof content);
+    console.log('🔴 [VisualTransformer] Content is object:', typeof content === 'object');
+    if (typeof content === 'string') {
+      console.log('🔴 [VisualTransformer] Content BEFORE stripHtml (first 500 chars):', content.substring(0, 500));
+      if (content.includes('sentdebtcollectorsforit')) {
+        console.log('🔴🔴🔴 [VisualTransformer] CONTENT ALREADY BROKEN BEFORE stripHtml! 🔴🔴🔴');
+      }
+    } else if (typeof content === 'object') {
+      const contentStr = JSON.stringify(content);
+      console.log('🔴 [VisualTransformer] Content JSON BEFORE stripHtml (first 500 chars):', contentStr.substring(0, 500));
+      if (contentStr.includes('sentdebtcollectorsforit')) {
+        console.log('🔴🔴🔴 [VisualTransformer] CONTENT ALREADY BROKEN BEFORE stripHtml (JSON)! 🔴🔴🔴');
+      }
+    }
+
     setError(null);
     setIsGeneratingV2(true);
     setV2Layout(null);
 
     try {
+      const strippedContent = stripHtml(content);
+      
+      // 🔴 DIAGNOSTIC: Log content AFTER stripHtml
+      console.log('🔴 [VisualTransformer] Content AFTER stripHtml type:', typeof strippedContent);
+      if (typeof strippedContent === 'string') {
+        console.log('🔴 [VisualTransformer] Content AFTER stripHtml (first 500 chars):', strippedContent.substring(0, 500));
+        if (strippedContent.includes('sentdebtcollectorsforit')) {
+          console.log('🔴🔴🔴 [VisualTransformer] CONTENT BROKEN BY stripHtml! 🔴🔴🔴');
+        }
+      } else if (typeof strippedContent === 'object') {
+        const contentStr = JSON.stringify(strippedContent);
+        console.log('🔴 [VisualTransformer] Content JSON AFTER stripHtml (first 500 chars):', contentStr.substring(0, 500));
+        if (contentStr.includes('sentdebtcollectorsforit')) {
+          console.log('🔴🔴🔴 [VisualTransformer] CONTENT BROKEN BY stripHtml (JSON)! 🔴🔴🔴');
+        }
+      }
+      
       const response = await fetch('/api/blog/generate-layout-v2', {
         method: 'POST',
         headers: {
@@ -149,7 +183,7 @@ export function VisualTransformer({
         },
         body: JSON.stringify({
           title,
-          content: stripHtml(content),
+          content: strippedContent,
           excerpt,
           author: 'Lightpoint Team',
           includeHero: true,

@@ -84,6 +84,24 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
       setTitle(existingPost.title || '');
       setSlug(existingPost.slug || '');
       setExcerpt(existingPost.excerpt || '');
+      
+      // 🔴 DIAGNOSTIC: Log raw content from database
+      console.log('🔴 [BlogPostForm] Loading post from database');
+      console.log('🔴 [BlogPostForm] Content type:', typeof existingPost.content);
+      console.log('🔴 [BlogPostForm] Content is object:', typeof existingPost.content === 'object');
+      if (typeof existingPost.content === 'string') {
+        console.log('🔴 [BlogPostForm] Content (first 500 chars):', existingPost.content.substring(0, 500));
+        if (existingPost.content.includes('sentdebtcollectorsforit')) {
+          console.log('🔴🔴🔴 [BlogPostForm] CONTENT ALREADY BROKEN IN DATABASE! 🔴🔴🔴');
+        }
+      } else if (typeof existingPost.content === 'object') {
+        const contentStr = JSON.stringify(existingPost.content);
+        console.log('🔴 [BlogPostForm] Content JSON (first 500 chars):', contentStr.substring(0, 500));
+        if (contentStr.includes('sentdebtcollectorsforit')) {
+          console.log('🔴🔴🔴 [BlogPostForm] CONTENT ALREADY BROKEN IN DATABASE (JSON)! 🔴🔴🔴');
+        }
+      }
+      
       setContent(existingPost.content || '');
       setFeaturedImage(existingPost.featured_image_url || '');
       setFeaturedImageAlt(existingPost.featured_image_alt || '');

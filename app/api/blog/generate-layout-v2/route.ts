@@ -27,6 +27,22 @@ export async function POST(req: NextRequest) {
     const body: V2LayoutRequest = await req.json();
     const { title, content, excerpt, author, includeHero = true, includeCTA = true } = body;
 
+    // 🔴 CRITICAL DIAGNOSTIC: Check content at API entry point
+    console.log('🔴 [API] Content type:', typeof content);
+    console.log('🔴 [API] Content is object:', typeof content === 'object');
+    if (typeof content === 'string') {
+      console.log('🔴 [API] Content (first 500 chars):', content.substring(0, 500));
+      if (content.includes('sentdebtcollectorsforit')) {
+        console.log('🔴🔴🔴 [API] CONTENT ALREADY BROKEN AT API ENTRY POINT! 🔴🔴🔴');
+      }
+    } else if (typeof content === 'object') {
+      const contentStr = JSON.stringify(content);
+      console.log('🔴 [API] Content JSON (first 500 chars):', contentStr.substring(0, 500));
+      if (contentStr.includes('sentdebtcollectorsforit')) {
+        console.log('🔴🔴🔴 [API] CONTENT ALREADY BROKEN AT API ENTRY POINT (JSON)! 🔴🔴🔴');
+      }
+    }
+
     if (!title || !content) {
       return NextResponse.json(
         { success: false, error: 'Title and content are required' },
@@ -35,7 +51,7 @@ export async function POST(req: NextRequest) {
     }
 
     console.log('📄 [V2 Layout] Generating layout for:', title.substring(0, 50));
-    console.log('📄 [V2 Layout] Content length:', content.length);
+    console.log('📄 [V2 Layout] Content length:', typeof content === 'string' ? content.length : JSON.stringify(content).length);
     console.log('📄 [V2 Layout] Content type:', typeof content);
     console.log('📄 [V2 Layout] Content preview (first 500 chars):', typeof content === 'string' ? content.substring(0, 500) : JSON.stringify(content).substring(0, 500));
 

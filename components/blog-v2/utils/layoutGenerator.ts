@@ -42,7 +42,23 @@ export async function generateLayout(
     includeCTA = true,
   } = options;
 
-  console.log('🔍 [V2 Layout] Input content length:', content?.length || 0);
+  // 🔴 CRITICAL DIAGNOSTIC: Check content at generateLayout entry
+  console.log('🔴 [generateLayout] Content type:', typeof content);
+  console.log('🔴 [generateLayout] Content is object:', typeof content === 'object');
+  if (typeof content === 'string') {
+    console.log('🔴 [generateLayout] Content (first 500 chars):', content?.substring(0, 500));
+    if (content?.includes('sentdebtcollectorsforit')) {
+      console.log('🔴🔴🔴 [generateLayout] CONTENT ALREADY BROKEN AT generateLayout ENTRY! 🔴🔴🔴');
+    }
+  } else if (typeof content === 'object') {
+    const contentStr = JSON.stringify(content);
+    console.log('🔴 [generateLayout] Content JSON (first 500 chars):', contentStr.substring(0, 500));
+    if (contentStr.includes('sentdebtcollectorsforit')) {
+      console.log('🔴🔴🔴 [generateLayout] CONTENT ALREADY BROKEN AT generateLayout ENTRY (JSON)! 🔴🔴🔴');
+    }
+  }
+
+  console.log('🔍 [V2 Layout] Input content length:', typeof content === 'string' ? content?.length || 0 : JSON.stringify(content).length);
   console.log('🔍 [V2 Layout] Content type:', typeof content);
   console.log('🔍 [V2 Layout] Content preview:', typeof content === 'string' ? content?.substring(0, 500) : JSON.stringify(content).substring(0, 500));
 
