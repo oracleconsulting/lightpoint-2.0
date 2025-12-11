@@ -279,10 +279,21 @@ function sectionToComponent(section: DetectedSection): LayoutComponent | null {
     case 'paragraph':
       // Skip very short paragraphs (less than 20 chars)
       if (section.content.length < 20) return null;
+      
+      // 🔴 DEBUG: Log paragraph text to check for word concatenation
+      const paragraphText = section.content;
+      if (paragraphText.match(/[a-z][A-Z]/) || paragraphText.match(/\w{30,}/)) {
+        console.log('🔴🔴🔴 [layoutGenerator] BROKEN PARAGRAPH DETECTED:', {
+          preview: paragraphText.substring(0, 200),
+          hasNoSpaces: paragraphText.match(/[a-z][A-Z]/),
+          hasLongWord: paragraphText.match(/\w{30,}/),
+        });
+      }
+      
       return {
         type: 'paragraph',
         props: {
-          text: section.content,
+          text: paragraphText,
         },
       };
     

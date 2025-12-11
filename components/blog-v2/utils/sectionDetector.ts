@@ -65,10 +65,27 @@ export class SectionDetector {
       console.log('🔬 [SectionDetector] Constructor - Input is object:', JSON.stringify(content).substring(0, 300));
     }
     const normalized = this.normalizeContent(content);
+    
+    // 🔴 DEBUG: Check for word concatenation after normalization  
+    if (normalized.match(/[a-z][A-Z]/) || normalized.match(/\w{25,}/)) {
+      console.log('🔴🔴🔴 [SectionDetector] CONTENT BROKEN AFTER NORMALIZATION:', {
+        example: normalized.match(/\S*[a-z][A-Z]\S*/g)?.slice(0, 5),
+        longWords: normalized.match(/\w{25,}/g)?.slice(0, 5),
+      });
+    }
+    
     // CRITICAL: Preprocess to merge short lines into paragraphs BEFORE detection
     this.content = this.preprocessContent(normalized);
     console.log('🔬 [SectionDetector] Constructor - After preprocessing length:', this.content.length);
     console.log('🔬 [SectionDetector] Constructor - After preprocessing preview:', this.content.substring(0, 300));
+    
+    // 🔴 DEBUG: Check for word concatenation after preprocessing
+    if (this.content.match(/[a-z][A-Z]/) || this.content.match(/\w{25,}/)) {
+      console.log('🔴🔴🔴 [SectionDetector] CONTENT BROKEN AFTER PREPROCESSING:', {
+        example: this.content.match(/\S*[a-z][A-Z]\S*/g)?.slice(0, 5),
+        longWords: this.content.match(/\w{25,}/g)?.slice(0, 5),
+      });
+    }
   }
 
   /**
@@ -1406,6 +1423,15 @@ export class SectionDetector {
     // Skip if text is now empty or just punctuation
     if (!cleanText.trim() || /^[\.\*\s\-]+$/.test(cleanText.trim())) {
       return null;
+    }
+    
+    // 🔴 DEBUG: Check for word concatenation before returning paragraph
+    if (cleanText.match(/[a-z][A-Z]/) || cleanText.match(/\w{25,}/)) {
+      console.log('🔴🔴🔴 [detectParagraphType] BROKEN TEXT:', {
+        preview: cleanText.substring(0, 200),
+        hasNoSpaces: cleanText.match(/[a-z][A-Z]/)?.[0],
+        longWord: cleanText.match(/\w{25,}/)?.[0],
+      });
     }
     
     return {
