@@ -1700,13 +1700,12 @@ export class SectionDetector {
     if (paragraphs.length === 0) return [];
     
     const result: DetectedSection[] = [];
-    const MIN_PARAGRAPH_LENGTH = 100; // Merge paragraphs shorter than this
-    const IMAGE_FREQUENCY = 4; // Insert image every N merged paragraphs
-    
-    let mergedParagraphs: string[] = [];
-    let mergedStartIndex = paragraphs[0]?.startIndex || 0;
-    let mergedEndIndex = paragraphs[0]?.endIndex || 0;
+    const IMAGE_FREQUENCY = 4; // Insert image every N paragraphs
     let imageCounter = 0;
+    
+    // NEW APPROACH: Respect author's paragraph structure!
+    // Short paragraphs that end with punctuation are INTENTIONAL for emphasis
+    // Only merge paragraphs that are clearly incomplete (no ending punctuation)
     
     for (let i = 0; i < paragraphs.length; i++) {
       const paragraph = paragraphs[i];
@@ -1719,121 +1718,50 @@ export class SectionDetector {
       // Fix broken sentences (like "collectors for it\n. The money")
       content = content.replace(/([a-z])\s*\n\s*\.\s+([A-Z])/g, '$1. $2');
       
-      // REMOVED: This "broken words" fix was stripping spaces incorrectly!
-      // It was matching "t \nfor " and turning it into "tfor " (missing space)
-      
       // Skip empty or artifact-only paragraphs
       if (!content || /^[\.\*\s\-]+$/.test(content)) continue;
       
-      // If paragraph is short, merge with previous
-      if (content.length < MIN_PARAGRAPH_LENGTH && mergedParagraphs.length > 0) {
-        // Ensure we're not breaking a sentence - check if previous ends with punctuation
-        const lastMerged = mergedParagraphs[mergedParagraphs.length - 1];
-        const endsWithPunctuation = /[.!?]$/.test(lastMerged.trim());
-        
-        if (endsWithPunctuation) {
-          // Previous paragraph ends properly, safe to add new paragraph
-          mergedParagraphs.push(content);
-        } else {
-          // Previous doesn't end properly, merge as continuation
-          mergedParagraphs[mergedParagraphs.length - 1] = lastMerged + ' ' + content;
-        }
-        mergedEndIndex = paragraph.endIndex;
-        continue;
+      // Check if this is a complete sentence/paragraph (ends with . ! ?)
+      const isCompleteParagraph = /[.!?]$/.test(content.trim());
+      
+      // If incomplete, try to merge with next paragraph
+      if (!isCompleteParagraph && i + 1 < paragraphs.length) {
+        let nextContent = paragraphs[i + 1].content.trim()
+          .replace(/\*\*/g, '').replace(/\*/g, '');
+        content = content + ' ' + nextContent;
+        i++; // Skip next paragraph since we merged it
       }
       
-      // Flush merged paragraphs if we have them
-      if (mergedParagraphs.length > 0) {
-        const mergedContent = mergedParagraphs.join('\n\n').trim();
-        
-        // Clean up merged content
-        let cleanMerged = mergedContent
-          .replace(/\*\*/g, '')
-          .replace(/\*/g, '')
-          .replace(/^\.\s+/g, '')
-          .replace(/\n\s*\.\s+/g, '. '); // Fix periods at start of lines
-        
-        // Remove only consecutive duplicate sentences
-        const sentences = cleanMerged.split(/(?<=[.!?])\s+/);
-        const dedupedSentences: string[] = [];
-        for (let i = 0; i < sentences.length; i++) {
-          const trimmed = sentences[i].trim();
-          if (!trimmed) continue;
-          
-          // Only skip if it's the same as the immediately previous sentence
-          if (i > 0 && dedupedSentences[dedupedSentences.length - 1] === trimmed) {
-            continue; // Skip consecutive duplicates only
-          }
-          dedupedSentences.push(trimmed);
-        }
-        cleanMerged = dedupedSentences.join(' ');
-        
-        if (cleanMerged && cleanMerged.length > 20) {
-          // Every Nth merged block, convert to textWithImage
-          if (imageCounter > 0 && imageCounter % IMAGE_FREQUENCY === 0 && cleanMerged.length > 200) {
-            result.push({
-              type: 'textWithImage',
-              content: cleanMerged,
-              data: {
-                paragraphs: mergedParagraphs.filter(p => p.trim()),
-                imageAlt: this.generateImageAlt(cleanMerged),
-                imagePosition: imageCounter % 2 === 0 ? 'right' : 'left',
-              },
-              confidence: 0.7,
-              startIndex: mergedStartIndex,
-              endIndex: mergedEndIndex,
-            });
-          } else {
-            // Merge into single paragraph component
-            result.push({
-              type: 'paragraph',
-              content: cleanMerged,
-              data: { text: cleanMerged },
-              confidence: 0.5,
-              startIndex: mergedStartIndex,
-              endIndex: mergedEndIndex,
-            });
-          }
-        }
-        
-        imageCounter++;
-        mergedParagraphs = [];
-      }
+      // Skip if too short after cleaning
+      if (content.length < 10) continue;
       
-      // Start new merge group or add long paragraph
-      if (content.length < MIN_PARAGRAPH_LENGTH) {
-        mergedParagraphs.push(content);
-        mergedStartIndex = paragraph.startIndex;
-        mergedEndIndex = paragraph.endIndex;
-      } else {
-        // Long paragraph - add as-is (but cleaned)
+      // Every Nth paragraph, convert to textWithImage (if long enough)
+      if (imageCounter > 0 && imageCounter % IMAGE_FREQUENCY === 0 && content.length > 200) {
         result.push({
-          ...paragraph,
-          content,
-          data: { text: content },
+          type: 'textWithImage',
+          content: content,
+          data: {
+            paragraphs: [content],
+            imageAlt: this.generateImageAlt(content),
+            imagePosition: imageCounter % 2 === 0 ? 'right' : 'left',
+          },
+          confidence: 0.7,
+          startIndex: paragraph.startIndex,
+          endIndex: paragraph.endIndex,
         });
-        imageCounter++;
-      }
-    }
-    
-    // Flush any remaining merged paragraphs
-    if (mergedParagraphs.length > 0) {
-      const mergedContent = mergedParagraphs.join('\n\n').trim();
-      let cleanMerged = mergedContent
-        .replace(/\*\*/g, '')
-        .replace(/\*/g, '')
-        .replace(/^\.\s+/g, '');
-      
-      if (cleanMerged && cleanMerged.length > 20) {
+      } else {
+        // Add each paragraph as-is - respect author's intentional structure!
         result.push({
           type: 'paragraph',
-          content: cleanMerged,
-          data: { text: cleanMerged },
+          content: content,
+          data: { text: content },
           confidence: 0.5,
-          startIndex: mergedStartIndex,
-          endIndex: mergedEndIndex,
+          startIndex: paragraph.startIndex,
+          endIndex: paragraph.endIndex,
         });
       }
+      
+      imageCounter++;
     }
     
     return result;
