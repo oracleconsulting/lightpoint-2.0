@@ -14,8 +14,8 @@ const PATTERNS = {
   // Stats: **92%**, £1,200, 15 days, 35,000 cases
   stat: /\*\*(\d+(?:,\d{3})*(?:\.\d+)?%?)\*\*|£(\d+(?:,\d{3})*(?:\.\d+)?)|(\d+(?:,\d{3})*)\s*(days?|weeks?|months?|years?|cases?|complaints?|hours?|minutes?)/gi,
   
-  // Numbered steps: 1. Step one, Step 1:, First,
-  numberedStep: /^(?:\d+\.|Step\s+\d+:|(?:First|Second|Third|Fourth|Fifth|Sixth|Seventh|Eighth|Ninth|Tenth),?)\s+(.+)/gim,
+  // Numbered steps: 1. Step one, Step 1:, First, (ordinals must have comma)
+  numberedStep: /^(?:\d+\.|Step\s+\d+:|(?:First|Second|Third|Fourth|Fifth|Sixth|Seventh|Eighth|Ninth|Tenth),)\s+(.+)/gim,
   
   // Timeline dates: 12 May 2024, Day 1, Week 3
   timelineDate: /(?:Day\s+\d+|Week\s+\d+|\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4})/gi,
@@ -701,7 +701,9 @@ export class SectionDetector {
       const pointPattern = content.match(/^Point\s+\d+[:\s]*(.*)/is);
       
       // Pattern 4: Colon-separated - "Title: longer description text"
-      const colonPattern = content.match(/^([A-Z][^:]{5,60}?):\s+(.+)/s);
+      // EXCLUDE month names - these should be detected as timeline, not cards!
+      const isMonthStart = /^(?:January|February|March|April|May|June|July|August|September|October|November|December):/i.test(content);
+      const colonPattern = !isMonthStart ? content.match(/^([A-Z][^:]{5,60}?):\s+(.+)/s) : null;
       
       if (boldPattern) {
         title = boldPattern[1].trim();
@@ -983,7 +985,8 @@ export class SectionDetector {
     
     while (i < paragraphs.length && steps.length < 10) {
       const trimmed = paragraphs[i].trim();
-      const numberedPattern = /^(?:\d+\.|Step\s+\d+:|0?\d+\s|(?:First|Second|Third|Fourth|Fifth|Sixth|Seventh|Eighth|Ninth|Tenth),?\s+)/i;
+      // For ordinals, require comma to avoid matching narrative like "First letter sent"
+      const numberedPattern = /^(?:\d+\.|Step\s+\d+:|0?\d+\s|(?:First|Second|Third|Fourth|Fifth|Sixth|Seventh|Eighth|Ninth|Tenth),\s+)/i;
       
       if (numberedPattern.test(trimmed)) {
         const stepData = this.parseNumberedStep(trimmed);
@@ -1262,8 +1265,9 @@ export class SectionDetector {
     }
     
     // Check for numbered step (must start with number or "Step")
-    // Also check for patterns like "01", "02", "03" or "First", "Second", "Third"
-    const numberedStepPattern = /^(?:\d+\.|Step\s+\d+:|0?\d+\s|(?:First|Second|Third|Fourth|Fifth|Sixth|Seventh|Eighth|Ninth|Tenth),?\s+)/i;
+    // For ordinals like "First", "Second", require a COMMA after to avoid matching narrative like "First letter sent"
+    // Pattern: "1.", "01 ", "Step 1:", or "First, ..." (with comma)
+    const numberedStepPattern = /^(?:\d+\.|Step\s+\d+:|0?\d+\s|(?:First|Second|Third|Fourth|Fifth|Sixth|Seventh|Eighth|Ninth|Tenth),\s+)/i;
     
     if (numberedStepPattern.test(trimmed) && trimmed.length < 500) {
       // Check if it's a simple numbered item (not a full paragraph)
@@ -1947,10 +1951,11 @@ export class SectionDetector {
         'first': 1, 'second': 2, 'third': 3, 'fourth': 4, 'fifth': 5,
         'sixth': 6, 'seventh': 7, 'eighth': 8, 'ninth': 9, 'tenth': 10,
       };
-      const ordinalMatch = cleanText.match(/^(First|Second|Third|Fourth|Fifth|Sixth|Seventh|Eighth|Ninth|Tenth),?\s+/i);
+      // Only match ordinals followed by comma (e.g., "First, submit..." not "First letter sent")
+      const ordinalMatch = cleanText.match(/^(First|Second|Third|Fourth|Fifth|Sixth|Seventh|Eighth|Ninth|Tenth),\s+/i);
       if (ordinalMatch) {
         number = ordinalMap[ordinalMatch[1].toLowerCase()] || 1;
-        content = cleanText.replace(/^(?:First|Second|Third|Fourth|Fifth|Sixth|Seventh|Eighth|Ninth|Tenth),?\s+/i, '');
+        content = cleanText.replace(/^(?:First|Second|Third|Fourth|Fifth|Sixth|Seventh|Eighth|Ninth|Tenth),\s+/i, '');
       }
     }
     
