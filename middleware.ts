@@ -64,26 +64,32 @@ function addSecurityHeaders(res: NextResponse): void {
 }
 
 export async function middleware(req: NextRequest) {
-  // Rate limiting check
-  const isApiRoute = req.nextUrl.pathname.startsWith('/api');
-  const maxRequests = isApiRoute ? API_RATE_LIMIT_MAX : RATE_LIMIT_MAX_REQUESTS;
-  const rateLimitKey = getRateLimitKey(req);
-  const rateLimit = checkRateLimit(rateLimitKey, maxRequests);
+  // Exclude blog layout generation from rate limiting (development/testing)
+  const isBlogLayoutRoute = req.nextUrl.pathname.startsWith('/api/blog/generate-layout-v2');
   
-  if (!rateLimit.allowed) {
-    logger.warn('🚫 Rate limit exceeded:', { key: rateLimitKey, resetIn: rateLimit.resetIn });
-    return new NextResponse(
-      JSON.stringify({ error: 'Too many requests. Please try again later.' }),
-      { 
-        status: 429, 
-        headers: {
-          'Content-Type': 'application/json',
-          'Retry-After': Math.ceil(rateLimit.resetIn / 1000).toString(),
-          'X-RateLimit-Remaining': '0',
-          'X-RateLimit-Reset': Math.ceil(rateLimit.resetIn / 1000).toString(),
+  // Rate limiting check (skip for blog layout generation)
+  let rateLimit: { allowed: boolean; remaining: number; resetIn: number } | null = null;
+  if (!isBlogLayoutRoute) {
+    const isApiRoute = req.nextUrl.pathname.startsWith('/api');
+    const maxRequests = isApiRoute ? API_RATE_LIMIT_MAX : RATE_LIMIT_MAX_REQUESTS;
+    const rateLimitKey = getRateLimitKey(req);
+    rateLimit = checkRateLimit(rateLimitKey, maxRequests);
+    
+    if (!rateLimit.allowed) {
+      logger.warn('🚫 Rate limit exceeded:', { key: rateLimitKey, resetIn: rateLimit.resetIn });
+      return new NextResponse(
+        JSON.stringify({ error: 'Too many requests. Please try again later.' }),
+        { 
+          status: 429, 
+          headers: {
+            'Content-Type': 'application/json',
+            'Retry-After': Math.ceil(rateLimit.resetIn / 1000).toString(),
+            'X-RateLimit-Remaining': '0',
+            'X-RateLimit-Reset': Math.ceil(rateLimit.resetIn / 1000).toString(),
+          }
         }
-      }
-    );
+      );
+    }
   }
 
   const res = NextResponse.next();
@@ -91,9 +97,11 @@ export async function middleware(req: NextRequest) {
   // Add security headers
   addSecurityHeaders(res);
   
-  // Add rate limit headers
-  res.headers.set('X-RateLimit-Remaining', rateLimit.remaining.toString());
-  res.headers.set('X-RateLimit-Reset', Math.ceil(rateLimit.resetIn / 1000).toString());
+  // Add rate limit headers (only if rate limiting was checked)
+  if (rateLimit) {
+    res.headers.set('X-RateLimit-Remaining', rateLimit.remaining.toString());
+    res.headers.set('X-RateLimit-Reset', Math.ceil(rateLimit.resetIn / 1000).toString());
+  }
   
   // Debug: Log available cookies
   const allCookies = req.cookies.getAll();
