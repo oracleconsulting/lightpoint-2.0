@@ -766,25 +766,34 @@ export function VisualTransformer({
 function stripHtml(content: any): string {
   if (!content) return '';
   
+  console.log('🔵 [stripHtml] Input type:', typeof content);
+  console.log('🔵 [stripHtml] Is TipTap JSON:', typeof content === 'object' && content?.type === 'doc');
+  
   // If it's a TipTap JSON object, preserve structure with markdown-like formatting
   if (typeof content === 'object' && content.type === 'doc') {
+    console.log('🔵 [stripHtml] Processing TipTap JSON');
+    
     const extractNode = (node: any): string => {
       if (!node) return '';
       
       // Text node - check for marks (bold, italic, etc.)
       if (node.type === 'text') {
         let text = node.text || '';
-        if (node.marks) {
+        if (node.marks && node.marks.length > 0) {
+          console.log('🔵 [stripHtml] Found marks on text:', text.substring(0, 30), '- marks:', node.marks.map((m: any) => m.type));
           for (const mark of node.marks) {
-            if (mark.type === 'bold') text = `**${text}**`;
+            if (mark.type === 'bold') {
+              text = `**${text}**`;
+              console.log('🔵 [stripHtml] Applied bold markers:', text.substring(0, 50));
+            }
             if (mark.type === 'italic') text = `*${text}*`;
           }
         }
         return text;
       }
       
-      // Get children content - preserve spaces between text nodes
-      const children = node.content ? node.content.map(extractNode).join(' ') : '';
+      // Get children content - join WITHOUT extra space to preserve formatting
+      const children = node.content ? node.content.map(extractNode).join('') : '';
       
       // Handle different node types with proper formatting
       switch (node.type) {
@@ -814,11 +823,22 @@ function stripHtml(content: any): string {
     
     const result = extractNode(content);
     // Normalize excessive newlines but preserve paragraph breaks
-    return result.replace(/\n{4,}/g, '\n\n\n').trim();
+    const finalResult = result.replace(/\n{4,}/g, '\n\n\n').trim();
+    
+    // Log bold marker count
+    const boldMarkerCount = (finalResult.match(/\*\*/g) || []).length / 2;
+    console.log('🔵 [stripHtml] Output has', boldMarkerCount, 'bold sections');
+    console.log('🔵 [stripHtml] Output preview (first 500 chars):', finalResult.substring(0, 500));
+    
+    return finalResult;
   }
   
   // If it's an HTML string, convert to markdown-like format
   if (typeof content === 'string') {
+    console.log('🔵 [stripHtml] Processing HTML string');
+    console.log('🔵 [stripHtml] Has <strong> tags:', content.includes('<strong'));
+    console.log('🔵 [stripHtml] Has <b> tags:', content.includes('<b>') || content.includes('<b '));
+    
     let text = content;
     // Convert block elements to paragraph breaks
     text = text.replace(/<\/?(p|div|br|h[1-6]|li|tr|blockquote)[^>]*>/gi, '\n\n');
@@ -826,7 +846,7 @@ function stripHtml(content: any): string {
     text = text.replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1\n\n');
     text = text.replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n\n');
     text = text.replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1\n\n');
-    // Convert bold
+    // Convert bold - MUST happen before stripping other HTML
     text = text.replace(/<strong[^>]*>(.*?)<\/strong>/gi, '**$1**');
     text = text.replace(/<b[^>]*>(.*?)<\/b>/gi, '**$1**');
     // Convert italic
@@ -848,10 +868,19 @@ function stripHtml(content: any): string {
     // Normalize whitespace but preserve paragraph breaks
     text = text.replace(/\n{4,}/g, '\n\n\n');
     text = text.replace(/[ \t]+/g, ' ');
-    return text.trim();
+    
+    const finalResult = text.trim();
+    
+    // Log bold marker count
+    const boldMarkerCount = (finalResult.match(/\*\*/g) || []).length / 2;
+    console.log('🔵 [stripHtml] Output has', boldMarkerCount, 'bold sections');
+    console.log('🔵 [stripHtml] Output preview (first 500 chars):', finalResult.substring(0, 500));
+    
+    return finalResult;
   }
   
   // Otherwise try to stringify it
+  console.log('🔵 [stripHtml] Fallback: stringifying content');
   return String(content);
 }
 
