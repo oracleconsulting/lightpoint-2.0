@@ -631,27 +631,47 @@ export class SectionDetector {
         continue;
       }
       
-      // LAST: Check for column cards (3 or 4) - ONLY if they have EXPLICIT card markers
+      // LAST: Check for column cards (3 or 4) - with both explicit markers AND semantic patterns
       // This prevents the "card explosion" bug where every 3 lines becomes a card
       if (i + 2 < paragraphs.length) {
-        // Helper to check if a paragraph has card markers
+        // Helper to check if a paragraph has EXPLICIT card markers
         const monthNames = /^(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec):/i;
-        const hasCardMarker = (p: string) => {
+        const hasExplicitCardMarker = (p: string) => {
           const trimmed = p.trim();
           if (monthNames.test(trimmed)) return false;
           return (
             trimmed.match(/^[-•*]?\s*\*\*[^*]+\*\*[:\s]/) || // Bold title pattern
-            trimmed.match(/^[🎯📋⚖️🔑💡✅❌📧📝📜💰⚠️📅]\s/) // Emoji prefix
+            trimmed.match(/^[🎯📋⚖️🔑💡✅❌📧📝📜💰⚠️📅]\s/) || // Emoji prefix
+            trimmed.match(/^"[^"]+"\s*[→\-–:]/) // Quoted title with arrow/dash
           );
+        };
+        
+        // More flexible: Check for SEMANTIC card patterns (title-like lines)
+        // A "card-like" paragraph is one that looks like a title+description
+        const looksLikeCardItem = (p: string) => {
+          const trimmed = p.trim();
+          if (monthNames.test(trimmed)) return false;
+          if (trimmed.length > 300) return false; // Too long for a card
+          // Has explicit marker
+          if (hasExplicitCardMarker(p)) return true;
+          // Contains bold content and is relatively short
+          if (trimmed.match(/\*\*[^*]+\*\*/) && trimmed.length < 200) return true;
+          // Short line ending with period that looks like a title
+          if (trimmed.match(/^[A-Z][^.!?]{10,60}[.]$/) && trimmed.length < 80) return true;
+          return false;
         };
         
         // Try 4 cards first (2x2 grid), then fall back to 3 cards
         const nextFour = paragraphs.slice(i, i + 4);
         const nextThree = paragraphs.slice(i, i + 3);
         
-        // Check if we have 4 consecutive paragraphs with card markers
-        if (i + 3 < paragraphs.length && nextFour.every(p => hasCardMarker(p))) {
-          console.log('🔬 [SectionDetector] Checking for 4-column cards at index', i);
+        // Check for 4 consecutive paragraphs with card markers OR semantic patterns
+        const fourHaveExplicitMarkers = nextFour.every(p => hasExplicitCardMarker(p));
+        const fourLookLikeCards = nextFour.every(p => looksLikeCardItem(p)) && 
+          nextFour.filter(p => p.trim().match(/\*\*[^*]+\*\*/)).length >= 2; // At least 2 have bold
+        
+        if (i + 3 < paragraphs.length && (fourHaveExplicitMarkers || fourLookLikeCards)) {
+          console.log('🔬 [SectionDetector] Checking for 4-column cards at index', i, fourHaveExplicitMarkers ? '(explicit)' : '(semantic)');
           const fourColumnSection = this.detectThreeColumnCards(nextFour, currentIndex);
           if (fourColumnSection) {
             console.log('🔬 [SectionDetector] ✅ Detected 4 cards (2x2 grid)');
@@ -662,9 +682,13 @@ export class SectionDetector {
           }
         }
         
-        // Fall back to 3 cards
-        if (nextThree.every(p => hasCardMarker(p))) {
-          console.log('🔬 [SectionDetector] Checking for threeColumnCards at index', i, '- all have card markers');
+        // Fall back to 3 cards - with explicit OR semantic detection
+        const threeHaveExplicitMarkers = nextThree.every(p => hasExplicitCardMarker(p));
+        const threeLookLikeCards = nextThree.every(p => looksLikeCardItem(p)) && 
+          nextThree.filter(p => p.trim().match(/\*\*[^*]+\*\*/)).length >= 2; // At least 2 have bold
+        
+        if (threeHaveExplicitMarkers || threeLookLikeCards) {
+          console.log('🔬 [SectionDetector] Checking for threeColumnCards at index', i, threeHaveExplicitMarkers ? '(explicit)' : '(semantic)');
           const threeColumnSection = this.detectThreeColumnCards(nextThree, currentIndex);
           if (threeColumnSection) {
             console.log('🔬 [SectionDetector] ✅ Detected threeColumnCards:', {
@@ -1351,8 +1375,13 @@ export class SectionDetector {
     if (!firstPara) return null;
     
     // Check if first line ends with colon (could be bold)
-    // Matches: "Claimable:", "**Claimable:**", "Not claimable:", etc.
+    // Matches: "Claimable:", "**Claimable:**", "Not claimable:", "What's claimable:", etc.
     const headerMatch = firstPara.match(/^(?:\*\*)?([A-Za-z][^:]{0,60}):(?:\*\*)?$/);
+    
+    if (headerMatch) {
+      console.log('🔍 [detectImplicitList] Found colon header:', firstPara);
+    }
+    
     if (!headerMatch) return null;
     
     const headerText = headerMatch[1].replace(/\*\*/g, '').trim();
@@ -1367,11 +1396,17 @@ export class SectionDetector {
       if (!line) { i++; continue; }
       
       // Stop conditions - we've hit a new section
-      if (line.match(/^(?:\*\*)?[A-Za-z][^:]{0,60}:(?:\*\*)?$/)) break; // Another colon header
+      if (line.match(/^(?:\*\*)?[A-Za-z][^:]{0,60}:(?:\*\*)?$/)) {
+        console.log('🔍 [detectImplicitList] Stop: another colon header:', line.substring(0, 40));
+        break;
+      }
       if (line.match(/^#+\s/)) break; // Markdown header
       if (line.match(/^[🎯📋⚖️🔑💡✅❌📧📝📜💰⚠️📅]\s/)) break; // Emoji marker
       if (line.match(/^[-•*]\s*\*\*[^*]+\*\*[:\s]/)) break; // Card marker
-      if (line.length > 200) break; // Too long for list item
+      if (line.length > 200) {
+        console.log('🔍 [detectImplicitList] Stop: line too long (' + line.length + ' chars)');
+        break;
+      }
       
       // Check if it looks like a list item (relatively short, typically no period at end)
       // Or starts with typical list-item patterns
@@ -1385,12 +1420,16 @@ export class SectionDetector {
         totalLength += line.length + 2;
         i++;
       } else {
+        console.log('🔍 [detectImplicitList] Stop: line not list-like:', line.substring(0, 60));
         break;
       }
     }
     
-    // Need at least 3 items for a meaningful list
-    if (items.length >= 3) {
+    console.log('🔍 [detectImplicitList] Found', items.length, 'items after header "' + headerText + '"');
+    
+    // Need at least 2 items for a meaningful list (reduced from 3)
+    if (items.length >= 2) {
+      console.log('✅ [detectImplicitList] DETECTED bulletList with title "' + headerText + '":', items);
       return {
         section: {
           type: 'bulletList',
@@ -1398,7 +1437,7 @@ export class SectionDetector {
           data: { 
             title: headerText,
             items,
-            variant: 'bullet'
+            variant: 'check' // Use checkmarks for implicit lists
           },
           confidence: 0.8,
           startIndex: currentIndex,
@@ -1458,6 +1497,11 @@ export class SectionDetector {
   private detectParagraphType(text: string, startIndex: number): DetectedSection | null {
     const endIndex = startIndex + text.length;
     const trimmed = text.trim();
+    
+    // 🔍 DETECTION LOG: Check what we're analyzing
+    if (trimmed.length < 150) {
+      console.log('🔍 [detectParagraphType] Checking short paragraph:', trimmed.substring(0, 80) + (trimmed.length > 80 ? '...' : ''));
+    }
     
     // Check for explicit callout markers (must start with marker)
     // Also check for patterns like "THE KEY:", "Compare that to:", quotes, etc.
@@ -1540,7 +1584,16 @@ export class SectionDetector {
       const isFullyBold = trimmed.match(/^\*\*[^*]+\*\*$/) || 
                           (trimmed.match(/^\*\*.*\*\*$/) && !trimmed.match(/\*\*[^*]+\*\*[^*]+/));
       
+      console.log('🔍 [detectParagraphType] Bold heading check:', {
+        text: trimmed.substring(0, 60),
+        boldRatio: boldRatio.toFixed(2),
+        isFullyBold: !!isFullyBold,
+        boldMatches: boldMatches.length,
+        willDetect: boldRatio > 0.6 || !!isFullyBold,
+      });
+      
       if (boldRatio > 0.6 || isFullyBold) {
+        console.log('✅ [detectParagraphType] DETECTED as sectionHeading:', trimmedNoBold);
         return {
           type: 'sectionHeading',
           content: text,
