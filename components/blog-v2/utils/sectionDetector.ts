@@ -104,39 +104,76 @@ export class SectionDetector {
   /**
    * Preprocess content - merge short consecutive lines into paragraphs
    * This prevents the "card explosion" bug where every 3 lines becomes a card
+   * Also handles "list context" - lines following a colon header become list items
    */
   private preprocessContent(content: string): string {
     const lines = content.split('\n');
     const processed: string[] = [];
     let currentParagraph: string[] = [];
+    let inListContext = false; // Track if we're after a colon header
     
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       const trimmed = line.trim();
       
-      // Empty line = paragraph break
+      // Empty line = paragraph break, exit list context
       if (!trimmed) {
         if (currentParagraph.length > 0) {
           processed.push(currentParagraph.join(' '));
           currentParagraph = [];
         }
+        inListContext = false;
         continue;
       }
       
       // Check if this line is a "continuation" or a "new section"
-      const isHeader = trimmed.match(/^#+\s/) || trimmed.match(/^[A-Z][^.!?]*:$/);
+      const isHeader = trimmed.match(/^#+\s/);
+      const isColonHeader = trimmed.match(/^(?:\*\*)?[A-Za-z][^:]{0,60}:(?:\*\*)?$/); // "Claimable:", "**Title:**"
       const isListItem = trimmed.match(/^[-•*]\s/) || trimmed.match(/^\d+[.)]\s/);
-      const isMonthHeader = trimmed.match(/^(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec):$/i);
+      const isMonthHeader = trimmed.match(/^(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec):/i);
       const isDateLine = trimmed.match(/^(?:Day\s+\d+|Week\s+\d+|\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4})/i);
       const isCardMarker = trimmed.match(/^[-•*]?\s*\*\*[^*]+\*\*[:\s]/) || trimmed.match(/^[🎯📋⚖️🔑💡✅❌📧📝📜💰⚠️📅]\s/);
       
-      // These start new sections
-      if (isHeader || isListItem || isMonthHeader || isDateLine || isCardMarker) {
+      // Colon headers start list context
+      if (isColonHeader && !isMonthHeader) {
         if (currentParagraph.length > 0) {
           processed.push(currentParagraph.join(' '));
           currentParagraph = [];
         }
         processed.push(trimmed);
+        inListContext = true;
+        continue;
+      }
+      
+      // These start new sections, exit list context
+      if (isHeader || isMonthHeader || isDateLine || isCardMarker) {
+        if (currentParagraph.length > 0) {
+          processed.push(currentParagraph.join(' '));
+          currentParagraph = [];
+        }
+        processed.push(trimmed);
+        inListContext = false;
+        continue;
+      }
+      
+      // Explicit list items stay as-is
+      if (isListItem) {
+        if (currentParagraph.length > 0) {
+          processed.push(currentParagraph.join(' '));
+          currentParagraph = [];
+        }
+        processed.push(trimmed);
+        continue;
+      }
+      
+      // If in list context (after colon header), treat short lines as list items
+      if (inListContext && trimmed.length < 150 && !trimmed.match(/^#+\s/)) {
+        // Add as bullet item if not already a bullet
+        if (!trimmed.startsWith('-') && !trimmed.startsWith('•') && !trimmed.startsWith('*')) {
+          processed.push('- ' + trimmed);
+        } else {
+          processed.push(trimmed);
+        }
         continue;
       }
       

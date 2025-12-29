@@ -219,16 +219,30 @@ export function BulletList({
     }
   };
 
+  // Helper to render text with bold markers as actual bold
+  const renderFormattedText = (input: string) => {
+    if (!input) return null;
+    // Split by **bold** markers and render alternating normal/bold
+    const parts = input.split(/(\*\*[^*]+\*\*)/g);
+    return parts.map((part, idx) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        const boldContent = part.slice(2, -2);
+        return <strong key={idx} className="font-bold text-slate-900">{boldContent}</strong>;
+      }
+      return <span key={idx}>{part}</span>;
+    });
+  };
+
   return (
     <div className="my-6">
       {title && (
-        <h3 className="text-2xl lg:text-3xl font-bold text-slate-800 mb-4">{title}</h3>
+        <h3 className="text-2xl lg:text-3xl font-bold text-slate-800 mb-4">{renderFormattedText(title)}</h3>
       )}
       <ul className="space-y-4">
         {items.map((item, index) => (
           <li key={index} className="flex items-start gap-4">
             {getBullet(index)}
-            <span className="text-[22px] lg:text-[24px] text-slate-700 leading-[1.8]">{item}</span>
+            <span className="text-[22px] lg:text-[24px] text-slate-700 leading-[1.8]">{renderFormattedText(item)}</span>
           </li>
         ))}
       </ul>
