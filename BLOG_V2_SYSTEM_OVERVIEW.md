@@ -618,3 +618,6 @@ The V2 layout system is a multi-stage pipeline:
 
 **Key Issue:** The detection and grouping logic may not be working correctly, resulting in poor component detection and text extraction. The group-first approach should help, but may need further refinement.
 
+
+
+

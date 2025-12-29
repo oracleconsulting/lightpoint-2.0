@@ -584,27 +584,39 @@ export class SectionDetector {
         continue;
       }
       
-      // LAST: Check for three-column cards - ONLY if they have EXPLICIT card markers
+      // LAST: Check for column cards (3 or 4) - ONLY if they have EXPLICIT card markers
       // This prevents the "card explosion" bug where every 3 lines becomes a card
       if (i + 2 < paragraphs.length) {
-        const nextThree = paragraphs.slice(i, i + 3);
-        
-        // STRICT PRE-CHECK: Must have explicit card markers on ALL 3 paragraphs
-        // Pattern 1: Bold title - "**Title**: description"
-        // Pattern 2: Emoji prefix - "🎯 Title: description"
-        // Pattern 3: Colon-separated title - "Title: description" (but NOT months!)
+        // Helper to check if a paragraph has card markers
         const monthNames = /^(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec):/i;
-        const allHaveCardMarkers = nextThree.every(p => {
+        const hasCardMarker = (p: string) => {
           const trimmed = p.trim();
-          // EXCLUDE month patterns - these should be timeline, not cards!
           if (monthNames.test(trimmed)) return false;
           return (
             trimmed.match(/^[-•*]?\s*\*\*[^*]+\*\*[:\s]/) || // Bold title pattern
-            trimmed.match(/^[🎯📋⚖️🔑💡✅❌📧📝📜💰⚠️📅]\s/) // Emoji prefix only (removed colon pattern - too aggressive)
+            trimmed.match(/^[🎯📋⚖️🔑💡✅❌📧📝📜💰⚠️📅]\s/) // Emoji prefix
           );
-        });
+        };
         
-        if (allHaveCardMarkers) {
+        // Try 4 cards first (2x2 grid), then fall back to 3 cards
+        const nextFour = paragraphs.slice(i, i + 4);
+        const nextThree = paragraphs.slice(i, i + 3);
+        
+        // Check if we have 4 consecutive paragraphs with card markers
+        if (i + 3 < paragraphs.length && nextFour.every(p => hasCardMarker(p))) {
+          console.log('🔬 [SectionDetector] Checking for 4-column cards at index', i);
+          const fourColumnSection = this.detectThreeColumnCards(nextFour, currentIndex);
+          if (fourColumnSection) {
+            console.log('🔬 [SectionDetector] ✅ Detected 4 cards (2x2 grid)');
+            sections.push(fourColumnSection);
+            i += 4;
+            currentIndex += nextFour.reduce((sum, p) => sum + p.length + 2, 0);
+            continue;
+          }
+        }
+        
+        // Fall back to 3 cards
+        if (nextThree.every(p => hasCardMarker(p))) {
           console.log('🔬 [SectionDetector] Checking for threeColumnCards at index', i, '- all have card markers');
           const threeColumnSection = this.detectThreeColumnCards(nextThree, currentIndex);
           if (threeColumnSection) {
@@ -1138,6 +1150,7 @@ export class SectionDetector {
     // "Recoverable:" followed by bullet list
     // "Not recoverable:" followed by bullet list
     const comparisonHeaders = [
+      { positive: /^(?:\*\*)?Claimable(?:\*\*)?:?$/i, negative: /^(?:\*\*)?Not\s+claimable(?:\*\*)?:?$/i },
       { positive: /^(?:\*\*)?Recoverable(?:\*\*)?:?$/i, negative: /^(?:\*\*)?Not\s+recoverable(?:\*\*)?:?$/i },
       { positive: /^(?:\*\*)?Do(?:\*\*)?:?$/i, negative: /^(?:\*\*)?Don'?t(?:\*\*)?:?$/i },
       { positive: /^(?:\*\*)?Yes(?:\*\*)?:?$/i, negative: /^(?:\*\*)?No(?:\*\*)?:?$/i },
@@ -2101,8 +2114,13 @@ export class SectionDetector {
       return stats.slice(0, 4);
     }
     
-    // Fallback: Extract percentages with context
-    const percentages = [...text.matchAll(/(\d+(?:\.\d+)?)\s*%\s*(?:of\s+)?([^,.]{3,30})/gi)];
+    // STRICT: Only match stat-like patterns (not narrative prose)
+    // Pattern must be at START of line and have explicit separator (-, –, :)
+    // This prevents "£48.40 supposedly owed" in narrative from matching
+    
+    // Fallback: Extract percentages ONLY if in stat-like format at line start
+    // e.g., "92% - success rate" but NOT "about 92% of cases"
+    const percentages = [...text.matchAll(/^[-•*]?\s*(\d+(?:\.\d+)?)\s*%\s*[-–:]\s*(.+)/gim)];
     for (const match of percentages) {
       const value = `${match[1]}%`;
       if (!seenValues.has(value)) {
@@ -2114,21 +2132,24 @@ export class SectionDetector {
       }
     }
     
-    // Extract money values
-    const money = [...text.matchAll(/£(\d+(?:,\d{3})*(?:\.\d+)?)\s*(?:in\s+)?([^,.]{3,30})?/gi)];
+    // Extract money values ONLY if in explicit format at line start
+    // e.g., "£1,200 - Professional fees" or "**£1,200**: Settlement"
+    // NOT "for £48.40 supposedly owed" in middle of sentence
+    const money = [...text.matchAll(/^[-•*]?\s*\*?\*?(£\d+(?:,\d{3})*(?:\.\d+)?)\*?\*?\s*[-–:]\s*(.+)/gim)];
     for (const match of money) {
-      const value = `£${match[1]}`;
+      const value = match[1];
       if (!seenValues.has(value)) {
         stats.push({
           value,
-          label: this.cleanLabel(match[2] || 'Amount'),
+          label: this.cleanLabel(match[2]),
         });
         seenValues.add(value);
       }
     }
     
-    // Extract large numbers with units
-    const numbers = [...text.matchAll(/(\d{1,3}(?:,\d{3})+|\d+(?:,\d{3})*)\s+(cases?|complaints?|people|calls?|days?|hours?|minutes?)/gi)];
+    // Extract large numbers ONLY if in explicit format at line start
+    // e.g., "17 - Hours spent" NOT "spent 17 hours on the phone"
+    const numbers = [...text.matchAll(/^[-•*]?\s*\*?\*?(\d{1,3}(?:,\d{3})+)\*?\*?\s*[-–:]\s*(.+)/gim)];
     for (const match of numbers) {
       const value = match[1];
       if (!seenValues.has(value)) {

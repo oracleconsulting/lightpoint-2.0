@@ -117,3 +117,6 @@ All logs will show:
 3. **Generate layout** and watch terminal for 🔴 logs
 4. **Report findings**: Where does the first "BROKEN" message appear?
 
+
+
+

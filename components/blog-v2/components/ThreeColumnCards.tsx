@@ -53,8 +53,15 @@ export function ThreeColumnCards({
           </div>
         )}
 
-        {/* Cards grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Cards grid - adapts based on card count */}
+        {/* 2 cards: side by side, 3 cards: 3 columns, 4 cards: 2x2 grid */}
+        <div className={`grid gap-6 ${
+          cards.length === 4 
+            ? 'grid-cols-1 md:grid-cols-2' // 4 cards: 2x2 grid
+            : cards.length === 2
+            ? 'grid-cols-1 md:grid-cols-2' // 2 cards: side by side
+            : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' // 3 cards: standard 3-column
+        }`}>
           {cards.map((card, index) => (
             <CardItem key={index} card={card} index={index} />
           ))}
