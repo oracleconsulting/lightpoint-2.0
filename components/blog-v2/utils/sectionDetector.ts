@@ -566,6 +566,16 @@ export class SectionDetector {
         continue;
       }
       
+      // Check for implicit lists (colon header followed by short lines)
+      // e.g., "Claimable:" followed by items without bullet markers
+      const implicitList = this.detectImplicitList(paragraphs, i, currentIndex);
+      if (implicitList) {
+        sections.push(implicitList.section);
+        i += implicitList.count;
+        currentIndex += implicitList.totalLength;
+        continue;
+      }
+      
       // Check for numbered steps BEFORE cards
       const numberedSteps = this.detectNumberedStepsGroup(paragraphs, i, currentIndex);
       if (numberedSteps && numberedSteps.count > 1) {
@@ -728,6 +738,11 @@ export class SectionDetector {
       const isMonthStart = /^(?:January|February|March|April|May|June|July|August|September|October|November|December):/i.test(content);
       const colonPattern = !isMonthStart ? content.match(/^([A-Z][^:]{5,60}?):\s+(.+)/s) : null;
       
+      // Pattern 5: Quoted title - "Title here" followed by response text
+      // e.g., "This is normal agent work" → "No, it's not. When you have to..."
+      const quotedPattern = content.match(/^"([^"]+)"\s*[→\-–:]\s*"?(.+)"?$/s) ||
+                           content.match(/^"([^"]+)"\s+"?(.+)"?$/s);
+      
       if (boldPattern) {
         title = boldPattern[1].trim();
         description = boldPattern[2]?.trim() || '';
@@ -860,6 +875,34 @@ export class SectionDetector {
         for (let j = 1; j < lines.length; j++) {
           const line = lines[j];
           if (line.match(/^Point\s+\d+/i) || line.match(/^[🎯📋⚖️]/) || line.match(/^[-•*]?\s*\*\*/)) break;
+          // Check for "Instead:" callout
+          if (line.match(/^(Instead:|Rather:|Better:|COMPARE THAT TO:)/i)) {
+            const calloutMatch = line.match(/^(Instead:|Rather:|Better:|COMPARE THAT TO:)\s*(.*)/i);
+            if (calloutMatch) {
+              callout = {
+                label: calloutMatch[1],
+                text: calloutMatch[2] || '',
+              };
+              for (let k = j + 1; k < lines.length; k++) {
+                const calloutLine = lines[k];
+                if (!calloutLine || calloutLine.match(/^[-•*]?\s*\*\*/) || calloutLine.match(/^[🎯📋⚖️]/)) break;
+                if (callout) {
+                  callout.text += ' ' + calloutLine;
+                }
+              }
+              break;
+            }
+          }
+          description += (description ? ' ' : '') + line;
+        }
+      } else if (quotedPattern) {
+        // Handle quoted title pattern like "This is normal agent work" → "No, it's not..."
+        title = quotedPattern[1].trim();
+        description = quotedPattern[2]?.replace(/^"/, '').replace(/"$/, '').trim() || '';
+        // Gather additional description from following lines
+        for (let j = 1; j < lines.length; j++) {
+          const line = lines[j];
+          if (line.match(/^"[^"]+"\s/) || line.match(/^[🎯📋⚖️]/) || line.match(/^[-•*]?\s*\*\*/)) break;
           // Check for "Instead:" callout
           if (line.match(/^(Instead:|Rather:|Better:|COMPARE THAT TO:)/i)) {
             const calloutMatch = line.match(/^(Instead:|Rather:|Better:|COMPARE THAT TO:)\s*(.*)/i);
@@ -1260,6 +1303,79 @@ export class SectionDetector {
   }
   
   /**
+   * Detect implicit list - short lines following a header that ends with colon
+   * Handles patterns like:
+   *   Claimable:
+   *   Time spent correcting HMRC errors
+   *   Chasing progress on stuck applications
+   */
+  private detectImplicitList(paragraphs: string[], startIndex: number, currentIndex: number): { section: DetectedSection; count: number; totalLength: number } | null {
+    const firstPara = paragraphs[startIndex]?.trim();
+    if (!firstPara) return null;
+    
+    // Check if first line ends with colon (could be bold)
+    // Matches: "Claimable:", "**Claimable:**", "Not claimable:", etc.
+    const headerMatch = firstPara.match(/^(?:\*\*)?([A-Za-z][^:]{0,60}):(?:\*\*)?$/);
+    if (!headerMatch) return null;
+    
+    const headerText = headerMatch[1].replace(/\*\*/g, '').trim();
+    
+    // Collect following lines as list items
+    const items: string[] = [];
+    let i = startIndex + 1;
+    let totalLength = firstPara.length + 2;
+    
+    while (i < paragraphs.length && items.length < 20) {
+      const line = paragraphs[i]?.trim();
+      if (!line) { i++; continue; }
+      
+      // Stop conditions - we've hit a new section
+      if (line.match(/^(?:\*\*)?[A-Za-z][^:]{0,60}:(?:\*\*)?$/)) break; // Another colon header
+      if (line.match(/^#+\s/)) break; // Markdown header
+      if (line.match(/^[🎯📋⚖️🔑💡✅❌📧📝📜💰⚠️📅]\s/)) break; // Emoji marker
+      if (line.match(/^[-•*]\s*\*\*[^*]+\*\*[:\s]/)) break; // Card marker
+      if (line.length > 200) break; // Too long for list item
+      
+      // Check if it looks like a list item (relatively short, typically no period at end)
+      // Or starts with typical list-item patterns
+      const isListLike = 
+        line.length < 120 ||
+        !line.match(/[.!?]\s*$/) ||
+        line.match(/^[A-Z][a-z]+\s+(and|or|with|for|about|to)\s/i);
+      
+      if (isListLike) {
+        items.push(line);
+        totalLength += line.length + 2;
+        i++;
+      } else {
+        break;
+      }
+    }
+    
+    // Need at least 3 items for a meaningful list
+    if (items.length >= 3) {
+      return {
+        section: {
+          type: 'bulletList',
+          content: paragraphs.slice(startIndex, i).join('\n'),
+          data: { 
+            title: headerText,
+            items,
+            variant: 'bullet'
+          },
+          confidence: 0.8,
+          startIndex: currentIndex,
+          endIndex: currentIndex + totalLength,
+        },
+        count: i - startIndex,
+        totalLength,
+      };
+    }
+    
+    return null;
+  }
+  
+  /**
    * Detect stats group
    */
   private detectStatsGroup(paragraphs: string[], startIndex: number, currentIndex: number): { section: DetectedSection; count: number; totalLength: number } | null {
@@ -1369,16 +1485,30 @@ export class SectionDetector {
       };
     }
     
-    // Check for bold-only line as heading (short, all bold, no other text)
-    if (trimmed.startsWith('**') && trimmed.endsWith('**') && trimmed.length < 100 && !trimmed.includes('\n')) {
-      const inner = trimmed.replace(/^\*\*|\*\*$/g, '');
-      // Only if it doesn't contain other bold markers inside
-      if (!inner.includes('**')) {
+    // Check for bold-only line as heading
+    // Handles: "**Title here**" or fragmented "**word1** **word2**" or partial "The **key** point"
+    const boldPattern = /\*\*([^*]+)\*\*/g;
+    const boldMatches = [...trimmed.matchAll(boldPattern)];
+    const trimmedNoBold = trimmed.replace(/\*\*/g, '').trim();
+    
+    // If line is short and contains bold markers
+    if (trimmed.length < 150 && boldMatches.length > 0 && !trimmed.includes('\n')) {
+      // Calculate how much of the line is bold
+      const boldTextLength = boldMatches.reduce((sum, m) => sum + m[1].length, 0);
+      const totalTextLength = trimmedNoBold.length;
+      const boldRatio = totalTextLength > 0 ? boldTextLength / totalTextLength : 0;
+      
+      // If more than 60% of the text is bold, treat as heading
+      // OR if it's entirely wrapped in bold markers
+      const isFullyBold = trimmed.match(/^\*\*[^*]+\*\*$/) || 
+                          (trimmed.match(/^\*\*.*\*\*$/) && !trimmed.match(/\*\*[^*]+\*\*[^*]+/));
+      
+      if (boldRatio > 0.6 || isFullyBold) {
         return {
           type: 'sectionHeading',
           content: text,
-          data: { title: inner },
-          confidence: 0.9,
+          data: { title: trimmedNoBold },
+          confidence: 0.85,
           startIndex,
           endIndex,
         };
@@ -1401,6 +1531,17 @@ export class SectionDetector {
       /^The\s+Real\s+Figure/i,
       /^Start\s+Now/i,
       /^Counter-strategy/i,
+      // Additional patterns for HMRC content
+      /^The\s+£[\d,]+(?:\.\d+)?\s+(?:that|which|recovery)/i,  // "The £48.40 that became £3,750"
+      /^What'?s\s+actually\s+/i,  // "What's actually claimable"
+      /^The\s+documentation\s+that\s+/i,  // "The documentation that wins"
+      /^The\s+template\s+that\s+/i,  // "The template that gets paid"
+      /^When\s+HMRC\s+/i,  // "When HMRC says no"
+      /^The\s+escalation\s+that\s+/i,  // "The escalation that doubles your chances"
+      /^The\s+practice-?wide\s+/i,  // "The practice-wide opportunity"
+      /^Start\s+a\s+simple\s+/i,  // "Start a simple system"
+      /^HMRC'?s\s+common\s+/i,  // "HMRC's common pushbacks"
+      /^The\s+pushback\s+/i,  // "The pushback playbook"
     ];
     
     for (const pattern of headingPatterns) {
