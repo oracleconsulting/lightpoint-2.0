@@ -7,11 +7,12 @@
  */
 
 import React, { useState } from 'react';
-import { Sparkles, Wand2, Loader2, CheckCircle, XCircle, RefreshCw, Zap, Image as ImageIcon, ExternalLink, FileText, LayoutTemplate } from 'lucide-react';
+import { Sparkles, Wand2, Loader2, CheckCircle, XCircle, RefreshCw, Zap, Image as ImageIcon, ExternalLink, FileText, LayoutTemplate, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import DynamicGammaRenderer from './DynamicGammaRenderer';
 import { GammaEmbed } from './GammaEmbed';
 import { BlogRenderer as BlogRendererV2 } from '@/components/blog-v2';
+import { generateLayoutWithAI } from '@/components/blog-v2/utils/aiLayoutGenerator';
 
 interface VisualTransformerProps {
   title: string;
@@ -43,12 +44,15 @@ export function VisualTransformer({
   const [gammaUrl, setGammaUrl] = useState<string | null>(existingGammaUrl || null);
   const [gammaPdfUrl, setGammaPdfUrl] = useState<string | null>(null);
   const [showGammaPreview, setShowGammaPreview] = useState(false);
-  const [generationMode, setGenerationMode] = useState<'lightpoint' | 'v2-clean' | 'gamma'>('v2-clean'); // Default to V2
+  const [generationMode, setGenerationMode] = useState<'lightpoint' | 'v2-clean' | 'v2-ai' | 'gamma'>('v2-ai'); // Default to V2 AI
   
   // V2 Layout state
   const [isGeneratingV2, setIsGeneratingV2] = useState(false);
   const [v2Layout, setV2Layout] = useState<any | null>(null);
   const [showV2Preview, setShowV2Preview] = useState(false);
+  
+  // AI Layout state
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
 
   const handleTransform = async () => {
     if (!title || !content) {
@@ -182,24 +186,40 @@ export function VisualTransformer({
 
   const handleAcceptV2 = () => {
     if (v2Layout) {
-      console.log('📦 [VisualTransformer] Applying V2 layout...');
-      console.log('📦 Component count:', v2Layout.components?.length || 0);
-      console.log('📦 Layout structure:', {
-        hasTheme: !!v2Layout.theme,
-        hasComponents: !!v2Layout.components,
-        componentsLength: v2Layout.components?.length || 0,
-        componentTypes: v2Layout.components?.slice(0, 5).map((c: any) => c.type) || [],
-      });
-      
-      // V2 layouts have { theme, components } structure
       const layoutToSave = JSON.parse(JSON.stringify(v2Layout));
-      console.log('📦 [VisualTransformer] Layout to save:', {
-        hasTheme: !!layoutToSave.theme,
-        hasComponents: !!layoutToSave.components,
-        componentsLength: layoutToSave.components?.length || 0,
-      });
       onTransformed(layoutToSave);
       setShowV2Preview(false);
+    }
+  };
+
+  // Generate V2 Layout using AI (Claude)
+  const handleGenerateAI = async () => {
+    if (!title || !content) {
+      setError('Need title and content to generate layout');
+      return;
+    }
+
+    setError(null);
+    setIsGeneratingAI(true);
+    setV2Layout(null);
+
+    try {
+      const strippedContent = stripHtml(content);
+      
+      const layout = await generateLayoutWithAI({
+        title,
+        subtitle: excerpt,
+        content: strippedContent,
+        authorName: 'Lightpoint Team',
+      });
+
+      setV2Layout(layout);
+      setShowV2Preview(true);
+    } catch (err: any) {
+      console.error('AI generation error:', err);
+      setError(err.message || 'Failed to generate AI layout');
+    } finally {
+      setIsGeneratingAI(false);
     }
   };
 
@@ -271,7 +291,20 @@ export function VisualTransformer({
               </p>
               
               {/* Generation Mode Selector */}
-              <div className="flex items-center gap-2 mb-4 p-1 bg-gray-100 rounded-lg w-fit">
+              <div className="flex items-center gap-2 mb-4 p-1 bg-gray-100 rounded-lg w-fit flex-wrap">
+                <button
+                  onClick={() => setGenerationMode('v2-ai')}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                    generationMode === 'v2-ai'
+                      ? 'bg-white shadow-sm text-blue-700'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <Bot className="h-4 w-4" />
+                    🤖 AI Layout (Best)
+                  </span>
+                </button>
                 <button
                   onClick={() => setGenerationMode('v2-clean')}
                   className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
@@ -282,7 +315,7 @@ export function VisualTransformer({
                 >
                   <span className="flex items-center gap-2">
                     <LayoutTemplate className="h-4 w-4" />
-                    V2 Clean (Recommended)
+                    Pattern Detection
                   </span>
                 </button>
                 <button
@@ -313,13 +346,50 @@ export function VisualTransformer({
                 </button>
               </div>
               
-              {/* V2 Clean Layout Options (Recommended) */}
+              {/* AI Layout Options (Best) */}
+              {generationMode === 'v2-ai' && (
+                <div className="space-y-4">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p className="text-sm text-blue-800">
+                      <strong>🤖 AI-Powered Layout</strong> uses Claude (via OpenRouter) to intelligently analyze your content and select 
+                      the best visual components. Extracts stats, creates comparisons, and generates images with NanoBanana automatically.
+                    </p>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <Button
+                      onClick={handleGenerateAI}
+                      disabled={isGeneratingAI}
+                      className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                    >
+                      {isGeneratingAI ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          AI Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Bot className="h-4 w-4 mr-2" />
+                          Generate with AI
+                        </>
+                      )}
+                    </Button>
+                    {isGeneratingAI && (
+                      <span className="text-sm text-gray-600">
+                        Claude is analyzing content and selecting components...
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {/* V2 Clean Layout Options (Pattern-based) */}
               {generationMode === 'v2-clean' && (
                 <div className="space-y-4">
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                     <p className="text-sm text-green-800">
-                      <strong>V2 Clean Layout</strong> uses pattern detection to create a clean, light-themed layout 
-                      matching Gamma's professional quality. Fast, deterministic, no AI costs.
+                      <strong>Pattern Detection</strong> uses regex patterns to detect content structures. 
+                      Fast and free, but may miss some opportunities for visual components.
                     </p>
                   </div>
                   
@@ -337,7 +407,7 @@ export function VisualTransformer({
                       ) : (
                         <>
                           <LayoutTemplate className="h-4 w-4 mr-2" />
-                          Generate V2 Layout
+                          Generate with Patterns
                         </>
                       )}
                     </Button>

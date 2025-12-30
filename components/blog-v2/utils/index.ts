@@ -19,3 +19,9 @@ export {
   generateImagesInBackground,
 } from './autoImageGenerator';
 
+export {
+  generateLayoutWithAI,
+  isAILayoutAvailable,
+} from './aiLayoutGenerator';
+export type { AILayoutRequest, AILayoutResponse } from './aiLayoutGenerator';
+
