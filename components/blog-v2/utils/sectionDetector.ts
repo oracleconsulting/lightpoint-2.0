@@ -57,48 +57,8 @@ export class SectionDetector {
   private sections: DetectedSection[] = [];
 
   constructor(content: string) {
-    // 🔴🔴🔴 CRITICAL: Check content at VERY FIRST entry point
-    const hasProperSpaces = content.includes('sent debt collectors');
-    const hasBrokenWords = content.includes('sentdebtcollectors');
-    console.log('🔴🔴🔴 [SectionDetector] CONSTRUCTOR ENTRY:', {
-      hasProperSpaces,
-      hasBrokenWords,
-      spaceCount: (content.match(/ /g) || []).length,
-      newlineCount: (content.match(/\n/g) || []).length,
-      first100: content.substring(0, 100),
-    });
-    
-    if (hasBrokenWords || !hasProperSpaces) {
-      console.log('🔴🔴🔴🔴🔴 CONTENT ALREADY BROKEN AT CONSTRUCTOR! 🔴🔴🔴🔴🔴');
-    }
-    
     const normalized = this.normalizeContent(content);
-    
-    // Check after normalization
-    const normalizedHasSpaces = normalized.includes('sent debt collectors');
-    const normalizedBroken = normalized.includes('sentdebtcollectors');
-    if (normalizedBroken || !normalizedHasSpaces) {
-      console.log('🔴🔴🔴 [SectionDetector] CONTENT BROKEN AFTER NORMALIZATION:', {
-        hadSpaces: hasProperSpaces,
-        nowHasSpaces: normalizedHasSpaces,
-        wasBroken: hasBrokenWords,
-        nowBroken: normalizedBroken,
-      });
-    }
-    
     this.content = this.preprocessContent(normalized);
-    
-    // Check after preprocessing
-    const preprocessedHasSpaces = this.content.includes('sent debt collectors');
-    const preprocessedBroken = this.content.includes('sentdebtcollectors');
-    if (preprocessedBroken || !preprocessedHasSpaces) {
-      console.log('🔴🔴🔴 [SectionDetector] CONTENT BROKEN AFTER PREPROCESSING:', {
-        hadSpaces: normalizedHasSpaces,
-        nowHasSpaces: preprocessedHasSpaces,
-        wasBroken: normalizedBroken,
-        nowBroken: preprocessedBroken,
-      });
-    }
   }
 
   /**
@@ -205,15 +165,6 @@ export class SectionDetector {
   private normalizeContent(content: string): string {
     if (!content) return '';
     
-    // 🔴 DIAGNOSTIC: Log input to normalizeContent
-    console.log('🔴 [normalizeContent] Input type:', typeof content);
-    if (typeof content === 'string') {
-      console.log('🔴 [normalizeContent] Input (first 500 chars):', content.substring(0, 500));
-      if (content.includes('sentdebtcollectorsforit')) {
-        console.log('🔴🔴🔴 [normalizeContent] CONTENT ALREADY BROKEN AT INPUT! 🔴🔴🔴');
-      }
-    }
-    
     // If TipTap JSON, extract text (preserving bold markers)
     if (typeof content === 'object') {
       return this.extractTextFromTipTap(content);
@@ -223,7 +174,6 @@ export class SectionDetector {
     
     // Check if content is already plain text (no HTML tags) - skip HTML processing
     const hasHtmlTags = /<[^>]+>/.test(text);
-    console.log('🔴 [normalizeContent] Has HTML tags:', hasHtmlTags);
     
     if (hasHtmlTags) {
       // Content still has HTML - process it
@@ -232,18 +182,8 @@ export class SectionDetector {
       // Convert <br> tags to newlines (preserve structure)
       text = text.replace(/<br\s*\/?>/gi, '\n');
       
-      // 🔴 DIAGNOSTIC: Check after HTML tag replacement
-      if (text.includes('sentdebtcollectorsforit')) {
-        console.log('🔴🔴🔴 [normalizeContent] CONTENT BROKEN AFTER HTML TAG REPLACEMENT! 🔴🔴🔴');
-      }
-      
       // Strip remaining HTML tags - REPLACE WITH SPACE to preserve word boundaries
       text = text.replace(/<[^>]*>/g, ' ');
-      
-      // 🔴 DIAGNOSTIC: Check after stripping HTML
-      if (text.includes('sentdebtcollectorsforit')) {
-        console.log('🔴🔴🔴 [normalizeContent] CONTENT BROKEN AFTER STRIPPING HTML! 🔴🔴🔴');
-      }
       
       // Decode HTML entities
       text = text.replace(/&nbsp;/g, ' ');
@@ -252,17 +192,9 @@ export class SectionDetector {
       text = text.replace(/&gt;/g, '>');
       text = text.replace(/&quot;/g, '"');
       text = text.replace(/&#39;/g, "'");
-    } else {
-      // Content is already plain text - just normalize whitespace
-      console.log('🔴 [normalizeContent] Content is already plain text, skipping HTML processing');
     }
     
-    // 🔴 DIAGNOSTIC: Check after stripping HTML
-    if (text.includes('sentdebtcollectorsforit')) {
-      console.log('🔴🔴🔴 [normalizeContent] CONTENT BROKEN AFTER STRIPPING HTML! 🔴🔴🔴');
-    }
-    
-    // Decode HTML entities
+    // Decode HTML entities (also for plain text that might have entities)
     text = text.replace(/&nbsp;/g, ' ');
     text = text.replace(/&amp;/g, '&');
     text = text.replace(/&lt;/g, '<');
@@ -328,12 +260,6 @@ export class SectionDetector {
       }
     }
     text = deduped.join('\n');
-    
-    // 🔴 DIAGNOSTIC: Check final output
-    if (text.includes('sentdebtcollectorsforit')) {
-      console.log('🔴🔴🔴 [normalizeContent] CONTENT BROKEN IN FINAL OUTPUT! 🔴🔴🔴');
-    }
-    console.log('🔴 [normalizeContent] Final output (first 500 chars):', text.substring(0, 500));
     
     return text.trim();
   }
@@ -470,10 +396,6 @@ export class SectionDetector {
   detect(): DetectedSection[] {
     this.sections = [];
     
-    console.log('🔍 [SectionDetector] Starting detection...');
-    console.log('🔍 [SectionDetector] Content length:', this.content.length);
-    console.log('🔍 [SectionDetector] First 200 chars:', this.content.substring(0, 200));
-    
     // Split into paragraphs - preserve sentence boundaries
     let paragraphs = this.content.split(/\n\n+/).filter(p => p.trim());
     
@@ -542,10 +464,6 @@ export class SectionDetector {
     // Post-process: merge adjacent stats, group numbered steps
     this.sections = groupedSections;
     this.postProcess();
-    
-    console.log('🔍 [SectionDetector] Sections detected:', this.sections.length);
-    console.log('🔍 [SectionDetector] Section types:', this.sections.map(s => s.type));
-    console.log('🔍 [SectionDetector] Three-column cards count:', this.sections.filter(s => s.type === 'threeColumnCards').length);
     
     return this.sections;
   }
@@ -1378,10 +1296,6 @@ export class SectionDetector {
     // Matches: "Claimable:", "**Claimable:**", "Not claimable:", "What's claimable:", etc.
     const headerMatch = firstPara.match(/^(?:\*\*)?([A-Za-z][^:]{0,60}):(?:\*\*)?$/);
     
-    if (headerMatch) {
-      console.log('🔍 [detectImplicitList] Found colon header:', firstPara);
-    }
-    
     if (!headerMatch) return null;
     
     const headerText = headerMatch[1].replace(/\*\*/g, '').trim();
@@ -1396,17 +1310,11 @@ export class SectionDetector {
       if (!line) { i++; continue; }
       
       // Stop conditions - we've hit a new section
-      if (line.match(/^(?:\*\*)?[A-Za-z][^:]{0,60}:(?:\*\*)?$/)) {
-        console.log('🔍 [detectImplicitList] Stop: another colon header:', line.substring(0, 40));
-        break;
-      }
+      if (line.match(/^(?:\*\*)?[A-Za-z][^:]{0,60}:(?:\*\*)?$/)) break; // Another colon header
       if (line.match(/^#+\s/)) break; // Markdown header
       if (line.match(/^[🎯📋⚖️🔑💡✅❌📧📝📜💰⚠️📅]\s/)) break; // Emoji marker
       if (line.match(/^[-•*]\s*\*\*[^*]+\*\*[:\s]/)) break; // Card marker
-      if (line.length > 200) {
-        console.log('🔍 [detectImplicitList] Stop: line too long (' + line.length + ' chars)');
-        break;
-      }
+      if (line.length > 200) break; // Line too long for a list item
       
       // Check if it looks like a list item (relatively short, typically no period at end)
       // Or starts with typical list-item patterns
@@ -1420,16 +1328,12 @@ export class SectionDetector {
         totalLength += line.length + 2;
         i++;
       } else {
-        console.log('🔍 [detectImplicitList] Stop: line not list-like:', line.substring(0, 60));
         break;
       }
     }
     
-    console.log('🔍 [detectImplicitList] Found', items.length, 'items after header "' + headerText + '"');
-    
-    // Need at least 2 items for a meaningful list (reduced from 3)
+    // Need at least 2 items for a meaningful list
     if (items.length >= 2) {
-      console.log('✅ [detectImplicitList] DETECTED bulletList with title "' + headerText + '":', items);
       return {
         section: {
           type: 'bulletList',
@@ -1497,11 +1401,6 @@ export class SectionDetector {
   private detectParagraphType(text: string, startIndex: number): DetectedSection | null {
     const endIndex = startIndex + text.length;
     const trimmed = text.trim();
-    
-    // 🔍 DETECTION LOG: Check what we're analyzing
-    if (trimmed.length < 150) {
-      console.log('🔍 [detectParagraphType] Checking short paragraph:', trimmed.substring(0, 80) + (trimmed.length > 80 ? '...' : ''));
-    }
     
     // Check for explicit callout markers (must start with marker)
     // Also check for patterns like "THE KEY:", "Compare that to:", quotes, etc.
@@ -1584,16 +1483,7 @@ export class SectionDetector {
       const isFullyBold = trimmed.match(/^\*\*[^*]+\*\*$/) || 
                           (trimmed.match(/^\*\*.*\*\*$/) && !trimmed.match(/\*\*[^*]+\*\*[^*]+/));
       
-      console.log('🔍 [detectParagraphType] Bold heading check:', {
-        text: trimmed.substring(0, 60),
-        boldRatio: boldRatio.toFixed(2),
-        isFullyBold: !!isFullyBold,
-        boldMatches: boldMatches.length,
-        willDetect: boldRatio > 0.6 || !!isFullyBold,
-      });
-      
       if (boldRatio > 0.6 || isFullyBold) {
-        console.log('✅ [detectParagraphType] DETECTED as sectionHeading:', trimmedNoBold);
         return {
           type: 'sectionHeading',
           content: text,
@@ -1946,9 +1836,6 @@ export class SectionDetector {
     
     // Second pass: detect patterns that span multiple sections
     // DISABLED: Second-pass card detection was too aggressive - converted normal paragraphs to cards
-    console.log('🔍 [SectionDetector] postProcess: Skipping detectCrossSectionPatterns (disabled)');
-    console.log('🔍 [SectionDetector] postProcess: Using grouped sections directly, count:', grouped.length);
-    // this.sections = this.detectCrossSectionPatterns(grouped);
     this.sections = grouped;
   }
   

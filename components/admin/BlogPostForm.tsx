@@ -84,24 +84,6 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
       setTitle(existingPost.title || '');
       setSlug(existingPost.slug || '');
       setExcerpt(existingPost.excerpt || '');
-      
-      // 🔴 DIAGNOSTIC: Log raw content from database
-      console.log('🔴 [BlogPostForm] Loading post from database');
-      console.log('🔴 [BlogPostForm] Content type:', typeof existingPost.content);
-      console.log('🔴 [BlogPostForm] Content is object:', typeof existingPost.content === 'object');
-      if (typeof existingPost.content === 'string') {
-        console.log('🔴 [BlogPostForm] Content (first 500 chars):', existingPost.content.substring(0, 500));
-        if (existingPost.content.includes('sentdebtcollectorsforit')) {
-          console.log('🔴🔴🔴 [BlogPostForm] CONTENT ALREADY BROKEN IN DATABASE! 🔴🔴🔴');
-        }
-      } else if (typeof existingPost.content === 'object') {
-        const contentStr = JSON.stringify(existingPost.content);
-        console.log('🔴 [BlogPostForm] Content JSON (first 500 chars):', contentStr.substring(0, 500));
-        if (contentStr.includes('sentdebtcollectorsforit')) {
-          console.log('🔴🔴🔴 [BlogPostForm] CONTENT ALREADY BROKEN IN DATABASE (JSON)! 🔴🔴🔴');
-        }
-      }
-      
       setContent(existingPost.content || '');
       setFeaturedImage(existingPost.featured_image_url || '');
       setFeaturedImageAlt(existingPost.featured_image_alt || '');
@@ -441,24 +423,10 @@ export function BlogPostForm({ postId }: BlogPostFormProps) {
               excerpt={excerpt}
               existingGammaUrl={gammaUrl}
               onTransformed={(layout) => {
-                console.log('📥 [BlogPostForm] Received layout from VisualTransformer');
-                console.log('📥 [BlogPostForm] Raw layout:', {
-                  keys: Object.keys(layout || {}),
-                  hasComponents: !!layout?.components,
-                  hasLayout: !!layout?.layout,
-                  componentsLength: layout?.components?.length || 0,
-                  layoutLength: layout?.layout?.length || 0,
-                });
-                // Handle both V1 (layout.layout) and V2 (layout.components) formats
-                const components = layout?.components || layout?.layout || [];
-                console.log('📥 Layout format:', layout?.components ? 'V2' : layout?.layout ? 'V1' : 'unknown');
-                console.log('📥 Layout component count:', components.length);
-                console.log('📥 Component types:', components.slice(0, 10).map((c: any) => c.type));
                 setStructuredLayout(layout);
                 alert('✨ Layout applied! You can now fine-tune the placement below, or save the post to keep this visual layout.');
               }}
               onGammaGenerated={(url, pdfUrl) => {
-                console.log('🎨 [BlogPostForm] Gamma presentation generated:', url);
                 setGammaUrl(url);
                 if (pdfUrl) setGammaPdfUrl(pdfUrl);
                 alert('✨ Gamma presentation created! Save the post to keep this visual version.');

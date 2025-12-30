@@ -137,44 +137,12 @@ export function VisualTransformer({
       return;
     }
 
-    // 🔴 DIAGNOSTIC: Log content BEFORE stripHtml
-    console.log('🔴 [VisualTransformer] handleGenerateV2 called');
-    console.log('🔴 [VisualTransformer] Content type:', typeof content);
-    console.log('🔴 [VisualTransformer] Content is object:', typeof content === 'object');
-    if (typeof content === 'string') {
-      console.log('🔴 [VisualTransformer] Content BEFORE stripHtml (first 500 chars):', content.substring(0, 500));
-      if (content.includes('sentdebtcollectorsforit')) {
-        console.log('🔴🔴🔴 [VisualTransformer] CONTENT ALREADY BROKEN BEFORE stripHtml! 🔴🔴🔴');
-      }
-    } else if (typeof content === 'object') {
-      const contentStr = JSON.stringify(content);
-      console.log('🔴 [VisualTransformer] Content JSON BEFORE stripHtml (first 500 chars):', contentStr.substring(0, 500));
-      if (contentStr.includes('sentdebtcollectorsforit')) {
-        console.log('🔴🔴🔴 [VisualTransformer] CONTENT ALREADY BROKEN BEFORE stripHtml (JSON)! 🔴🔴🔴');
-      }
-    }
-
     setError(null);
     setIsGeneratingV2(true);
     setV2Layout(null);
 
     try {
       const strippedContent = stripHtml(content);
-      
-      // 🔴 DIAGNOSTIC: Log content AFTER stripHtml
-      console.log('🔴 [VisualTransformer] Content AFTER stripHtml type:', typeof strippedContent);
-      if (typeof strippedContent === 'string') {
-        console.log('🔴 [VisualTransformer] Content AFTER stripHtml (first 500 chars):', strippedContent.substring(0, 500));
-        if (strippedContent.includes('sentdebtcollectorsforit')) {
-          console.log('🔴🔴🔴 [VisualTransformer] CONTENT BROKEN BY stripHtml! 🔴🔴🔴');
-        }
-      } else if (typeof strippedContent === 'object') {
-        const contentStr = JSON.stringify(strippedContent);
-        console.log('🔴 [VisualTransformer] Content JSON AFTER stripHtml (first 500 chars):', contentStr.substring(0, 500));
-        if (contentStr.includes('sentdebtcollectorsforit')) {
-          console.log('🔴🔴🔴 [VisualTransformer] CONTENT BROKEN BY stripHtml (JSON)! 🔴🔴🔴');
-        }
-      }
       
       const response = await fetch('/api/blog/generate-layout-v2', {
         method: 'POST',
@@ -201,7 +169,6 @@ export function VisualTransformer({
       if (result.success && result.layout) {
         setV2Layout(result.layout);
         setShowV2Preview(true);
-        console.log('✅ V2 Layout generated:', result.stats);
       } else {
         throw new Error(result.error || 'Failed to generate V2 layout');
       }
@@ -766,13 +733,8 @@ export function VisualTransformer({
 function stripHtml(content: any): string {
   if (!content) return '';
   
-  console.log('🔵 [stripHtml] Input type:', typeof content);
-  console.log('🔵 [stripHtml] Is TipTap JSON:', typeof content === 'object' && content?.type === 'doc');
-  
   // If it's a TipTap JSON object, preserve structure with markdown-like formatting
   if (typeof content === 'object' && content.type === 'doc') {
-    console.log('🔵 [stripHtml] Processing TipTap JSON');
-    
     const extractNode = (node: any): string => {
       if (!node) return '';
       
@@ -780,11 +742,9 @@ function stripHtml(content: any): string {
       if (node.type === 'text') {
         let text = node.text || '';
         if (node.marks && node.marks.length > 0) {
-          console.log('🔵 [stripHtml] Found marks on text:', text.substring(0, 30), '- marks:', node.marks.map((m: any) => m.type));
           for (const mark of node.marks) {
             if (mark.type === 'bold') {
               text = `**${text}**`;
-              console.log('🔵 [stripHtml] Applied bold markers:', text.substring(0, 50));
             }
             if (mark.type === 'italic') text = `*${text}*`;
           }
@@ -823,22 +783,11 @@ function stripHtml(content: any): string {
     
     const result = extractNode(content);
     // Normalize excessive newlines but preserve paragraph breaks
-    const finalResult = result.replace(/\n{4,}/g, '\n\n\n').trim();
-    
-    // Log bold marker count
-    const boldMarkerCount = (finalResult.match(/\*\*/g) || []).length / 2;
-    console.log('🔵 [stripHtml] Output has', boldMarkerCount, 'bold sections');
-    console.log('🔵 [stripHtml] Output preview (first 500 chars):', finalResult.substring(0, 500));
-    
-    return finalResult;
+    return result.replace(/\n{4,}/g, '\n\n\n').trim();
   }
   
   // If it's an HTML string, convert to markdown-like format
   if (typeof content === 'string') {
-    console.log('🔵 [stripHtml] Processing HTML string');
-    console.log('🔵 [stripHtml] Has <strong> tags:', content.includes('<strong'));
-    console.log('🔵 [stripHtml] Has <b> tags:', content.includes('<b>') || content.includes('<b '));
-    
     let text = content;
     // Convert block elements to paragraph breaks
     text = text.replace(/<\/?(p|div|br|h[1-6]|li|tr|blockquote)[^>]*>/gi, '\n\n');
@@ -869,18 +818,10 @@ function stripHtml(content: any): string {
     text = text.replace(/\n{4,}/g, '\n\n\n');
     text = text.replace(/[ \t]+/g, ' ');
     
-    const finalResult = text.trim();
-    
-    // Log bold marker count
-    const boldMarkerCount = (finalResult.match(/\*\*/g) || []).length / 2;
-    console.log('🔵 [stripHtml] Output has', boldMarkerCount, 'bold sections');
-    console.log('🔵 [stripHtml] Output preview (first 500 chars):', finalResult.substring(0, 500));
-    
-    return finalResult;
+    return text.trim();
   }
   
   // Otherwise try to stringify it
-  console.log('🔵 [stripHtml] Fallback: stringifying content');
   return String(content);
 }
 

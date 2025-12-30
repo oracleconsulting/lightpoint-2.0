@@ -90,16 +90,6 @@ function BlogContentRenderer({
   const hasV1Layout = hasStructuredLayout && post.structured_layout.layout;
   const hasV2Layout = hasStructuredLayout && isV2Layout(post.structured_layout);
 
-  // DEBUG: Log layout detection
-  console.log('🔍 [BlogContentRenderer] Layout Detection:', {
-    hasStructuredLayout,
-    hasV1Layout,
-    hasV2Layout,
-    structuredLayoutKeys: post.structured_layout ? Object.keys(post.structured_layout) : [],
-    componentsLength: post.structured_layout?.components?.length,
-    layoutLength: post.structured_layout?.layout?.length,
-  });
-
   // Auto-detect V2 layout
   const shouldUseV2 = hasV2Layout || useV2;
 
@@ -306,39 +296,8 @@ export default function BlogPostPage() {
   const hasStructuredLayout = post.structured_layout && typeof post.structured_layout === 'object';
   const hasV2Layout = hasStructuredLayout && isV2Layout(post.structured_layout);
 
-  // CRITICAL DEBUG: Log exactly what we're seeing
-  console.log('🔍 [BlogPostPage] Layout Analysis:', {
-    slug: post.slug,
-    hasStructuredLayout,
-    hasV2Layout,
-    structuredLayoutType: typeof post.structured_layout,
-    structuredLayoutKeys: post.structured_layout ? Object.keys(post.structured_layout) : [],
-    hasComponentsArray: Array.isArray(post.structured_layout?.components),
-    componentsLength: post.structured_layout?.components?.length,
-    hasLayoutArray: Array.isArray(post.structured_layout?.layout),
-    layoutLength: post.structured_layout?.layout?.length,
-    firstComponentType: post.structured_layout?.components?.[0]?.type || post.structured_layout?.layout?.[0]?.type,
-  });
-
   // V2 Layout: Clean, light theme - skip the dark wrapper entirely
   if (hasV2Layout) {
-    console.log('🎨 [BlogPostPage] ✅ Rendering V2 Layout with', post.structured_layout?.components?.length, 'components');
-    
-    // 🔴 DEBUG: Check if any paragraph text in saved layout is broken
-    const paragraphComponents = post.structured_layout?.components?.filter((c: any) => c.type === 'paragraph') || [];
-    const brokenParagraphs = paragraphComponents.filter((c: any) => 
-      c.props?.text?.match(/[a-z][A-Z]/) || c.props?.text?.match(/\w{25,}/)
-    );
-    if (brokenParagraphs.length > 0) {
-      console.log('🔴🔴🔴 [BlogPostPage] BROKEN PARAGRAPHS IN SAVED LAYOUT:', {
-        count: brokenParagraphs.length,
-        examples: brokenParagraphs.slice(0, 3).map((c: any) => ({
-          preview: c.props?.text?.substring(0, 100),
-          brokenWord: c.props?.text?.match(/\S*[a-z][A-Z]\S*/)?.[0] || c.props?.text?.match(/\w{25,}/)?.[0],
-        })),
-      });
-    }
-    
     return (
       <div className="min-h-screen bg-white">
         {/* JSON-LD Structured Data for SEO and AI Search */}
