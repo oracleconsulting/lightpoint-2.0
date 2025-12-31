@@ -10,10 +10,10 @@ import React from 'react';
 
 interface LetterTemplateProps {
   title?: string;
-  heading?: string; // AI compatibility alias
+  heading?: string; // AI compatibility
   subtitle?: string;
   content?: string;
-  text?: string; // AI compatibility alias
+  text?: string; // AI compatibility
   variant?: 'letter' | 'document' | 'code';
   className?: string;
 }

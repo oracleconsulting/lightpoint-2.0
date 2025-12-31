@@ -19,18 +19,60 @@ function postProcessLetterTemplates(components: LayoutComponent[]): LayoutCompon
   const processed: LayoutComponent[] = [];
   let letterBuffer: string[] = [];
   let inLetter = false;
-  let letterStartIndex = -1;
+  
+  // Helper to get text from component props
+  const getText = (comp: LayoutComponent): string => {
+    const props = comp.props || {};
+    return (props.text || props.content || '') as string;
+  };
+  
+  // Helper to check if component is a paragraph type
+  const isParagraph = (comp: LayoutComponent): boolean => {
+    const type = (comp.type || '').toLowerCase();
+    return type === 'paragraph';
+  };
+  
+  // Letter start patterns - more flexible matching
+  const letterStartPatterns = [
+    /Dear\s+(Sir|Madam|Sir\/Madam|Mr|Mrs|Ms|Dr)/i,
+    /^To\s+Whom\s+It\s+May\s+Concern/i,
+  ];
+  
+  // Letter content indicators
+  const hasLetterIndicator = (text: string): boolean => {
+    return /RE:\s*.*\[.*\]/i.test(text) || // RE: with placeholder
+           /\[Client Reference\]/i.test(text) ||
+           /\[HMRC Reference\]/i.test(text) ||
+           /Following the matters outlined/i.test(text) ||
+           /I write to/i.test(text) ||
+           /I am writing to/i.test(text);
+  };
+  
+  // Letter end patterns
+  const isLetterEnd = (text: string): boolean => {
+    return /Yours\s+(faithfully|sincerely|truly)/i.test(text);
+  };
   
   for (let i = 0; i < components.length; i++) {
     const component = components[i];
     
-    if (component.type === 'paragraph') {
-      const text = (component.props?.text || component.props?.content || '') as string;
+    if (isParagraph(component)) {
+      const text = getText(component);
+      const trimmedText = text.trim();
       
-      // Check if this starts a letter (Dear Sir/Madam, etc.)
-      if (!inLetter && /^Dear\s+(Sir|Madam|Sir\/Madam|Mr|Mrs|Ms|Dr)/i.test(text.trim())) {
+      // Check if this starts a letter
+      const startsLetter = letterStartPatterns.some(p => p.test(trimmedText));
+      
+      if (!inLetter && startsLetter) {
         inLetter = true;
-        letterStartIndex = i;
+        letterBuffer = [text];
+        continue;
+      }
+      
+      // Check if this paragraph has letter indicators (even if not after "Dear")
+      // This catches cases where "Dear Sir/Madam" might be in a different format
+      if (!inLetter && hasLetterIndicator(text)) {
+        inLetter = true;
         letterBuffer = [text];
         continue;
       }
@@ -39,9 +81,8 @@ function postProcessLetterTemplates(components: LayoutComponent[]): LayoutCompon
       if (inLetter) {
         letterBuffer.push(text);
         
-        // Check if letter ends (Yours faithfully, etc.)
-        if (/Yours\s+(faithfully|sincerely|truly)/i.test(text)) {
-          // Output the complete letter template
+        // Check if letter ends
+        if (isLetterEnd(text)) {
           processed.push({
             type: 'letterTemplate' as ComponentType,
             props: {
@@ -51,14 +92,11 @@ function postProcessLetterTemplates(components: LayoutComponent[]): LayoutCompon
           });
           letterBuffer = [];
           inLetter = false;
-          letterStartIndex = -1;
           continue;
         }
         
-        // Check for excessive content (more than 15 paragraphs without sign-off)
-        // This is likely not a proper letter format
-        if (letterBuffer.length > 15) {
-          // Not a proper letter - flush as paragraphs
+        // Safety: flush if too many paragraphs (not a proper letter)
+        if (letterBuffer.length > 20) {
           for (const bufferedText of letterBuffer) {
             processed.push({
               type: 'paragraph' as ComponentType,
@@ -67,16 +105,18 @@ function postProcessLetterTemplates(components: LayoutComponent[]): LayoutCompon
           }
           letterBuffer = [];
           inLetter = false;
-          letterStartIndex = -1;
         }
         continue;
       }
     }
     
     // Non-paragraph component encountered while in letter mode
-    if (inLetter && component.type !== 'paragraph') {
-      // Check if we have enough content to be a letter (at least 2 paragraphs)
-      if (letterBuffer.length >= 2) {
+    if (inLetter && !isParagraph(component)) {
+      // Check if we have enough content with placeholders to be a letter
+      const combinedText = letterBuffer.join('\n');
+      const hasPlaceholders = /\[[A-Z][^\]]+\]/.test(combinedText);
+      
+      if (letterBuffer.length >= 2 || hasPlaceholders) {
         processed.push({
           type: 'letterTemplate' as ComponentType,
           props: {
@@ -85,7 +125,6 @@ function postProcessLetterTemplates(components: LayoutComponent[]): LayoutCompon
           },
         });
       } else {
-        // Not enough for a letter - output as paragraphs
         for (const bufferedText of letterBuffer) {
           processed.push({
             type: 'paragraph' as ComponentType,
@@ -95,18 +134,17 @@ function postProcessLetterTemplates(components: LayoutComponent[]): LayoutCompon
       }
       letterBuffer = [];
       inLetter = false;
-      letterStartIndex = -1;
     }
     
     processed.push(component);
   }
   
-  // Handle letter at end of content (no explicit sign-off found)
+  // Handle letter at end of content
   if (letterBuffer.length > 0) {
-    // If we have placeholders like [Client Reference], treat as letter template
-    const hasPlaceholders = /\[[A-Z][^\]]+\]/.test(letterBuffer.join('\n'));
+    const combinedText = letterBuffer.join('\n');
+    const hasPlaceholders = /\[[A-Z][^\]]+\]/.test(combinedText);
     
-    if (hasPlaceholders || letterBuffer.length >= 3) {
+    if (hasPlaceholders || letterBuffer.length >= 2) {
       processed.push({
         type: 'letterTemplate' as ComponentType,
         props: {
@@ -115,7 +153,6 @@ function postProcessLetterTemplates(components: LayoutComponent[]): LayoutCompon
         },
       });
     } else {
-      // Output as regular paragraphs
       for (const bufferedText of letterBuffer) {
         processed.push({
           type: 'paragraph' as ComponentType,
