@@ -3,24 +3,27 @@
 import React from 'react';
 
 // ============================================================================
-// STATS ROW
-// Impactful statistics display with two variants:
-// - Flat: Large numbers with supporting text
-// - Ring: Circular progress indicators
+// STATS ROW - Gamma-quality statistics display
+// Features:
+// - Vertical dividers between stats
+// - Gradient text for impact
+// - Ring variant for percentages
+// - Dynamic grid based on stat count
 // ============================================================================
 
 interface Stat {
   value: string;
   label: string;
-  description: string;
+  description?: string;
 }
 
 interface StatsRowProps {
   stats?: Stat[];
-  items?: Stat[]; // Accept both prop names for backwards compatibility with AI layouts
-  variant?: 'flat' | 'ring';
+  items?: Stat[]; // AI compatibility
+  variant?: 'flat' | 'ring' | 'card';
   columns?: 3 | 4;
   title?: string;
+  showDividers?: boolean;
 }
 
 export function StatsRow({
@@ -29,16 +32,16 @@ export function StatsRow({
   variant = 'flat',
   columns = 4,
   title,
+  showDividers = true,
 }: StatsRowProps) {
   // Normalize: accept either 'stats' or 'items' prop
   const normalizedStats = stats || items || [];
   
-  // Early return if no stats
   if (normalizedStats.length === 0) {
     return null;
   }
 
-  // DYNAMIC grid columns based on ACTUAL stat count with appropriate max-widths
+  // Dynamic grid columns based on actual stat count
   const statCount = normalizedStats.length;
   const gridCols = 
     statCount === 1 ? 'grid-cols-1 max-w-xs' :
@@ -49,7 +52,7 @@ export function StatsRow({
   return (
     <div className="w-full">
       {title && (
-        <h2 className="text-3xl font-bold text-slate-800 mb-6 text-center">
+        <h2 className="text-3xl font-bold text-slate-800 mb-8 text-center">
           {title}
         </h2>
       )}
@@ -61,6 +64,8 @@ export function StatsRow({
             stat={stat} 
             variant={variant}
             index={index}
+            isLast={index === normalizedStats.length - 1}
+            showDivider={showDividers && index < normalizedStats.length - 1}
           />
         ))}
       </div>
@@ -70,18 +75,24 @@ export function StatsRow({
 
 interface StatItemProps {
   stat: Stat;
-  variant: 'flat' | 'ring';
+  variant: 'flat' | 'ring' | 'card';
   index: number;
+  isLast: boolean;
+  showDivider: boolean;
 }
 
-function StatItem({ stat, variant, index }: StatItemProps) {
+function StatItem({ stat, variant, index, isLast, showDivider }: StatItemProps) {
   if (variant === 'ring') {
-    return <RingStatItem stat={stat} index={index} />;
+    return <RingStatItem stat={stat} index={index} showDivider={showDivider} />;
+  }
+  
+  if (variant === 'card') {
+    return <CardStatItem stat={stat} index={index} />;
   }
 
   return (
-    <div className="text-center group">
-      {/* Large value */}
+    <div className="text-center relative group">
+      {/* Large value with gradient */}
       <div className="relative inline-block mb-3">
         <span className="text-5xl lg:text-6xl font-bold bg-gradient-to-br from-slate-800 to-slate-600 bg-clip-text text-transparent">
           {stat.value}
@@ -94,14 +105,21 @@ function StatItem({ stat, variant, index }: StatItemProps) {
       </div>
       
       {/* Description */}
-      <div className="text-sm text-slate-500 leading-relaxed max-w-[200px] mx-auto">
-        {stat.description}
-      </div>
+      {stat.description && (
+        <div className="text-sm text-slate-500 leading-relaxed max-w-[200px] mx-auto">
+          {stat.description}
+        </div>
+      )}
+      
+      {/* Vertical divider - positioned between stats */}
+      {showDivider && (
+        <div className="hidden md:block absolute right-0 top-1/2 -translate-y-1/2 translate-x-[50%] w-px h-20 bg-gradient-to-b from-transparent via-slate-200 to-transparent" />
+      )}
     </div>
   );
 }
 
-function RingStatItem({ stat, index }: { stat: Stat; index: number }) {
+function RingStatItem({ stat, index, showDivider }: { stat: Stat; index: number; showDivider: boolean }) {
   // Extract numeric value for ring progress
   const numericMatch = stat.value.match(/[\d.]+/);
   const numericValue = numericMatch ? parseFloat(numericMatch[0]) : 50;
@@ -114,17 +132,17 @@ function RingStatItem({ stat, index }: { stat: Stat; index: number }) {
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
-  // Color variations
+  // Brand-consistent colors
   const colors = [
-    { ring: '#1e40af', glow: 'rgba(30, 64, 175, 0.3)' },
-    { ring: '#0f766e', glow: 'rgba(15, 118, 110, 0.3)' },
-    { ring: '#7c3aed', glow: 'rgba(124, 58, 237, 0.3)' },
-    { ring: '#b45309', glow: 'rgba(180, 83, 9, 0.3)' },
+    { ring: '#1e3a5f', glow: 'rgba(30, 58, 95, 0.3)' },   // Navy
+    { ring: '#d4a84b', glow: 'rgba(212, 168, 75, 0.3)' }, // Gold
+    { ring: '#1e3a5f', glow: 'rgba(30, 58, 95, 0.3)' },   // Navy
+    { ring: '#475569', glow: 'rgba(71, 85, 105, 0.3)' },  // Slate
   ];
   const color = colors[index % colors.length];
 
   return (
-    <div className="text-center">
+    <div className="text-center relative">
       {/* Ring container */}
       <div className="relative w-36 h-36 mx-auto mb-4">
         <svg 
@@ -172,9 +190,38 @@ function RingStatItem({ stat, index }: { stat: Stat; index: number }) {
       </div>
       
       {/* Description */}
-      <div className="text-sm text-slate-500 leading-relaxed max-w-[180px] mx-auto">
-        {stat.description}
+      {stat.description && (
+        <div className="text-sm text-slate-500 leading-relaxed max-w-[180px] mx-auto">
+          {stat.description}
+        </div>
+      )}
+      
+      {/* Vertical divider */}
+      {showDivider && (
+        <div className="hidden md:block absolute right-0 top-1/2 -translate-y-1/2 translate-x-[50%] w-px h-20 bg-gradient-to-b from-transparent via-slate-200 to-transparent" />
+      )}
+    </div>
+  );
+}
+
+function CardStatItem({ stat, index }: { stat: Stat; index: number }) {
+  // Alternating accent colors
+  const accents = ['border-l-[#1e3a5f]', 'border-l-[#d4a84b]', 'border-l-[#1e3a5f]', 'border-l-slate-600'];
+  const accent = accents[index % accents.length];
+  
+  return (
+    <div className={`bg-white rounded-xl border border-slate-200 p-6 shadow-sm border-l-4 ${accent}`}>
+      <div className="text-4xl font-bold text-slate-800 mb-2">
+        {stat.value}
       </div>
+      <div className="text-sm font-semibold uppercase tracking-wider text-slate-700 mb-1">
+        {stat.label}
+      </div>
+      {stat.description && (
+        <div className="text-sm text-slate-500">
+          {stat.description}
+        </div>
+      )}
     </div>
   );
 }

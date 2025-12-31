@@ -279,6 +279,16 @@ function normalizeProps(type: string, props: Record<string, unknown>): Record<st
         delete normalized.heading;
       }
       break;
+
+    case 'horizontalBars':
+    case 'barChart':
+    case 'progressBars':
+      // Accept 'items' as 'bars'
+      if (!normalized.bars && normalized.items) {
+        normalized.bars = normalized.items;
+        delete normalized.items;
+      }
+      break;
   }
 
   return normalized;
@@ -301,6 +311,7 @@ import { CalloutBox } from './components/CalloutBox';
 import { QuoteBlock } from './components/QuoteBlock';
 import { Paragraph, SectionHeading, BulletList, CTASection } from './components/UtilityComponents';
 import { LetterTemplate, FormalLetter } from './components/LetterTemplate';
+import { HorizontalBars } from './components/HorizontalBars';
 
 export const componentRegistry: Record<string, React.ComponentType<any>> = {
   hero: HeroSection,
@@ -320,6 +331,9 @@ export const componentRegistry: Record<string, React.ComponentType<any>> = {
   letterTemplate: LetterTemplate,
   template: LetterTemplate, // Alias
   formalLetter: FormalLetter,
+  horizontalBars: HorizontalBars,
+  barChart: HorizontalBars, // Alias
+  progressBars: HorizontalBars, // Alias
 };
 
 export default BlogRenderer;

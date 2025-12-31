@@ -15,6 +15,7 @@ export { CalloutBox } from './CalloutBox';
 export { QuoteBlock } from './QuoteBlock';
 export { Paragraph, SectionHeading, BulletList, CTASection } from './UtilityComponents';
 export { LetterTemplate, FormalLetter } from './LetterTemplate';
+export { HorizontalBars, ProgressBar } from './HorizontalBars';
 
 // Section layout components
 export { SectionWrapper, ComponentSpacer } from './SectionWrapper';

@@ -24,7 +24,10 @@ export type ComponentType =
   | 'cta'
   | 'letterTemplate'
   | 'template'
-  | 'formalLetter';
+  | 'formalLetter'
+  | 'horizontalBars'
+  | 'barChart'
+  | 'progressBars';
 
 export interface LayoutComponent {
   type: ComponentType;
@@ -204,4 +207,31 @@ export interface CTASectionProps {
   buttonText?: string;
   buttonHref?: string;
   variant?: 'default' | 'highlight';
+}
+
+// ----------------------------------------------------------------------------
+// NEW GAMMA-PARITY COMPONENTS
+// ----------------------------------------------------------------------------
+
+export interface LetterTemplateProps {
+  title?: string;
+  content?: string;
+  text?: string; // AI compatibility
+  heading?: string; // AI compatibility
+}
+
+export interface Bar {
+  label: string;
+  value: number;
+  suffix?: string;
+  description?: string;
+}
+
+export interface HorizontalBarsProps {
+  title?: string;
+  subtitle?: string;
+  bars?: Bar[];
+  items?: Bar[]; // AI compatibility
+  maxValue?: number;
+  showLabels?: boolean;
 }
