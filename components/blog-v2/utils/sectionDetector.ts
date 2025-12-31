@@ -1427,10 +1427,20 @@ export class SectionDetector {
     // If 2+ patterns match OR content has placeholder brackets [like this]
     const hasPlaceholders = /\[[A-Z][A-Za-z\s]+\]/.test(trimmed);
     if (letterPatternCount >= 2 || (letterPatternCount >= 1 && hasPlaceholders)) {
+      // Extract a title from RE: line or use default
+      const reMatch = trimmed.match(/RE:\s*([^\n—–-]+)/i);
+      const subjectMatch = trimmed.match(/Subject:\s*([^\n]+)/i);
+      const title = reMatch ? reMatch[1].trim() : 
+                    subjectMatch ? subjectMatch[1].trim() : 
+                    'Letter Template';
+      
       return {
         type: 'letterTemplate',
         content: text,
-        data: { content: trimmed },
+        data: { 
+          title: title,
+          content: trimmed,
+        },
         confidence: 0.9,
         startIndex,
         endIndex,

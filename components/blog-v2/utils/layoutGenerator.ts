@@ -266,6 +266,29 @@ function sectionToComponent(section: DetectedSection): LayoutComponent | null {
         },
       };
     
+    case 'letterTemplate':
+    case 'template':
+    case 'formalLetter':
+      return {
+        type: 'letterTemplate',
+        props: {
+          title: section.data?.title || 'Letter Template',
+          content: section.data?.content || section.content,
+        },
+      };
+    
+    case 'horizontalBars':
+    case 'barChart':
+    case 'progressBars':
+      return {
+        type: 'horizontalBars',
+        props: {
+          title: section.data?.title,
+          bars: section.data?.bars || section.data?.items || [],
+          maxValue: section.data?.maxValue || 100,
+        },
+      };
+    
     default:
       // Unknown type - render as paragraph
       return {
