@@ -23,10 +23,11 @@ const backgroundStyles: Record<string, string> = {
   gradient: 'bg-gradient-to-br from-slate-800 to-slate-900 text-white',
 };
 
+// TIGHTER spacing for better visual rhythm
 const spacingStyles: Record<string, string> = {
-  tight: 'py-8 md:py-12',
-  normal: 'py-12 md:py-16',
-  relaxed: 'py-16 md:py-24',
+  tight: 'py-3 md:py-4',
+  normal: 'py-6 md:py-8',
+  relaxed: 'py-8 md:py-12',
 };
 
 const maxWidthStyles: Record<string, string> = {
@@ -69,10 +70,11 @@ export interface ComponentSpacerProps {
   size?: 'small' | 'medium' | 'large';
 }
 
+// TIGHTER component spacing within sections
 const spacerSizes: Record<string, string> = {
-  small: 'h-4 md:h-6',
-  medium: 'h-8 md:h-12',
-  large: 'h-12 md:h-16',
+  small: 'h-2 md:h-3',
+  medium: 'h-4 md:h-5',
+  large: 'h-6 md:h-8',
 };
 
 export function ComponentSpacer({ size = 'medium' }: ComponentSpacerProps) {

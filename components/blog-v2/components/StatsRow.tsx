@@ -38,9 +38,13 @@ export function StatsRow({
     return null;
   }
 
-  const gridCols = columns === 3 
-    ? 'grid-cols-1 md:grid-cols-3' 
-    : 'grid-cols-2 lg:grid-cols-4';
+  // DYNAMIC grid columns based on ACTUAL stat count with appropriate max-widths
+  const statCount = normalizedStats.length;
+  const gridCols = 
+    statCount === 1 ? 'grid-cols-1 max-w-xs' :
+    statCount === 2 ? 'grid-cols-2 max-w-2xl' :
+    statCount === 3 ? 'grid-cols-1 sm:grid-cols-3 max-w-4xl' :
+    'grid-cols-2 md:grid-cols-4 max-w-5xl';
 
   return (
     <div className="w-full">
@@ -50,7 +54,7 @@ export function StatsRow({
         </h2>
       )}
       
-      <div className={`grid ${gridCols} gap-6 lg:gap-8`}>
+      <div className={`grid ${gridCols} gap-8 md:gap-12 mx-auto`}>
         {normalizedStats.map((stat, index) => (
           <StatItem 
             key={index} 
