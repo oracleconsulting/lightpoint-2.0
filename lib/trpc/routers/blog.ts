@@ -166,6 +166,7 @@ export const blogRouter = router({
           author: input.author || 'Admin', // TEXT field - required
           author_id: ctx.user?.id || null, // UUID field - optional FK
           status: input.isPublished ? 'published' : 'draft',
+          is_published: input.isPublished || false, // Also set is_published for public query
           published_at: input.isPublished ? new Date().toISOString() : null,
           category: input.category || null,
           tags: input.tags || [],
@@ -242,6 +243,7 @@ export const blogRouter = router({
       if (input.data.metaDescription !== undefined) updateData.seo_description = input.data.metaDescription;
       if (input.data.isPublished !== undefined) {
         updateData.status = input.data.isPublished ? 'published' : 'draft';
+        updateData.is_published = input.data.isPublished; // Also set is_published for public query
         if (input.data.isPublished && !updateData.published_at) {
           updateData.published_at = new Date().toISOString();
         }
