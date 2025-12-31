@@ -33,6 +33,9 @@ export function RichTextEditor({
   bucket = 'blog-images'
 }: RichTextEditorProps) {
   
+  // Track if content change originated from user typing (internal) vs prop change (external)
+  const isInternalChange = React.useRef(false);
+  
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -64,6 +67,7 @@ export function RichTextEditor({
     ],
     content,
     onUpdate: ({ editor }) => {
+      isInternalChange.current = true;
       onChange(editor.getHTML());
     },
     editorProps: {
@@ -75,10 +79,19 @@ export function RichTextEditor({
 
   // Update editor content when the content prop changes (for editing existing posts)
   React.useEffect(() => {
-    if (editor && content !== editor.getHTML()) {
-      // Only update if the content is different to avoid infinite loops
-      editor.commands.setContent(content);
+    if (editor && !isInternalChange.current) {
+      // Only set content on initial load or when content prop changes from parent
+      // (e.g., loading existing post data)
+      const editorContent = editor.getHTML();
+      // Compare normalized versions to avoid false positives from whitespace differences
+      const normalizedContent = content?.trim().replace(/\s+/g, ' ') || '';
+      const normalizedEditor = editorContent?.trim().replace(/\s+/g, ' ') || '';
+      
+      if (normalizedContent !== normalizedEditor && content) {
+        editor.commands.setContent(content);
+      }
     }
+    isInternalChange.current = false;
   }, [content, editor]);
 
   // Image upload handler

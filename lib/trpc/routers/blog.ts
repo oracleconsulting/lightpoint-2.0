@@ -232,7 +232,10 @@ export const blogRouter = router({
       }
       if (input.data.featuredImage !== undefined) updateData.featured_image_url = input.data.featuredImage;
       if (input.data.featuredImageAlt !== undefined) updateData.featured_image_alt = input.data.featuredImageAlt;
-      if (input.data.author) updateData.author_id = ctx.user?.id;
+      if (input.data.author !== undefined) {
+        updateData.author = input.data.author; // TEXT field - the author name
+        updateData.author_id = ctx.user?.id || null; // UUID field - optional FK
+      }
       if (input.data.category !== undefined) updateData.category = input.data.category;
       if (input.data.tags !== undefined) updateData.tags = input.data.tags;
       if (input.data.metaTitle !== undefined) updateData.seo_title = input.data.metaTitle;
