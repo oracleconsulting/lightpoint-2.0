@@ -55,30 +55,31 @@ export function CalloutBox({
     return null;
   }
 
+  // Brand-consistent styling with Lightpoint navy (#1e3a5f)
   const variants = {
     blue: {
-      container: 'bg-blue-50 border-blue-200',
-      icon: 'bg-blue-500 text-white',
-      label: 'text-blue-700',
-      text: 'text-blue-900',
+      container: 'bg-slate-50 border-[#1e3a5f]/20',
+      icon: 'bg-[#1e3a5f]',
+      label: 'text-[#1e3a5f]',
+      text: 'text-slate-700',
     },
     border: {
-      container: 'bg-white border-slate-200 border-l-4 border-l-blue-500',
-      icon: 'bg-slate-100 text-slate-600',
+      container: 'bg-white border-slate-200 border-l-4 border-l-[#1e3a5f]',
+      icon: 'bg-slate-100',
       label: 'text-slate-700',
       text: 'text-slate-600',
     },
     gold: {
-      container: 'bg-amber-50 border-amber-200',
-      icon: 'bg-amber-500 text-white',
+      container: 'bg-amber-50/50 border-amber-200/50',
+      icon: 'bg-amber-600',
       label: 'text-amber-700',
-      text: 'text-amber-900',
+      text: 'text-slate-700',
     },
     green: {
-      container: 'bg-emerald-50 border-emerald-200',
-      icon: 'bg-emerald-500 text-white',
+      container: 'bg-emerald-50/50 border-emerald-200/50',
+      icon: 'bg-emerald-600',
       label: 'text-emerald-700',
-      text: 'text-emerald-900',
+      text: 'text-slate-700',
     },
   };
 
@@ -90,13 +91,13 @@ export function CalloutBox({
       ${style.container}
     `}>
       <div className="flex items-start gap-5">
-        {/* Icon */}
+        {/* Icon - wrapped in brand container with white/monochrome emoji */}
         {normalizedIcon && (
           <div className={`
-            w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0
+            w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0
             ${style.icon}
           `}>
-            <span className="text-2xl">{normalizedIcon}</span>
+            <span className="text-xl filter brightness-0 invert">{normalizedIcon}</span>
           </div>
         )}
         

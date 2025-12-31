@@ -21,7 +21,10 @@ export type ComponentType =
   | 'paragraph'
   | 'sectionHeading'
   | 'bulletList'
-  | 'cta';
+  | 'cta'
+  | 'letterTemplate'
+  | 'template'
+  | 'formalLetter';
 
 export interface LayoutComponent {
   type: ComponentType;

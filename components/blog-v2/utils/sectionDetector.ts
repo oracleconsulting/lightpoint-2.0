@@ -1402,6 +1402,41 @@ export class SectionDetector {
     const endIndex = startIndex + text.length;
     const trimmed = text.trim();
     
+    // Check for formal letter/template patterns
+    // Detects formal correspondence with salutation, subject line, or sign-off
+    const letterPatterns = [
+      /Dear\s+(?:Sir|Madam|Sir\/Madam|Sirs|Mr|Mrs|Ms|Dr)/i,
+      /^RE:\s+/i,
+      /^Subject:\s+/i,
+      /Yours\s+(?:faithfully|sincerely|truly)/i,
+      /Kind\s+regards/i,
+      /^To\s+(?:Whom\s+It\s+May\s+Concern|The\s+(?:Manager|Director|Team))/i,
+      /I\s+write\s+(?:to|in\s+(?:connection|relation))/i,
+      /I\s+am\s+writing\s+(?:to|in\s+(?:connection|relation))/i,
+      /Please\s+(?:find\s+(?:attached|enclosed)|accept\s+this)/i,
+    ];
+    
+    // Check if multiple letter patterns are present (strong indicator)
+    let letterPatternCount = 0;
+    for (const pattern of letterPatterns) {
+      if (pattern.test(trimmed)) {
+        letterPatternCount++;
+      }
+    }
+    
+    // If 2+ patterns match OR content has placeholder brackets [like this]
+    const hasPlaceholders = /\[[A-Z][A-Za-z\s]+\]/.test(trimmed);
+    if (letterPatternCount >= 2 || (letterPatternCount >= 1 && hasPlaceholders)) {
+      return {
+        type: 'letterTemplate',
+        content: text,
+        data: { content: trimmed },
+        confidence: 0.9,
+        startIndex,
+        endIndex,
+      };
+    }
+    
     // Check for explicit callout markers (must start with marker)
     // Also check for patterns like "THE KEY:", "Compare that to:", quotes, etc.
     const calloutPatterns = [

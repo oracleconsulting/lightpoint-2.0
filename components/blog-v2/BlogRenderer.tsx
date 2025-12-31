@@ -264,6 +264,21 @@ function normalizeProps(type: string, props: Record<string, unknown>): Record<st
         delete normalized.heading;
       }
       break;
+
+    case 'letterTemplate':
+    case 'template':
+    case 'formalLetter':
+      // Accept both 'text' and 'content'
+      if (!normalized.content && normalized.text) {
+        normalized.content = normalized.text;
+        delete normalized.text;
+      }
+      // Accept 'heading' as 'title'
+      if (!normalized.title && normalized.heading) {
+        normalized.title = normalized.heading;
+        delete normalized.heading;
+      }
+      break;
   }
 
   return normalized;
@@ -285,6 +300,7 @@ import { DonutChart } from './components/DonutChart';
 import { CalloutBox } from './components/CalloutBox';
 import { QuoteBlock } from './components/QuoteBlock';
 import { Paragraph, SectionHeading, BulletList, CTASection } from './components/UtilityComponents';
+import { LetterTemplate, FormalLetter } from './components/LetterTemplate';
 
 export const componentRegistry: Record<string, React.ComponentType<any>> = {
   hero: HeroSection,
@@ -301,6 +317,9 @@ export const componentRegistry: Record<string, React.ComponentType<any>> = {
   sectionHeading: SectionHeading,
   bulletList: BulletList,
   cta: CTASection,
+  letterTemplate: LetterTemplate,
+  template: LetterTemplate, // Alias
+  formalLetter: FormalLetter,
 };
 
 export default BlogRenderer;
