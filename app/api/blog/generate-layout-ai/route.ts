@@ -23,9 +23,9 @@ Available component types and their props:
 
 3. paragraph - { text: string }
 
-4. stats - { items: Array<{ value: string, label: string, description?: string }> }
+4. stats - { stats: Array<{ value: string, label: string, description?: string }> }
    Use for ANY numbers/statistics found in prose. Extract and highlight them.
-   Example: "£6,174" becomes { value: "£6,174", label: "Professional costs", description: "paid through Adjudicator" }
+   Example: "£6,174" becomes { stats: [{ value: "£6,174", label: "Professional costs", description: "paid through Adjudicator" }] }
 
 5. threeColumnCards - { cards: Array<{ icon?: string, title: string, description: string }> }
    Icons: 🎯 📋 ⚖️ 💡 ✅ ❌ 📊 🔍 📈 💰 ⏱️ 📞 📧 📄 🏆 ⚠️ 💼 🔒

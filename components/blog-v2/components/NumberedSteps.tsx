@@ -16,7 +16,7 @@ interface Step {
 interface NumberedStepsProps {
   title?: string;
   intro?: string;
-  steps: Step[];
+  steps?: Step[];
   conclusion?: string;
   variant?: 'vertical' | 'grid';
 }
@@ -28,6 +28,12 @@ export function NumberedSteps({
   conclusion,
   variant = 'vertical',
 }: NumberedStepsProps) {
+  // Defensive: ensure steps is an array
+  const normalizedSteps = steps || [];
+  if (normalizedSteps.length === 0) {
+    return null;
+  }
+
   return (
     <div className="w-full">
       {/* Header */}
@@ -48,9 +54,9 @@ export function NumberedSteps({
 
       {/* Steps */}
       {variant === 'grid' ? (
-        <GridSteps steps={steps} />
+        <GridSteps steps={normalizedSteps} />
       ) : (
-        <VerticalSteps steps={steps} />
+        <VerticalSteps steps={normalizedSteps} />
       )}
 
       {/* Conclusion */}

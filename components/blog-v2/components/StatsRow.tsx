@@ -16,7 +16,8 @@ interface Stat {
 }
 
 interface StatsRowProps {
-  stats: Stat[];
+  stats?: Stat[];
+  items?: Stat[]; // Accept both prop names for backwards compatibility with AI layouts
   variant?: 'flat' | 'ring';
   columns?: 3 | 4;
   title?: string;
@@ -24,10 +25,19 @@ interface StatsRowProps {
 
 export function StatsRow({
   stats,
+  items,
   variant = 'flat',
   columns = 4,
   title,
 }: StatsRowProps) {
+  // Normalize: accept either 'stats' or 'items' prop
+  const normalizedStats = stats || items || [];
+  
+  // Early return if no stats
+  if (normalizedStats.length === 0) {
+    return null;
+  }
+
   const gridCols = columns === 3 
     ? 'grid-cols-1 md:grid-cols-3' 
     : 'grid-cols-2 lg:grid-cols-4';
@@ -41,7 +51,7 @@ export function StatsRow({
       )}
       
       <div className={`grid ${gridCols} gap-6 lg:gap-8`}>
-        {stats.map((stat, index) => (
+        {normalizedStats.map((stat, index) => (
           <StatItem 
             key={index} 
             stat={stat} 

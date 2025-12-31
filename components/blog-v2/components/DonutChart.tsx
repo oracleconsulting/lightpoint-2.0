@@ -15,7 +15,7 @@ interface ChartSegment {
 
 interface DonutChartProps {
   title?: string;
-  segments: ChartSegment[];
+  segments?: ChartSegment[];
   size?: number;
   showLegend?: boolean;
   centerLabel?: string;
@@ -28,11 +28,17 @@ export function DonutChart({
   showLegend = true,
   centerLabel,
 }: DonutChartProps) {
+  // Defensive: ensure segments is an array
+  const normalizedSegments = segments || [];
+  if (normalizedSegments.length === 0) {
+    return null;
+  }
+
   // Default colors
   const defaultColors = ['#1e3a5f', '#3b82f6', '#60a5fa', '#93c5fd'];
   
   // Calculate total and percentages
-  const total = segments.reduce((sum, s) => sum + s.value, 0);
+  const total = normalizedSegments.reduce((sum, s) => sum + s.value, 0);
   
   // SVG calculations
   const strokeWidth = size * 0.15;
@@ -41,7 +47,7 @@ export function DonutChart({
 
   // Calculate stroke dash arrays for each segment
   let accumulatedOffset = 0;
-  const segmentData = segments.map((segment, index) => {
+  const segmentData = normalizedSegments.map((segment, index) => {
     const percentage = (segment.value / total) * 100;
     const dashLength = (percentage / 100) * circumference;
     const dashOffset = circumference - accumulatedOffset;
@@ -100,13 +106,13 @@ export function DonutChart({
             <span className="text-2xl font-bold text-slate-800">
               {centerLabel}
             </span>
-          ) : segments[0] && (
+          ) : normalizedSegments[0] && (
             <>
               <span className="text-3xl font-bold text-slate-800">
-                {segments[0].value}%
+                {normalizedSegments[0].value}%
               </span>
               <span className="text-sm text-slate-500">
-                {segments[0].label}
+                {normalizedSegments[0].label}
               </span>
             </>
           )}

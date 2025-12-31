@@ -22,7 +22,7 @@ interface Card {
 interface ThreeColumnCardsProps {
   title?: string;
   intro?: string;
-  cards: Card[];
+  cards?: Card[];
   background?: 'white' | 'gray';
 }
 
@@ -32,6 +32,12 @@ export function ThreeColumnCards({
   cards,
   background = 'white',
 }: ThreeColumnCardsProps) {
+  // Defensive: ensure cards is an array
+  const normalizedCards = cards || [];
+  if (normalizedCards.length === 0) {
+    return null;
+  }
+
   const bgClass = background === 'gray' ? 'bg-slate-50' : 'bg-white';
 
   return (
@@ -56,13 +62,13 @@ export function ThreeColumnCards({
         {/* Cards grid - adapts based on card count */}
         {/* 2 cards: side by side, 3 cards: 3 columns, 4 cards: 2x2 grid */}
         <div className={`grid gap-6 ${
-          cards.length === 4 
+          normalizedCards.length === 4 
             ? 'grid-cols-1 md:grid-cols-2' // 4 cards: 2x2 grid
-            : cards.length === 2
+            : normalizedCards.length === 2
             ? 'grid-cols-1 md:grid-cols-2' // 2 cards: side by side
             : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' // 3 cards: standard 3-column
         }`}>
-          {cards.map((card, index) => (
+          {normalizedCards.map((card, index) => (
             <CardItem key={index} card={card} index={index} />
           ))}
         </div>

@@ -16,7 +16,7 @@ interface TimelineEvent {
 interface TimelineProps {
   title?: string;
   intro?: string;
-  events: TimelineEvent[];
+  events?: TimelineEvent[];
   quote?: string;
   quoteAttribution?: string;
 }
@@ -28,6 +28,12 @@ export function Timeline({
   quote,
   quoteAttribution,
 }: TimelineProps) {
+  // Defensive: ensure events is an array
+  const normalizedEvents = events || [];
+  if (normalizedEvents.length === 0 && !quote) {
+    return null;
+  }
+
   return (
     <div className="w-full py-8 bg-white">
       <div className="max-w-5xl mx-auto px-6 lg:px-8">
@@ -54,7 +60,7 @@ export function Timeline({
 
           {/* Events */}
           <div className="space-y-6">
-            {events.map((event, index) => (
+            {normalizedEvents.map((event, index) => (
               <TimelineEventItem 
                 key={index} 
                 event={event} 

@@ -174,7 +174,7 @@ export function SectionHeading({
 
 interface BulletListProps {
   title?: string;
-  items: string[];
+  items?: string[];
   variant?: 'bullet' | 'check' | 'arrow' | 'number';
 }
 
@@ -183,6 +183,12 @@ export function BulletList({
   items,
   variant = 'bullet',
 }: BulletListProps) {
+  // Defensive: ensure items is an array
+  const normalizedItems = items || [];
+  if (normalizedItems.length === 0) {
+    return null;
+  }
+
   const getBullet = (index: number) => {
     switch (variant) {
       case 'check':
@@ -230,7 +236,7 @@ export function BulletList({
         <h3 className="text-2xl lg:text-3xl font-bold text-slate-800 mb-4">{renderFormattedText(title)}</h3>
       )}
       <ul className="space-y-4">
-        {items.map((item, index) => (
+        {normalizedItems.map((item, index) => (
           <li key={index} className="flex items-start gap-4">
             {getBullet(index)}
             <span className="text-[22px] lg:text-[24px] text-slate-700 leading-[1.8]">{renderFormattedText(item)}</span>

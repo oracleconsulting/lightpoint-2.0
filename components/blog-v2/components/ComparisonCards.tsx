@@ -16,8 +16,8 @@ interface ComparisonCard {
 interface ComparisonCardsProps {
   title?: string;
   intro?: string;
-  leftCard: ComparisonCard;
-  rightCard: ComparisonCard;
+  leftCard?: ComparisonCard;
+  rightCard?: ComparisonCard;
   conclusion?: string;
 }
 
@@ -28,6 +28,11 @@ export function ComparisonCards({
   rightCard,
   conclusion,
 }: ComparisonCardsProps) {
+  // Defensive: ensure both cards exist
+  if (!leftCard || !rightCard) {
+    return null;
+  }
+
   return (
     <div className="w-full py-8 bg-slate-50">
       <div className="max-w-5xl mx-auto px-6 lg:px-8">
