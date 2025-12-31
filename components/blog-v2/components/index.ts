@@ -14,3 +14,7 @@ export { DonutChart } from './DonutChart';
 export { CalloutBox } from './CalloutBox';
 export { QuoteBlock } from './QuoteBlock';
 export { Paragraph, SectionHeading, BulletList, CTASection } from './UtilityComponents';
+
+// Section layout components
+export { SectionWrapper, ComponentSpacer } from './SectionWrapper';
+export type { SectionWrapperProps, ComponentSpacerProps } from './SectionWrapper';

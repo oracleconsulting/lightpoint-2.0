@@ -25,3 +25,10 @@ export {
 } from './aiLayoutGenerator';
 export type { AILayoutRequest, AILayoutResponse } from './aiLayoutGenerator';
 
+// Section grouping utilities
+export {
+  groupIntoSections,
+  smartGroupIntoSections,
+} from './sectionGrouper';
+export type { SectionGroup } from './sectionGrouper';
+

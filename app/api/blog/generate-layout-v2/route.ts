@@ -51,8 +51,8 @@ export async function POST(req: NextRequest) {
       success: true,
       layout,
       stats: {
-        componentCount: layout.components.length,
-        componentTypes: [...new Set(layout.components.map(c => c.type))],
+        componentCount: layout.components?.length ?? 0,
+        componentTypes: [...new Set(layout.components?.map(c => c.type) ?? [])],
       },
     });
 

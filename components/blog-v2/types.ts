@@ -28,12 +28,25 @@ export interface LayoutComponent {
   props: Record<string, any>;
 }
 
-export interface BlogLayout {
-  theme?: {
-    mode?: 'light' | 'dark';
-    name?: string;
-  };
+export interface SectionGroup {
+  id: string;
+  background: 'white' | 'gray' | 'dark' | 'gradient';
+  spacing?: 'tight' | 'normal' | 'relaxed';
   components: LayoutComponent[];
+}
+
+export interface LayoutTheme {
+  mode?: 'light' | 'dark';
+  name?: string;
+  primaryColor?: string;
+  secondaryColor?: string;
+  accentColor?: string;
+}
+
+export interface BlogLayout {
+  theme?: LayoutTheme;
+  components?: LayoutComponent[];
+  sections?: SectionGroup[]; // Section-based layout with alternating backgrounds
 }
 
 // ----------------------------------------------------------------------------

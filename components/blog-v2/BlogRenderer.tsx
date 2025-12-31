@@ -1,13 +1,17 @@
 'use client';
 
 import React from 'react';
-import type { BlogLayout, LayoutComponent, ComponentType } from './types';
+import type { BlogLayout, LayoutComponent, ComponentType, SectionGroup } from './types';
+import { SectionWrapper, ComponentSpacer } from './components/SectionWrapper';
+import { smartGroupIntoSections } from './utils/sectionGrouper';
 
 // ============================================================================
-// WORLD-CLASS BLOG RENDERER
-// Magazine-quality layout with full-width sections, generous whitespace,
+// WORLD-CLASS BLOG RENDERER V2
+// Magazine-quality layout with section grouping, alternating backgrounds,
 // and optimal reading typography
 // ============================================================================
+
+// BlogLayout already supports sections from types.ts
 
 interface BlogRendererProps {
   layout: BlogLayout;
@@ -15,7 +19,20 @@ interface BlogRendererProps {
 }
 
 export function BlogRenderer({ layout, className = '' }: BlogRendererProps) {
-  const { theme, components } = layout;
+  // Get sections - either pre-defined or auto-generated from components
+  let sections: SectionGroup[] = [];
+  
+  if (layout.sections && layout.sections.length > 0) {
+    // Use pre-defined sections
+    sections = layout.sections;
+  } else if (layout.components && layout.components.length > 0) {
+    // Auto-group components into sections
+    sections = smartGroupIntoSections(layout.components);
+  }
+
+  if (sections.length === 0) {
+    return null;
+  }
 
   return (
     <article 
@@ -27,105 +44,229 @@ export function BlogRenderer({ layout, className = '' }: BlogRendererProps) {
         ${className}
       `}
     >
-      {/* Render each component with proper section wrapping */}
-      {components.map((component, index) => (
-        <ComponentRenderer 
-          key={`${component.type}-${index}`} 
-          component={component}
-          index={index}
-          isFirst={index === 0}
-          isLast={index === components.length - 1}
-        />
+      {sections.map((section, sectionIndex) => (
+        <SectionWrapper
+          key={section.id || `section-${sectionIndex}`}
+          id={section.id}
+          background={section.background}
+          spacing={section.spacing}
+        >
+          {section.components.map((component, componentIndex) => (
+            <React.Fragment key={`${section.id}-${component.type}-${componentIndex}`}>
+              <ComponentRenderer component={component} />
+              {/* Add spacing between components, but not after the last one */}
+              {componentIndex < section.components.length - 1 && (
+                <ComponentSpacer size="medium" />
+              )}
+            </React.Fragment>
+          ))}
+        </SectionWrapper>
       ))}
     </article>
   );
 }
 
 // ============================================================================
-// COMPONENT RENDERER
-// Intelligently wraps components with appropriate section styling
+// COMPONENT RENDERER - With error boundary and prop normalization
 // ============================================================================
 
 interface ComponentRendererProps {
   component: LayoutComponent;
-  index: number;
-  isFirst: boolean;
-  isLast: boolean;
 }
 
-function ComponentRenderer({ component, index, isFirst, isLast }: ComponentRendererProps) {
+function ComponentRenderer({ component }: ComponentRendererProps) {
   const { type, props } = component;
 
-  // Get the component from registry
+  // Normalize props for AI compatibility
+  const normalizedProps = normalizeProps(type, props);
+
   const Component = componentRegistry[type as ComponentType];
 
   if (!Component) {
-    console.warn(`Unknown component type: ${type}`);
-    return null;
+    if (process.env.NODE_ENV === 'development') {
+      console.warn(`Unknown component type: ${type}`);
+      return (
+        <div className="bg-yellow-50 border border-yellow-200 p-4 rounded">
+          <p className="text-yellow-800 text-sm">
+            Unknown component type: <code>{type}</code>
+          </p>
+        </div>
+      );
+    }
+    return null; // Silently skip unknown components in production
   }
 
-  // Determine section styling based on component type
-  const sectionStyle = getSectionStyle(type as ComponentType, index);
-
-  return (
-    <section 
-      className={`
-        ${sectionStyle.background}
-        ${sectionStyle.padding}
-        ${isFirst ? 'pt-0' : ''}
-        ${isLast ? 'pb-24' : ''}
-      `}
-    >
-      <div className={sectionStyle.container}>
-        <Component {...props} />
-      </div>
-    </section>
-  );
+  try {
+    return <Component {...normalizedProps} />;
+  } catch (error) {
+    console.error(`Error rendering ${type}:`, error);
+    if (process.env.NODE_ENV === 'development') {
+      return (
+        <div className="bg-red-50 border border-red-200 p-4 rounded">
+          <p className="text-red-800 text-sm">
+            Error rendering: <code>{type}</code>
+          </p>
+        </div>
+      );
+    }
+    return null; // Fail gracefully in production
+  }
 }
 
 // ============================================================================
-// SECTION STYLING LOGIC
-// Returns appropriate styling based on component type
+// PROP NORMALIZER - Handles AI naming variations
 // ============================================================================
 
-interface SectionStyle {
-  background: string;
-  padding: string;
-  container: string;
-}
+function normalizeProps(type: string, props: Record<string, unknown>): Record<string, unknown> {
+  const normalized = { ...props };
 
-function getSectionStyle(type: ComponentType, index: number): SectionStyle {
-  // Full-width components (hero, stats with ring)
-  const fullWidthTypes = ['hero', 'cta'];
-  
-  // Wide components (stats, comparison, charts)
-  const wideTypes = ['stats', 'comparisonCards', 'threeColumnCards', 'numberedSteps', 'timeline', 'donutChart'];
-  
-  // Reading-width components (text-heavy)
-  const readingTypes = ['paragraph', 'textWithImage', 'quote', 'callout', 'bulletList', 'sectionHeading'];
+  switch (type) {
+    case 'stats':
+      // Accept both 'stats' and 'items'
+      if (!normalized.stats && normalized.items) {
+        normalized.stats = normalized.items;
+        delete normalized.items;
+      }
+      break;
 
-  if (fullWidthTypes.includes(type)) {
-    return {
-      background: '',
-      padding: '',
-      container: 'w-full',
-    };
+    case 'callout':
+      // Map AI props to component props
+      if (!normalized.text && normalized.content) {
+        normalized.text = normalized.content;
+        delete normalized.content;
+      }
+      if (!normalized.label && normalized.title) {
+        normalized.label = normalized.title;
+        delete normalized.title;
+      }
+      // Map type to variant
+      if (normalized.type && !normalized.variant) {
+        const typeMap: Record<string, string> = {
+          info: 'blue',
+          warning: 'gold',
+          tip: 'border',
+          success: 'green',
+          error: 'gold',
+        };
+        normalized.variant = typeMap[normalized.type as string] || 'border';
+      }
+      break;
+
+    case 'paragraph':
+      // Accept both 'text' and 'content'
+      if (!normalized.text && normalized.content) {
+        normalized.text = normalized.content;
+        delete normalized.content;
+      }
+      break;
+
+    case 'textWithImage':
+      // Handle nested image object
+      if (normalized.image && typeof normalized.image === 'object') {
+        const img = normalized.image as Record<string, unknown>;
+        if (!normalized.imageSrc) normalized.imageSrc = img.url || img.src;
+        if (!normalized.imageAlt) normalized.imageAlt = img.alt;
+        if (!normalized.imageCaption) normalized.imageCaption = img.caption;
+        delete normalized.image;
+      }
+      // Convert content string to paragraphs array
+      if (!normalized.paragraphs && normalized.content) {
+        const content = normalized.content as string;
+        normalized.paragraphs = content.split('\n\n').filter(Boolean);
+        delete normalized.content;
+      }
+      break;
+
+    case 'comparisonCards':
+      // Handle items array format in leftCard/rightCard
+      if (normalized.leftCard && typeof normalized.leftCard === 'object') {
+        const leftCard = normalized.leftCard as Record<string, unknown>;
+        if (!leftCard.content && leftCard.items && Array.isArray(leftCard.items)) {
+          leftCard.content = (leftCard.items as string[]).map(item => `• ${item}`).join('\n');
+          delete leftCard.items;
+        }
+      }
+      if (normalized.rightCard && typeof normalized.rightCard === 'object') {
+        const rightCard = normalized.rightCard as Record<string, unknown>;
+        if (!rightCard.content && rightCard.items && Array.isArray(rightCard.items)) {
+          rightCard.content = (rightCard.items as string[]).map(item => `• ${item}`).join('\n');
+          delete rightCard.items;
+        }
+      }
+      break;
+
+    case 'quote':
+      // Accept both 'text' and 'quote'
+      if (!normalized.text && normalized.quote) {
+        normalized.text = normalized.quote;
+        delete normalized.quote;
+      }
+      // Accept 'author' as 'attribution'
+      if (!normalized.attribution && normalized.author) {
+        normalized.attribution = normalized.author;
+        delete normalized.author;
+      }
+      break;
+
+    case 'cta':
+      // Handle nested button object
+      if (normalized.primaryButton && typeof normalized.primaryButton === 'object') {
+        const btn = normalized.primaryButton as Record<string, unknown>;
+        if (!normalized.buttonText) normalized.buttonText = btn.text;
+        if (!normalized.buttonHref) normalized.buttonHref = btn.href;
+        delete normalized.primaryButton;
+      }
+      break;
+
+    case 'threeColumnCards':
+      // Ensure cards array exists
+      if (!normalized.cards && normalized.items) {
+        normalized.cards = normalized.items;
+        delete normalized.items;
+      }
+      break;
+
+    case 'numberedSteps':
+      // Ensure steps array exists
+      if (!normalized.steps && normalized.items) {
+        normalized.steps = normalized.items;
+        delete normalized.items;
+      }
+      break;
+
+    case 'timeline':
+      // Ensure events array exists
+      if (!normalized.events && normalized.items) {
+        normalized.events = normalized.items;
+        delete normalized.items;
+      }
+      break;
+
+    case 'bulletList':
+      // Ensure items array exists
+      if (!normalized.items) {
+        normalized.items = [];
+      }
+      break;
+
+    case 'donutChart':
+      // Ensure segments array exists
+      if (!normalized.segments && normalized.items) {
+        normalized.segments = normalized.items;
+        delete normalized.items;
+      }
+      break;
+
+    case 'sectionHeading':
+      // Accept 'heading' as 'title'
+      if (!normalized.title && normalized.heading) {
+        normalized.title = normalized.heading;
+        delete normalized.heading;
+      }
+      break;
   }
 
-  if (wideTypes.includes(type)) {
-    return {
-      background: index % 2 === 0 ? 'bg-white' : 'bg-slate-50',
-      padding: 'py-8 lg:py-10',  // Compact spacing
-      container: 'max-w-7xl mx-auto px-6 lg:px-12',  // MAXIMUM WIDTH
-    };
-  }
-
-  // Default: WIDE container with TIGHT spacing for readability
-  return {
-    background: 'bg-white',
-    padding: 'py-3 lg:py-4',  // TIGHT but readable spacing
-    container: 'max-w-6xl mx-auto px-6 lg:px-10',  // WIDE (1152px)
-  };
+  return normalized;
 }
 
 // ============================================================================
