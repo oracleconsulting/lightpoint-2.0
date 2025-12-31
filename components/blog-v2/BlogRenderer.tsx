@@ -11,6 +11,143 @@ import { smartGroupIntoSections } from './utils/sectionGrouper';
 // and optimal reading typography
 // ============================================================================
 
+// ============================================================================
+// POST-PROCESSOR: Detect letter templates from consecutive paragraphs
+// ============================================================================
+
+function postProcessLetterTemplates(components: LayoutComponent[]): LayoutComponent[] {
+  const processed: LayoutComponent[] = [];
+  let letterBuffer: string[] = [];
+  let inLetter = false;
+  let letterStartIndex = -1;
+  
+  for (let i = 0; i < components.length; i++) {
+    const component = components[i];
+    
+    if (component.type === 'paragraph') {
+      const text = (component.props?.text || component.props?.content || '') as string;
+      
+      // Check if this starts a letter (Dear Sir/Madam, etc.)
+      if (!inLetter && /^Dear\s+(Sir|Madam|Sir\/Madam|Mr|Mrs|Ms|Dr)/i.test(text.trim())) {
+        inLetter = true;
+        letterStartIndex = i;
+        letterBuffer = [text];
+        continue;
+      }
+      
+      // If we're inside a letter, accumulate content
+      if (inLetter) {
+        letterBuffer.push(text);
+        
+        // Check if letter ends (Yours faithfully, etc.)
+        if (/Yours\s+(faithfully|sincerely|truly)/i.test(text)) {
+          // Output the complete letter template
+          processed.push({
+            type: 'letterTemplate' as ComponentType,
+            props: {
+              title: extractLetterTitle(letterBuffer.join('\n\n')),
+              content: letterBuffer.join('\n\n'),
+            },
+          });
+          letterBuffer = [];
+          inLetter = false;
+          letterStartIndex = -1;
+          continue;
+        }
+        
+        // Check for excessive content (more than 15 paragraphs without sign-off)
+        // This is likely not a proper letter format
+        if (letterBuffer.length > 15) {
+          // Not a proper letter - flush as paragraphs
+          for (const bufferedText of letterBuffer) {
+            processed.push({
+              type: 'paragraph' as ComponentType,
+              props: { text: bufferedText },
+            });
+          }
+          letterBuffer = [];
+          inLetter = false;
+          letterStartIndex = -1;
+        }
+        continue;
+      }
+    }
+    
+    // Non-paragraph component encountered while in letter mode
+    if (inLetter && component.type !== 'paragraph') {
+      // Check if we have enough content to be a letter (at least 2 paragraphs)
+      if (letterBuffer.length >= 2) {
+        processed.push({
+          type: 'letterTemplate' as ComponentType,
+          props: {
+            title: extractLetterTitle(letterBuffer.join('\n\n')),
+            content: letterBuffer.join('\n\n'),
+          },
+        });
+      } else {
+        // Not enough for a letter - output as paragraphs
+        for (const bufferedText of letterBuffer) {
+          processed.push({
+            type: 'paragraph' as ComponentType,
+            props: { text: bufferedText },
+          });
+        }
+      }
+      letterBuffer = [];
+      inLetter = false;
+      letterStartIndex = -1;
+    }
+    
+    processed.push(component);
+  }
+  
+  // Handle letter at end of content (no explicit sign-off found)
+  if (letterBuffer.length > 0) {
+    // If we have placeholders like [Client Reference], treat as letter template
+    const hasPlaceholders = /\[[A-Z][^\]]+\]/.test(letterBuffer.join('\n'));
+    
+    if (hasPlaceholders || letterBuffer.length >= 3) {
+      processed.push({
+        type: 'letterTemplate' as ComponentType,
+        props: {
+          title: extractLetterTitle(letterBuffer.join('\n\n')),
+          content: letterBuffer.join('\n\n'),
+        },
+      });
+    } else {
+      // Output as regular paragraphs
+      for (const bufferedText of letterBuffer) {
+        processed.push({
+          type: 'paragraph' as ComponentType,
+          props: { text: bufferedText },
+        });
+      }
+    }
+  }
+  
+  return processed;
+}
+
+// Extract title from RE: line or generate default
+function extractLetterTitle(content: string): string {
+  const reMatch = content.match(/RE:\s*([^\n—–-]+)/i);
+  if (reMatch) {
+    // Clean up the title
+    return reMatch[1]
+      .replace(/\[.*?\]/g, '') // Remove placeholders
+      .replace(/\s+/g, ' ')
+      .trim()
+      .substring(0, 60) || 'Professional Cost Claim Template';
+  }
+  
+  const subjectMatch = content.match(/Subject:\s*([^\n]+)/i);
+  if (subjectMatch) {
+    return subjectMatch[1].trim().substring(0, 60);
+  }
+  
+  return 'Letter Template';
+}
+
 // BlogLayout already supports sections from types.ts
 
 interface BlogRendererProps {
@@ -26,8 +163,10 @@ export function BlogRenderer({ layout, className = '' }: BlogRendererProps) {
     // Use pre-defined sections
     sections = layout.sections;
   } else if (layout.components && layout.components.length > 0) {
+    // Post-process to detect letter templates from consecutive paragraphs
+    const processedComponents = postProcessLetterTemplates(layout.components);
     // Auto-group components into sections
-    sections = smartGroupIntoSections(layout.components);
+    sections = smartGroupIntoSections(processedComponents);
   }
 
   if (sections.length === 0) {

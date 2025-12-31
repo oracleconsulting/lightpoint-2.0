@@ -82,6 +82,19 @@ export function groupIntoSections(
       continue;
     }
 
+    // Letter template gets its own section with gray background
+    if (type === 'letterTemplate' || type === 'template' || type === 'formalLetter') {
+      flushSection();
+      sections.push({
+        id: `letter-${sectionIndex}`,
+        background: 'gray',
+        spacing: 'normal',
+        components: [component],
+      });
+      sectionIndex++;
+      continue;
+    }
+
     // Section heading starts a new section
     if (type === 'sectionHeading') {
       flushSection();
@@ -157,6 +170,19 @@ export function smartGroupIntoSections(
         id: 'cta',
         background: 'gray',
         spacing: 'relaxed',
+        components: [component],
+      });
+      sectionIndex++;
+      continue;
+    }
+
+    // Letter template - standalone section with special styling
+    if (type === 'letterTemplate' || type === 'template' || type === 'formalLetter') {
+      flushSection();
+      sections.push({
+        id: `letter-${sectionIndex}`,
+        background: 'gray', // Gray background to make the document pop
+        spacing: 'normal',
         components: [component],
       });
       sectionIndex++;
