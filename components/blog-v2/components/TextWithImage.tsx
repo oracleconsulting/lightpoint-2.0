@@ -9,11 +9,14 @@ import React from 'react';
 
 interface TextWithImageProps {
   title?: string;
-  paragraphs: string[];
+  paragraphs?: string[];
   imageSrc?: string;
-  imageAlt: string;
+  imageAlt?: string;
   imagePosition?: 'left' | 'right';
   imageCaption?: string;
+  // AI compatibility props
+  content?: string;
+  image?: { url: string; alt: string; caption?: string };
 }
 
 export function TextWithImage({
@@ -23,7 +26,21 @@ export function TextWithImage({
   imageAlt,
   imagePosition = 'right',
   imageCaption,
+  // AI compatibility props
+  content,
+  image,
 }: TextWithImageProps) {
+  // Normalize: accept AI-style props or original props
+  const normalizedParagraphs = paragraphs || (content ? [content] : []);
+  const normalizedImageSrc = imageSrc || image?.url || '';
+  const normalizedImageAlt = imageAlt || image?.alt || 'Image';
+  const normalizedCaption = imageCaption || image?.caption || '';
+  
+  // Defensive: return null if no content
+  if (normalizedParagraphs.length === 0) {
+    return null;
+  }
+
   const isImageLeft = imagePosition === 'left';
 
   return (
@@ -42,7 +59,7 @@ export function TextWithImage({
       `}>
         {/* Text column - 60% */}
         <div className="flex-1 lg:w-[60%] space-y-3">
-          {paragraphs.map((paragraph, index) => {
+          {normalizedParagraphs.map((paragraph, index) => {
             // Clean paragraph text
             const cleanParagraph = paragraph
               .replace(/\*\*/g, '') // Remove bold markers
@@ -67,20 +84,20 @@ export function TextWithImage({
         {/* Image column - 45% */}
         <div className="flex-shrink-0 w-full lg:w-[40%]">
           <div className="relative rounded-xl overflow-hidden shadow-xl bg-slate-100 aspect-[4/3]">
-            {imageSrc ? (
+            {normalizedImageSrc ? (
               <img
-                src={imageSrc}
-                alt={imageAlt}
+                src={normalizedImageSrc}
+                alt={normalizedImageAlt}
                 className="w-full h-full object-cover"
               />
             ) : (
-              <ImagePlaceholder alt={imageAlt} />
+              <ImagePlaceholder alt={normalizedImageAlt} />
             )}
           </div>
           
-          {imageCaption && (
+          {normalizedCaption && (
             <p className="mt-3 text-sm text-slate-500 text-center italic">
-              {imageCaption}
+              {normalizedCaption}
             </p>
           )}
         </div>

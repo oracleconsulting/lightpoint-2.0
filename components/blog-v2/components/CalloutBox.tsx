@@ -9,17 +9,52 @@ import React from 'react';
 
 interface CalloutBoxProps {
   icon?: string;
-  label: string;
-  text: string;
+  label?: string;
+  text?: string;
   variant?: 'blue' | 'border' | 'gold' | 'green';
+  // AI compatibility props
+  type?: 'info' | 'warning' | 'success' | 'tip';
+  title?: string;
+  content?: string;
 }
+
+// Map AI 'type' values to component 'variant' values
+const typeToVariant: Record<string, 'blue' | 'border' | 'gold' | 'green'> = {
+  info: 'blue',
+  warning: 'gold',
+  success: 'green',
+  tip: 'border',
+};
+
+// Map AI 'type' values to default icons
+const typeToIcon: Record<string, string> = {
+  info: 'ℹ️',
+  warning: '⚠️',
+  success: '✅',
+  tip: '💡',
+};
 
 export function CalloutBox({
   icon,
   label,
   text,
-  variant = 'blue',
+  variant,
+  // AI compatibility props
+  type,
+  title,
+  content,
 }: CalloutBoxProps) {
+  // Normalize props: accept both naming conventions
+  const normalizedVariant = variant || (type ? typeToVariant[type] : 'blue') || 'blue';
+  const normalizedIcon = icon || (type ? typeToIcon[type] : undefined);
+  const normalizedLabel = label || title || '';
+  const normalizedText = text || content || '';
+  
+  // Defensive: return null if no content
+  if (!normalizedText && !normalizedLabel) {
+    return null;
+  }
+
   const variants = {
     blue: {
       container: 'bg-blue-50 border-blue-200',
@@ -47,7 +82,7 @@ export function CalloutBox({
     },
   };
 
-  const style = variants[variant];
+  const style = variants[normalizedVariant];
 
   return (
     <div className={`
@@ -56,23 +91,27 @@ export function CalloutBox({
     `}>
       <div className="flex items-start gap-5">
         {/* Icon */}
-        {icon && (
+        {normalizedIcon && (
           <div className={`
             w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0
             ${style.icon}
           `}>
-            <span className="text-2xl">{icon}</span>
+            <span className="text-2xl">{normalizedIcon}</span>
           </div>
         )}
         
         {/* Content */}
         <div className="flex-1">
-          <div className={`font-bold text-sm uppercase tracking-wider mb-3 ${style.label}`}>
-            {label.replace(/\*\*/g, '').replace(/\*/g, '').trim()}
-          </div>
-          <p className={`text-[22px] lg:text-[24px] leading-[1.8] ${style.text}`}>
-            {text.replace(/\*\*/g, '').replace(/\*/g, '').replace(/^\.\s+/, '').trim()}
-          </p>
+          {normalizedLabel && (
+            <div className={`font-bold text-sm uppercase tracking-wider mb-3 ${style.label}`}>
+              {normalizedLabel.replace(/\*\*/g, '').replace(/\*/g, '').trim()}
+            </div>
+          )}
+          {normalizedText && (
+            <p className={`text-[22px] lg:text-[24px] leading-[1.8] ${style.text}`}>
+              {normalizedText.replace(/\*\*/g, '').replace(/\*/g, '').replace(/^\.\s+/, '').trim()}
+            </p>
+          )}
         </div>
       </div>
     </div>
