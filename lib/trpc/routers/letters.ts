@@ -1,5 +1,6 @@
 import { router, protectedProcedure } from '../trpc';
 import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
 import { supabaseAdmin } from '@/lib/supabase/client';
 import { generateComplaintLetter } from '@/lib/openrouter/client';
 import { generateComplaintLetterThreeStage } from '@/lib/openrouter/three-stage-client';
@@ -23,10 +24,16 @@ export const lettersRouter = router({
       logger.info('📝 Starting letter generation for complaint:', input.complaintId);
       
       // Check OpenRouter API key first
-      if (!process.env.OPENROUTER_API_KEY) {
+      const apiKey = process.env.OPENROUTER_API_KEY;
+      if (!apiKey) {
         logger.error('❌ OPENROUTER_API_KEY is not configured!');
-        throw new Error('Letter generation service is not configured. Please contact support.');
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Letter generation service is not configured. Please contact support.',
+        });
       }
+      
+      logger.info('✅ OPENROUTER_API_KEY found (length:', apiKey.length, ')');
       
       try {
         // Get complaint details
@@ -38,12 +45,18 @@ export const lettersRouter = router({
         
         if (fetchError) {
           logger.error('❌ Failed to fetch complaint:', fetchError);
-          throw new Error(`Failed to fetch complaint: ${fetchError.message}`);
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: `Failed to fetch complaint: ${fetchError.message}`,
+          });
         }
         
         if (!complaint) {
           logger.error('❌ Complaint not found:', input.complaintId);
-          throw new Error('Complaint not found');
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Complaint not found',
+          });
         }
         
         logger.info('✅ Complaint found:', (complaint as any).complaint_reference);
@@ -79,7 +92,15 @@ export const lettersRouter = router({
           );
         }
         
-        logger.info('✅ Letter generated successfully, length:', letter?.length || 0);
+        if (!letter || letter.length === 0) {
+          logger.error('❌ Letter generation returned empty result');
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Letter generation returned empty result. Please try again.',
+          });
+        }
+        
+        logger.info('✅ Letter generated successfully, length:', letter.length);
         
         // Auto-save letter to database
         logger.info('💾 Auto-saving letter to database...');
@@ -100,13 +121,26 @@ export const lettersRouter = router({
         }
         
         return { letter };
-      } catch (error) {
+      } catch (error: any) {
+        // If it's already a TRPCError, re-throw it
+        if (error.code && error.message) {
+          throw error;
+        }
+        
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         logger.error('❌ Letter generation failed:', errorMessage);
-        logger.error('❌ Full error:', error);
+        logger.error('❌ Full error:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack?.substring(0, 500),
+        });
         
-        // Re-throw with a cleaner message
-        throw new Error(`Letter generation failed: ${errorMessage}`);
+        // Throw a properly structured TRPC error
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Letter generation failed: ${errorMessage}`,
+          cause: error,
+        });
       }
     }),
 

@@ -8,17 +8,37 @@ export async function POST(request: NextRequest) {
   try {
     logger.info('📥 Document upload request received');
     
-    const formData = await request.formData();
+    let formData;
+    try {
+      formData = await request.formData();
+    } catch (formError: any) {
+      logger.error('❌ Failed to parse form data:', formError);
+      return NextResponse.json(
+        { error: 'Invalid form data', details: formError.message },
+        { status: 400 }
+      );
+    }
+    
     const file = formData.get('file') as File;
     const complaintId = formData.get('complaintId') as string;
     const documentType = formData.get('documentType') as string || 'evidence';
 
-    logger.info(`📄 File: ${file?.name}, Size: ${file?.size}, Complaint: ${complaintId}`);
+    logger.info(`📄 File: ${file?.name}, Size: ${file?.size}, Type: ${file?.type}, Complaint: ${complaintId}, DocType: ${documentType}`);
 
     if (!file || !complaintId) {
-      logger.error('❌ Missing required fields:', { file: !!file, complaintId: !!complaintId });
+      logger.error('❌ Missing required fields:', { file: !!file, fileName: file?.name, complaintId: !!complaintId });
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Missing required fields', details: !file ? 'No file provided' : 'No complaint ID provided' },
+        { status: 400 }
+      );
+    }
+    
+    // Validate file size (max 50MB)
+    const maxSize = 50 * 1024 * 1024;
+    if (file.size > maxSize) {
+      logger.error('❌ File too large:', file.size);
+      return NextResponse.json(
+        { error: 'File too large', details: `Maximum file size is 50MB. Your file is ${(file.size / 1024 / 1024).toFixed(2)}MB` },
         { status: 400 }
       );
     }

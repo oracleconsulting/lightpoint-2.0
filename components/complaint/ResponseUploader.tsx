@@ -26,21 +26,25 @@ export function ResponseUploader({ complaintId, onResponseUploaded }: ResponseUp
 
     setUploading(true);
     try {
-      const formData = new FormData();
-      formData.append('complaintId', complaintId);
-      formData.append('documentType', 'response');
-      formData.append('context', context);
-
+      // Upload each file separately to match API expectations
       for (let i = 0; i < files.length; i++) {
-        formData.append('files', files[i]);
+        const formData = new FormData();
+        formData.append('complaintId', complaintId);
+        formData.append('documentType', 'response');
+        formData.append('context', context);
+        formData.append('file', files[i]); // API expects 'file' (singular)
+
+        const response = await fetch('/api/documents/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          logger.error('Upload failed:', errorData);
+          throw new Error(errorData.details || errorData.error || 'Upload failed');
+        }
       }
-
-      const response = await fetch('/api/documents/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) throw new Error('Upload failed');
 
       // Refresh documents list
       utils.documents.list.invalidate(complaintId);
@@ -52,9 +56,9 @@ export function ResponseUploader({ complaintId, onResponseUploaded }: ResponseUp
       onResponseUploaded?.();
 
       alert('HMRC response uploaded successfully!');
-    } catch (error) {
+    } catch (error: any) {
       logger.error('Upload error:', error);
-      alert('Failed to upload response');
+      alert(`Failed to upload response: ${error.message || 'Unknown error'}`);
     } finally {
       setUploading(false);
     }
