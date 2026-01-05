@@ -652,9 +652,21 @@ This precedent was manually added because it represents a novel complaint type n
             {(complaintData.status === 'active' || complaintData.status === 'escalated') && savedLetters && (savedLetters as any[]).length > 0 && (
               <FollowUpManager
                 complaintId={params.id}
-                lastLetterDate={(savedLetters as any[])[0]?.created_at}
-                hasResponse={documents && (documents as any[]).some((d: any) => d.document_type === 'response')}
-                onFollowUpGenerated={() => {
+                lastLetterDate={(savedLetters as any[])[0]?.sent_at || (savedLetters as any[])[0]?.created_at}
+                lastLetterRef={(savedLetters as any[])[0]?.id}
+                hasResponse={documents && (documents as any[]).some((d: any) => d.document_type === 'hmrc_response')}
+                hmrcResponseDate={
+                  documents && (documents as any[])
+                    .filter((d: any) => d.document_type === 'hmrc_response')
+                    .sort((a: any, b: any) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime())[0]?.uploaded_at
+                }
+                practiceLetterhead={getPracticeLetterhead()}
+                chargeOutRate={practiceSettings?.chargeOutRate || 250}
+                userName={currentUser?.full_name || currentUser?.email?.split('@')[0]}
+                userTitle={currentUser?.job_title || 'Chartered Accountant'}
+                userEmail={currentUser?.email}
+                userPhone={currentUser?.phone}
+                onFollowUpGenerated={(letter) => {
                   utils.letters.list.invalidate({ complaintId: params.id });
                   utils.time.getComplaintTime.invalidate(params.id);
                 }}

@@ -620,6 +620,134 @@ export const appRouter = router({
         return { letter };
       }),
 
+    // Generate follow-up letter (chase, delayed response, inadequate response, rebuttal, tier2 escalation)
+    generateFollowUp: protectedProcedure
+      .input(z.object({
+        complaintId: z.string(),
+        followUpType: z.enum(['chase', 'delayed_response', 'inadequate_response', 'rebuttal', 'tier2_escalation']).optional(),
+        originalLetterDate: z.string(),
+        originalLetterRef: z.string().optional(),
+        hmrcResponseDate: z.string().optional(),
+        hmrcResponseSummary: z.string().optional(),
+        hmrcIndicatedClosed: z.boolean().optional(),
+        responseWasSubstantive: z.boolean().optional(),
+        unaddressedPoints: z.array(z.string()).optional(),
+        additionalContext: z.string().optional(),
+        practiceLetterhead: z.string().optional(),
+        chargeOutRate: z.number().optional(),
+        userName: z.string().optional(),
+        userTitle: z.string().optional(),
+        userEmail: z.string().optional().nullable(),
+        userPhone: z.string().optional().nullable(),
+      }))
+      .mutation(async ({ input }) => {
+        logger.info('📝 Starting follow-up letter generation for complaint:', input.complaintId);
+        
+        // Check OpenRouter API key
+        const apiKey = process.env.OPENROUTER_API_KEY;
+        if (!apiKey) {
+          logger.error('❌ OPENROUTER_API_KEY is not configured!');
+          throw new Error('Letter generation service is not configured. Please contact support.');
+        }
+        
+        // Get complaint details
+        const { data: complaint, error: fetchError } = await supabaseAdmin
+          .from('complaints')
+          .select('*')
+          .eq('id', input.complaintId)
+          .single();
+        
+        if (fetchError || !complaint) {
+          logger.error('❌ Failed to fetch complaint:', fetchError);
+          throw new Error('Complaint not found');
+        }
+        
+        // Import follow-up client dynamically to avoid circular deps
+        const { generateFollowUpLetter, determineFollowUpType } = await import('@/lib/openrouter/follow-up-client');
+        
+        // Calculate days since original letter
+        const originalDate = new Date(input.originalLetterDate);
+        const now = new Date();
+        const daysSinceOriginal = Math.floor((now.getTime() - originalDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        // Calculate days overdue if HMRC responded late
+        let daysOverdue: number | undefined;
+        if (input.hmrcResponseDate) {
+          const responseDate = new Date(input.hmrcResponseDate);
+          const daysBetween = Math.floor((responseDate.getTime() - originalDate.getTime()) / (1000 * 60 * 60 * 24));
+          if (daysBetween > 21) { // 15 working days ≈ 21 calendar days
+            daysOverdue = daysBetween - 21;
+          }
+        }
+        
+        // Determine follow-up type if not specified
+        type FollowUpType = 'chase' | 'delayed_response' | 'inadequate_response' | 'rebuttal' | 'tier2_escalation';
+        const followUpType: FollowUpType = input.followUpType || determineFollowUpType(
+          !!input.hmrcResponseDate,
+          input.hmrcResponseDate || null,
+          input.originalLetterDate,
+          input.hmrcIndicatedClosed || false,
+          input.responseWasSubstantive !== false,
+        );
+        
+        logger.info(`📋 Follow-up type determined: ${followUpType}`);
+        
+        // Generate the follow-up letter
+        const letter = await generateFollowUpLetter({
+          type: followUpType,
+          originalLetterDate: input.originalLetterDate,
+          originalLetterRef: input.originalLetterRef,
+          hmrcResponseDate: input.hmrcResponseDate,
+          hmrcResponseSummary: input.hmrcResponseSummary,
+          daysSinceOriginal,
+          daysOverdue,
+          clientReference: (complaint as any).complaint_reference,
+          hmrcDepartment: (complaint as any).hmrc_department || 'HMRC',
+          unaddressedPoints: input.unaddressedPoints,
+          additionalContext: input.additionalContext,
+          practiceLetterhead: input.practiceLetterhead,
+          chargeOutRate: input.chargeOutRate,
+          userName: input.userName,
+          userTitle: input.userTitle,
+          userEmail: input.userEmail,
+          userPhone: input.userPhone,
+        });
+        
+        if (!letter || letter.length === 0) {
+          throw new Error('Follow-up letter generation returned empty result');
+        }
+        
+        logger.info('✅ Follow-up letter generated, length:', letter.length);
+        
+        // Determine letter type for database
+        const letterType = followUpType === 'tier2_escalation' ? 'tier2_escalation' : 
+                          followUpType === 'rebuttal' ? 'rebuttal' : 
+                          'initial_complaint'; // chase, delayed_response, inadequate_response are still Tier 1
+        
+        // Auto-save letter to database
+        const { error: saveError } = await (supabaseAdmin as any)
+          .from('generated_letters')
+          .insert({
+            complaint_id: input.complaintId,
+            letter_type: letterType,
+            letter_content: letter,
+            notes: `Auto-generated ${followUpType} follow-up letter`,
+          });
+        
+        if (saveError) {
+          logger.error('❌ Failed to auto-save letter:', saveError);
+        } else {
+          logger.info('✅ Follow-up letter auto-saved to database');
+        }
+        
+        return { 
+          letter, 
+          followUpType,
+          daysSinceOriginal,
+          daysOverdue,
+        };
+      }),
+
     // Save generated letter (without locking)
     save: protectedProcedure
       .input(z.object({
