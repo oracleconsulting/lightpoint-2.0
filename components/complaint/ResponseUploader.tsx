@@ -30,7 +30,7 @@ export function ResponseUploader({ complaintId, onResponseUploaded }: ResponseUp
       for (let i = 0; i < files.length; i++) {
         const formData = new FormData();
         formData.append('complaintId', complaintId);
-        formData.append('documentType', 'response');
+        formData.append('documentType', 'hmrc_response'); // Must match DB constraint
         formData.append('context', context);
         formData.append('file', files[i]); // API expects 'file' (singular)
 
