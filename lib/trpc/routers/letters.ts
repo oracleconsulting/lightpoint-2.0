@@ -20,64 +20,94 @@ export const lettersRouter = router({
       additionalContext: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
-      // Get complaint details
-      const { data: complaint } = await supabaseAdmin
-        .from('complaints')
-        .select('*')
-        .eq('id', input.complaintId)
-        .single();
+      logger.info('📝 Starting letter generation for complaint:', input.complaintId);
       
-      if (!complaint) throw new Error('Complaint not found');
-      
-      // Use three-stage pipeline by default
-      const useThreeStage = input.useThreeStage !== false;
-      
-      let letter: string;
-      
-      if (useThreeStage) {
-        logger.info('🚀 Using THREE-STAGE pipeline for letter generation');
-        letter = await generateComplaintLetterThreeStage(
-          input.analysis,
-          (complaint as any).complaint_reference,
-          (complaint as any).hmrc_department || 'HMRC',
-          input.practiceLetterhead,
-          input.chargeOutRate,
-          input.userName,
-          input.userTitle,
-          input.userEmail,
-          input.userPhone,
-          input.additionalContext
-        );
-      } else {
-        logger.info('📝 Using SINGLE-STAGE letter generation');
-        letter = await generateComplaintLetter(
-          input.analysis,
-          (complaint as any).complaint_reference,
-          (complaint as any).hmrc_department || 'HMRC',
-          input.practiceLetterhead,
-          input.chargeOutRate,
-          input.additionalContext
-        );
+      // Check OpenRouter API key first
+      if (!process.env.OPENROUTER_API_KEY) {
+        logger.error('❌ OPENROUTER_API_KEY is not configured!');
+        throw new Error('Letter generation service is not configured. Please contact support.');
       }
       
-      // Auto-save letter to database
-      logger.info('💾 Auto-saving letter to database...');
-      const { error: saveError } = await (supabaseAdmin as any)
-        .from('generated_letters')
-        .insert({
-          complaint_id: input.complaintId,
-          letter_type: 'initial_complaint',
-          letter_content: letter,
-          notes: 'Auto-generated via three-stage pipeline',
-        });
-      
-      if (saveError) {
-        logger.error('❌ Failed to auto-save letter:', saveError);
-      } else {
-        logger.info('✅ Letter auto-saved to database');
+      try {
+        // Get complaint details
+        const { data: complaint, error: fetchError } = await supabaseAdmin
+          .from('complaints')
+          .select('*')
+          .eq('id', input.complaintId)
+          .single();
+        
+        if (fetchError) {
+          logger.error('❌ Failed to fetch complaint:', fetchError);
+          throw new Error(`Failed to fetch complaint: ${fetchError.message}`);
+        }
+        
+        if (!complaint) {
+          logger.error('❌ Complaint not found:', input.complaintId);
+          throw new Error('Complaint not found');
+        }
+        
+        logger.info('✅ Complaint found:', (complaint as any).complaint_reference);
+        
+        // Use three-stage pipeline by default
+        const useThreeStage = input.useThreeStage !== false;
+        
+        let letter: string;
+        
+        if (useThreeStage) {
+          logger.info('🚀 Using THREE-STAGE pipeline for letter generation');
+          letter = await generateComplaintLetterThreeStage(
+            input.analysis,
+            (complaint as any).complaint_reference,
+            (complaint as any).hmrc_department || 'HMRC',
+            input.practiceLetterhead,
+            input.chargeOutRate,
+            input.userName,
+            input.userTitle,
+            input.userEmail,
+            input.userPhone,
+            input.additionalContext
+          );
+        } else {
+          logger.info('📝 Using SINGLE-STAGE letter generation');
+          letter = await generateComplaintLetter(
+            input.analysis,
+            (complaint as any).complaint_reference,
+            (complaint as any).hmrc_department || 'HMRC',
+            input.practiceLetterhead,
+            input.chargeOutRate,
+            input.additionalContext
+          );
+        }
+        
+        logger.info('✅ Letter generated successfully, length:', letter?.length || 0);
+        
+        // Auto-save letter to database
+        logger.info('💾 Auto-saving letter to database...');
+        const { error: saveError } = await (supabaseAdmin as any)
+          .from('generated_letters')
+          .insert({
+            complaint_id: input.complaintId,
+            letter_type: 'initial_complaint',
+            letter_content: letter,
+            notes: 'Auto-generated via three-stage pipeline',
+          });
+        
+        if (saveError) {
+          logger.error('❌ Failed to auto-save letter:', saveError);
+          // Don't throw here - letter was generated successfully
+        } else {
+          logger.info('✅ Letter auto-saved to database');
+        }
+        
+        return { letter };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        logger.error('❌ Letter generation failed:', errorMessage);
+        logger.error('❌ Full error:', error);
+        
+        // Re-throw with a cleaner message
+        throw new Error(`Letter generation failed: ${errorMessage}`);
       }
-      
-      return { letter };
     }),
 
   save: protectedProcedure
