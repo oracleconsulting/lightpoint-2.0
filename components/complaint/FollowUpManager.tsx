@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Clock, AlertTriangle, FileText, Send, ChevronRight, CheckCircle } from 'lucide-react';
-import { format, differenceInDays, addDays } from 'date-fns';
+import { Clock, AlertTriangle, FileText, Send, Download, CheckCircle, Calendar } from 'lucide-react';
+import { format, differenceInDays, addDays, parseISO } from 'date-fns';
 import { trpc } from '@/lib/trpc/Provider';
 import { logger } from '../../lib/logger';
 
@@ -80,17 +81,25 @@ export function FollowUpManager({
   const [responseWasSubstantive, setResponseWasSubstantive] = useState<boolean | undefined>(undefined);
   const [generating, setGenerating] = useState(false);
   const [generatedLetter, setGeneratedLetter] = useState<string | null>(null);
+  
+  // Allow user to override the original complaint date (important for recreated complaints)
+  const [customOriginalDate, setCustomOriginalDate] = useState<string>('');
+  const [customHmrcResponseDate, setCustomHmrcResponseDate] = useState<string>('');
 
   const utils = trpc.useUtils();
   const generateFollowUp = trpc.letters.generateFollowUp.useMutation();
 
+  // Use custom date if provided, otherwise fall back to system date
+  const effectiveOriginalDate = customOriginalDate || lastLetterDate;
+  const effectiveHmrcResponseDate = customHmrcResponseDate || hmrcResponseDate;
+
   // Calculate days since last letter
-  const daysSince = lastLetterDate 
-    ? differenceInDays(new Date(), new Date(lastLetterDate))
+  const daysSince = effectiveOriginalDate 
+    ? differenceInDays(new Date(), new Date(effectiveOriginalDate))
     : 0;
   
-  const responseDeadline = lastLetterDate 
-    ? addDays(new Date(lastLetterDate), 28)
+  const responseDeadline = effectiveOriginalDate 
+    ? addDays(new Date(effectiveOriginalDate), 28)
     : null;
   
   const daysUntilDeadline = responseDeadline
@@ -99,14 +108,50 @@ export function FollowUpManager({
 
   const isOverdue = daysUntilDeadline < 0;
   const isUrgent = daysUntilDeadline >= 0 && daysUntilDeadline <= 7;
+  
+  // Download letter as Word document
+  const downloadAsWord = () => {
+    if (!generatedLetter) return;
+    
+    // Convert markdown bold to simple text (Word doesn't render **)
+    const cleanedLetter = generatedLetter
+      .replace(/\*\*([^*]+)\*\*/g, '$1') // Remove ** markers
+      .replace(/\n/g, '\r\n'); // Windows line endings
+    
+    // Create HTML content that Word can understand
+    const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body { font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.5; }
+  p { margin: 0 0 12pt 0; }
+</style>
+</head>
+<body>
+${cleanedLetter.split('\r\n\r\n').map(para => `<p>${para.replace(/\r\n/g, '<br>')}</p>`).join('\n')}
+</body>
+</html>`;
+    
+    const blob = new Blob([htmlContent], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `follow-up-letter-${format(new Date(), 'yyyy-MM-dd')}.doc`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   // Auto-suggest follow-up type based on context
   const getSuggestedType = (): FollowUpType => {
     if (hmrcIndicatedClosed) return 'tier2_escalation';
-    if (!hasResponse && !hmrcResponseDate) return 'chase';
-    if (hmrcResponseDate) {
-      const originalDate = new Date(lastLetterDate || '');
-      const respDate = new Date(hmrcResponseDate);
+    if (!hasResponse && !effectiveHmrcResponseDate) return 'chase';
+    if (effectiveHmrcResponseDate && effectiveOriginalDate) {
+      const originalDate = new Date(effectiveOriginalDate);
+      const respDate = new Date(effectiveHmrcResponseDate);
       const daysBetween = differenceInDays(respDate, originalDate);
       if (daysBetween > 21) return 'delayed_response';
     }
@@ -142,8 +187,8 @@ export function FollowUpManager({
   };
 
   const handleGenerateFollowUp = async () => {
-    if (!lastLetterDate) {
-      alert('No original letter date found. Please ensure a letter has been sent first.');
+    if (!effectiveOriginalDate) {
+      alert('Please enter the original complaint date.');
       return;
     }
 
@@ -152,9 +197,9 @@ export function FollowUpManager({
       const result = await generateFollowUp.mutateAsync({
         complaintId,
         followUpType: followUpType || getSuggestedType(),
-        originalLetterDate: lastLetterDate,
+        originalLetterDate: effectiveOriginalDate,
         originalLetterRef: lastLetterRef,
-        hmrcResponseDate,
+        hmrcResponseDate: effectiveHmrcResponseDate,
         hmrcResponseSummary,
         hmrcIndicatedClosed,
         responseWasSubstantive,
@@ -211,12 +256,55 @@ export function FollowUpManager({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Date Override Section - Critical for recreated complaints */}
+        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg space-y-3">
+          <div className="flex items-center gap-2 text-amber-800 text-sm font-medium">
+            <Calendar className="h-4 w-4" />
+            Key Dates (Override if complaint was recreated)
+          </div>
+          
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-amber-900 mb-1">
+                Original Complaint Date *
+              </label>
+              <Input
+                type="date"
+                value={customOriginalDate || (lastLetterDate ? lastLetterDate.split('T')[0] : '')}
+                onChange={(e) => setCustomOriginalDate(e.target.value)}
+                className="bg-white text-sm"
+              />
+              {lastLetterDate && !customOriginalDate && (
+                <p className="text-xs text-amber-600 mt-1">
+                  System date: {format(new Date(lastLetterDate), 'PPP')}
+                </p>
+              )}
+            </div>
+            
+            <div>
+              <label className="block text-xs font-medium text-amber-900 mb-1">
+                HMRC Response Date
+              </label>
+              <Input
+                type="date"
+                value={customHmrcResponseDate || (hmrcResponseDate ? hmrcResponseDate.split('T')[0] : '')}
+                onChange={(e) => setCustomHmrcResponseDate(e.target.value)}
+                className="bg-white text-sm"
+              />
+            </div>
+          </div>
+          
+          <p className="text-xs text-amber-700">
+            ⚠️ If you recreated this complaint, enter the <strong>actual</strong> date you sent the original letter to HMRC, not when it was entered in Lightpoint.
+          </p>
+        </div>
+
         {/* Timeline Info */}
-        {lastLetterDate && (
+        {effectiveOriginalDate && (
           <div className="p-3 bg-card border rounded-lg space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Letter Sent:</span>
-              <span className="font-medium">{format(new Date(lastLetterDate), 'PPP')}</span>
+              <span className="text-muted-foreground">Complaint Date:</span>
+              <span className="font-medium">{format(new Date(effectiveOriginalDate), 'PPP')}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Days Since:</span>
@@ -230,10 +318,10 @@ export function FollowUpManager({
                 </span>
               </div>
             )}
-            {hmrcResponseDate && (
+            {effectiveHmrcResponseDate && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">HMRC Response:</span>
-                <span className="font-medium">{format(new Date(hmrcResponseDate), 'PPP')}</span>
+                <span className="font-medium">{format(new Date(effectiveHmrcResponseDate), 'PPP')}</span>
               </div>
             )}
           </div>
@@ -355,7 +443,7 @@ export function FollowUpManager({
         {/* Generate Button */}
         <Button
           onClick={handleGenerateFollowUp}
-          disabled={generating || !lastLetterDate}
+          disabled={generating || !effectiveOriginalDate}
           className="w-full"
           variant={selectedType === 'tier2_escalation' ? 'destructive' : isOverdue ? 'destructive' : 'default'}
         >
@@ -374,21 +462,54 @@ export function FollowUpManager({
 
         {/* Generated Letter Preview */}
         {generatedLetter && (
-          <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-            <div className="flex items-center gap-2 text-green-800 mb-2">
-              <CheckCircle className="h-5 w-5" />
-              <span className="font-medium">Letter Generated Successfully</span>
+          <div className="mt-4 space-y-3">
+            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2 text-green-800">
+                  <CheckCircle className="h-5 w-5" />
+                  <span className="font-medium">Letter Generated Successfully</span>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={downloadAsWord}
+                  >
+                    <Download className="h-4 w-4 mr-1" />
+                    Download Word
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setGeneratedLetter(null)}
+                  >
+                    Generate Another
+                  </Button>
+                </div>
+              </div>
+              <p className="text-sm text-green-700">
+                Letter saved to database. Download as Word or view in the Letters tab.
+              </p>
             </div>
-            <p className="text-sm text-green-700 mb-2">
-              Your follow-up letter has been generated and saved. View it in the Letters tab.
-            </p>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setGeneratedLetter(null)}
-            >
-              Generate Another
-            </Button>
+            
+            {/* Letter Preview */}
+            <div className="border rounded-lg overflow-hidden">
+              <div className="bg-slate-100 px-4 py-2 border-b flex items-center justify-between">
+                <span className="text-sm font-medium text-slate-600">Letter Preview</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigator.clipboard.writeText(generatedLetter)}
+                >
+                  Copy to Clipboard
+                </Button>
+              </div>
+              <div className="p-4 bg-white max-h-96 overflow-y-auto">
+                <pre className="text-sm whitespace-pre-wrap font-sans leading-relaxed">
+                  {generatedLetter}
+                </pre>
+              </div>
+            </div>
           </div>
         )}
       </CardContent>
