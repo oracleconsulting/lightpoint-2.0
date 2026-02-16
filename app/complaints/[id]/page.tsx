@@ -17,6 +17,7 @@ import { FlagToManagement, ComplaintTickets } from '@/components/tickets/FlagToM
 import { ResponseUploader } from '@/components/complaint/ResponseUploader';
 import { FollowUpManager } from '@/components/complaint/FollowUpManager';
 import { ViolationChecker } from '@/components/analysis/ViolationChecker';
+import { CaseClassificationPanel } from '@/components/complaint/CaseClassificationPanel';
 import { PrecedentMatcher } from '@/components/analysis/PrecedentMatcher';
 import { ReAnalysisPrompt } from '@/components/analysis/ReAnalysisPrompt';
 import { LetterPreview } from '@/components/complaint/LetterPreview';
@@ -39,7 +40,9 @@ export default function ComplaintDetailPage({ params }: { params: { id: string }
   const [isEditingReference, setIsEditingReference] = useState(false);
   const [editedReference, setEditedReference] = useState('');
   const [showLetterDialog, setShowLetterDialog] = useState(false);
+  const [showMixedLetterPicker, setShowMixedLetterPicker] = useState(false);
   const [additionalContext, setAdditionalContext] = useState('');
+  const [lastGeneratedLetterType, setLastGeneratedLetterType] = useState<'initial_complaint' | 'penalty_appeal'>('initial_complaint');
 
   const { currentUser } = useUser();
   const utils = trpc.useUtils();
@@ -67,6 +70,15 @@ export default function ComplaintDetailPage({ params }: { params: { id: string }
   // Auto-log time for analysis
   const logTime = trpc.time.logActivity.useMutation();
   const deleteTimeByType = trpc.time.deleteActivityByType.useMutation();
+  const updateCaseType = trpc.complaints.updateCaseType.useMutation({
+    onSuccess: () => {
+      utils.complaints.getById.invalidate(params.id);
+    },
+    onError: (error) => {
+      alert(`Failed to update case type: ${error.message}`);
+    },
+  });
+
   const updateReference = trpc.complaints.updateReference.useMutation({
     onSuccess: () => {
       setIsEditingReference(false);
@@ -139,6 +151,7 @@ export default function ComplaintDetailPage({ params }: { params: { id: string }
   const generateLetter = trpc.letters.generateComplaint.useMutation({
     onSuccess: (data) => {
       logger.info('✅ Letter generation succeeded!');
+      setLastGeneratedLetterType('initial_complaint');
       setGeneratedLetter(data.letter);
       
       // Auto-save letter to database
@@ -197,6 +210,33 @@ export default function ComplaintDetailPage({ params }: { params: { id: string }
     },
   });
 
+  const generateAppeal = trpc.letters.generateAppeal.useMutation({
+    onSuccess: (data) => {
+      logger.info('✅ Appeal letter generation succeeded!');
+      setLastGeneratedLetterType('penalty_appeal');
+      setGeneratedLetter(data.letter);
+      
+      saveLetter.mutate({
+        complaintId: params.id,
+        letterType: 'penalty_appeal',
+        letterContent: data.letter,
+        notes: 'Auto-generated appeal letter',
+      });
+      
+      const { minutes } = calculateLetterTime(data.letter);
+      logTime.mutate({
+        complaintId: params.id,
+        activity: 'Letter Generation',
+        duration: minutes,
+        rate: practiceSettings?.chargeOutRate || 250,
+      });
+    },
+    onError: (error) => {
+      logger.error('❌ Appeal letter generation failed:', error);
+      alert(`Appeal letter generation failed: ${error.message}`);
+    },
+  });
+
   const handleAnalyze = () => {
     logger.info('🔍 Analyze button clicked');
     logger.info('Documents:', documents);
@@ -251,42 +291,59 @@ This precedent was manually added because it represents a novel complaint type n
     });
   };
 
-  const handleGenerateLetter = () => {
-    logger.info('🔄 Generate Letter button clicked');
-    logger.info('Analysis data:', analysisData ? 'Available' : 'Missing');
-    logger.info('Current user:', currentUser);
-    logger.info('Additional context:', additionalContext || 'None provided');
-    
-    if (!analysisData) {
-      logger.error('❌ Cannot generate letter: No analysis data');
-      return;
-    }
-    
-    // Get practice letterhead if configured
+  const caseType = (complaint as any)?.case_type ?? analysisData?.analysis?.classification?.primary_type ?? 'complaint';
+  const isAppeal = caseType === 'penalty_appeal';
+  const isMixed = caseType === 'mixed';
+
+  const doGenerateComplaint = () => {
     const practiceLetterhead = getPracticeLetterhead();
-    logger.info('Practice letterhead:', practiceLetterhead);
-    
-    // Get practice settings for charge-out rate
     const practiceSettings = typeof window !== 'undefined' ? 
       JSON.parse(localStorage.getItem('lightpoint_practice_settings') || 'null') : null;
-    logger.info('Practice settings:', practiceSettings);
-    
-    const letterParams = {
+    generateLetter.mutate({
       complaintId: params.id,
       analysis: analysisData.analysis,
-      practiceLetterhead, // Pass practice details
-      chargeOutRate: practiceSettings?.chargeOutRate, // Pass charge-out rate
+      practiceLetterhead,
+      chargeOutRate: practiceSettings?.chargeOutRate,
       userName: currentUser?.full_name || currentUser?.email?.split('@')[0] || 'Professional',
       userTitle: currentUser?.job_title || 'Chartered Accountant',
       userEmail: currentUser?.email,
       userPhone: currentUser?.phone,
-      additionalContext: additionalContext || undefined, // Include additional context if provided
-    };
-    logger.info('📤 Calling generateLetter with params:', letterParams);
-    
-    generateLetter.mutate(letterParams);
-    
-    // Close dialog and reset context
+      additionalContext: additionalContext || undefined,
+    });
+  };
+
+  const doGenerateAppeal = () => {
+    const practiceLetterhead = getPracticeLetterhead();
+    const practiceSettings = typeof window !== 'undefined' ? 
+      JSON.parse(localStorage.getItem('lightpoint_practice_settings') || 'null') : null;
+    generateAppeal.mutate({
+      complaintId: params.id,
+      analysis: analysisData.analysis,
+      practiceLetterhead,
+      chargeOutRate: practiceSettings?.chargeOutRate,
+      userName: currentUser?.full_name || currentUser?.email?.split('@')[0] || 'Professional',
+      userTitle: currentUser?.job_title || 'Chartered Accountant',
+      userEmail: currentUser?.email,
+      userPhone: currentUser?.phone,
+      additionalContext: additionalContext || undefined,
+    });
+  };
+
+  const handleGenerateLetter = () => {
+    logger.info('🔄 Generate Letter button clicked');
+    if (!analysisData) {
+      logger.error('❌ Cannot generate letter: No analysis data');
+      return;
+    }
+    if (isMixed) {
+      setShowMixedLetterPicker(true);
+      return;
+    }
+    if (isAppeal) {
+      doGenerateAppeal();
+    } else {
+      doGenerateComplaint();
+    }
     setShowLetterDialog(false);
     setAdditionalContext('');
   };
@@ -573,16 +630,68 @@ This precedent was manually added because it represents a novel complaint type n
                       : 'Analyze Complaint'}
                   </Button>
 
-                  {!showLetterDialog ? (
+                  {!showLetterDialog && !showMixedLetterPicker ? (
                     <Button 
                       onClick={() => setShowLetterDialog(true)}
-                      disabled={!analysisData || generateLetter.isPending}
+                      disabled={!analysisData || generateLetter.isPending || generateAppeal.isPending}
                       className="w-full"
                       variant="outline"
                     >
                       <FileText className="h-4 w-4 mr-2" />
-                      {generateLetter.isPending ? 'Generating...' : 'Generate Letter'}
+                      {generateLetter.isPending || generateAppeal.isPending
+                        ? 'Generating...'
+                        : isAppeal
+                        ? 'Generate Appeal Letter'
+                        : isMixed
+                        ? 'Generate Letters'
+                        : 'Generate Letter'}
                     </Button>
+                  ) : showMixedLetterPicker ? (
+                    <Card className="border-2 border-primary">
+                      <CardHeader>
+                        <CardTitle className="text-lg">Generate Letter</CardTitle>
+                        <p className="text-sm text-muted-foreground">
+                          This case has both complaint and appeal elements. Which letter would you like to generate first?
+                        </p>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <Button
+                          className="w-full"
+                          onClick={() => {
+                            doGenerateComplaint();
+                            setShowMixedLetterPicker(false);
+                            setShowLetterDialog(false);
+                          }}
+                          disabled={generateLetter.isPending || generateAppeal.isPending}
+                        >
+                          <FileText className="h-4 w-4 mr-2" />
+                          Generate Complaint Letter
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => {
+                            doGenerateAppeal();
+                            setShowMixedLetterPicker(false);
+                            setShowLetterDialog(false);
+                          }}
+                          disabled={generateLetter.isPending || generateAppeal.isPending}
+                        >
+                          <FileText className="h-4 w-4 mr-2" />
+                          Generate Appeal Letter
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className="w-full"
+                          onClick={() => {
+                            setShowMixedLetterPicker(false);
+                            setShowLetterDialog(false);
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </CardContent>
+                    </Card>
                   ) : (
                     <Card className="border-2 border-primary">
                       <CardHeader>
@@ -623,11 +732,11 @@ This precedent was manually added because it represents a novel complaint type n
                           </Button>
                           <Button
                             onClick={handleGenerateLetter}
-                            disabled={generateLetter.isPending}
+                            disabled={generateLetter.isPending || generateAppeal.isPending}
                             className="flex-1"
                           >
                             <FileText className="h-4 w-4 mr-2" />
-                            {generateLetter.isPending ? 'Generating...' : 'Generate Letter'}
+                            {(generateLetter.isPending || generateAppeal.isPending) ? 'Generating...' : (isAppeal ? 'Generate Appeal Letter' : 'Generate Letter')}
                           </Button>
                         </div>
                       </CardContent>
@@ -739,6 +848,14 @@ This precedent was manually added because it represents a novel complaint type n
             
             {analysisData && (
               <>
+                {analysisData.analysis?.classification && (
+                  <CaseClassificationPanel
+                    classification={analysisData.analysis.classification}
+                    onConfirm={(t) => updateCaseType.mutate({ complaintId: params.id, caseType: t as any })}
+                    onOverride={(t) => updateCaseType.mutate({ complaintId: params.id, caseType: t })}
+                    isUpdating={updateCaseType.isPending}
+                  />
+                )}
                 <ViolationChecker analysis={analysisData.analysis} />
                 <PrecedentMatcher precedents={analysisData.precedents} />
                 
@@ -777,6 +894,7 @@ This precedent was manually added because it represents a novel complaint type n
                   complaintId={params.id}
                   clientReference={complaintData.complaint_reference}
                   generatedLetter={generatedLetter}
+                  letterTypeForSave={lastGeneratedLetterType}
                   onLetterSaved={() => setGeneratedLetter(null)}
                   onRegenerateLetter={handleReanalyzeLetter}
                   analysisData={analysisData}
@@ -794,6 +912,7 @@ This precedent was manually added because it represents a novel complaint type n
               <LetterManager 
                 complaintId={params.id} 
                 clientReference={complaintData.complaint_reference}
+                letterTypeForSave={lastGeneratedLetterType}
                 onRegenerateLetter={handleReanalyzeLetter}
                 analysisData={analysisData}
                 practiceSettings={practiceSettings}

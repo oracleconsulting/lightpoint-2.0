@@ -1,0 +1,138 @@
+/**
+ * Streaming Appeal Letter Generation API
+ *
+ * Uses Server-Sent Events (SSE) to provide real-time progress updates
+ * during the three-stage appeal letter generation pipeline.
+ *
+ * Events:
+ * - progress: { stage: string, percent: number, message: string }
+ * - complete: { letter: string }
+ * - error: { message: string }
+ */
+
+import { NextRequest } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
+import { generateAppealLetterThreeStage } from '@/lib/openrouter/appeal-client';
+import { logger } from '@/lib/logger';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+function createSSEStream() {
+  const encoder = new TextEncoder();
+  let controller: ReadableStreamDefaultController<Uint8Array>;
+
+  const stream = new ReadableStream({
+    start(c) {
+      controller = c;
+    },
+    cancel() {
+      logger.info('SSE appeal stream cancelled by client');
+    },
+  });
+
+  const send = (event: string, data: unknown) => {
+    try {
+      const message = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+      controller.enqueue(encoder.encode(message));
+    } catch (e) {
+      logger.error('Error sending SSE message:', e);
+    }
+  };
+
+  const close = () => {
+    try {
+      controller.close();
+    } catch {
+      // Stream already closed
+    }
+  };
+
+  return { stream, send, close };
+}
+
+export async function POST(request: NextRequest) {
+  const { stream, send, close } = createSSEStream();
+
+  (async () => {
+    try {
+      const cookieStore = await cookies();
+      const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          cookies: {
+            getAll() {
+              return cookieStore.getAll();
+            },
+            setAll() {},
+          },
+        }
+      );
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        send('error', { message: 'Unauthorized' });
+        close();
+        return;
+      }
+
+      const body = await request.json();
+      const {
+        complaintAnalysis,
+        clientReference,
+        hmrcDepartment,
+        practiceLetterhead,
+        chargeOutRate,
+        userName,
+        userTitle,
+        userEmail,
+        userPhone,
+        additionalContext,
+      } = body;
+
+      if (!complaintAnalysis || !clientReference) {
+        send('error', { message: 'Missing required fields: complaintAnalysis, clientReference' });
+        close();
+        return;
+      }
+
+      const onProgress = (stage: string, percent: number, message: string) => {
+        send('progress', { stage, percent, message });
+      };
+
+      send('progress', { stage: 'starting', percent: 0, message: 'Initializing appeal letter generation...' });
+
+      const letter = await generateAppealLetterThreeStage(
+        complaintAnalysis,
+        clientReference,
+        hmrcDepartment || 'HMRC',
+        practiceLetterhead,
+        chargeOutRate,
+        userName,
+        userTitle,
+        userEmail,
+        userPhone,
+        additionalContext,
+        onProgress
+      );
+
+      send('complete', { letter });
+    } catch (error: unknown) {
+      const err = error as Error;
+      logger.error('Appeal letter generation stream error:', err);
+      send('error', { message: err.message || 'Appeal letter generation failed' });
+    } finally {
+      close();
+    }
+  })();
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+    },
+  });
+}

@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase/client';
 import { processDocument } from '@/lib/documentProcessor';
 import { analyzeComplaint, generateComplaintLetter, generateResponse } from '@/lib/openrouter/client';
 import { generateComplaintLetterThreeStage } from '@/lib/openrouter/three-stage-client';
+import { generateAppealLetterThreeStage } from '@/lib/openrouter/appeal-client';
 import { searchKnowledgeBase, searchKnowledgeBaseMultiAngle, searchPrecedents } from '@/lib/vectorSearch';
 import { logTime } from '@/lib/timeTracking';
 import { sanitizeForLLM } from '@/lib/privacy';
@@ -27,6 +28,7 @@ import { documentsRouter } from './routers/documents';
 import { timeRouter } from './routers/time';
 import { ticketsRouter } from './routers/tickets';
 import { dashboardRouter, managementRouter } from './routers/dashboard';
+import { appealsRouter } from './routers/appeals';
 
 export const appRouter = router({
   // Pilot onboarding & activation
@@ -58,6 +60,9 @@ export const appRouter = router({
   
   // Social media content generation & automation
   socialContent: socialContentRouter,
+  
+  // Appeals (penalty appeals, grounds, precedents)
+  appeals: appealsRouter,
   
   // Existing routes
   // Complaints
@@ -193,6 +198,33 @@ export const appRouter = router({
         
         if (error) throw new Error(error.message);
         
+        return data;
+      }),
+
+    updateCaseType: protectedProcedure
+      .input(z.object({
+        complaintId: z.string().uuid(),
+        caseType: z.enum(['complaint', 'penalty_appeal', 'statutory_review', 'mixed', 'tribunal_appeal']),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { data: complaint } = await (supabaseAdmin as any)
+          .from('complaints')
+          .select('organization_id')
+          .eq('id', input.complaintId)
+          .single();
+        if (!complaint || complaint.organization_id !== ctx.organizationId) {
+          throw new Error('Complaint not found or access denied');
+        }
+        const { data, error } = await (supabaseAdmin as any)
+          .from('complaints')
+          .update({
+            case_type: input.caseType,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', input.complaintId)
+          .select()
+          .single();
+        if (error) throw new Error(error.message);
         return data;
       }),
 
@@ -507,12 +539,16 @@ export const appRouter = router({
         // SAVE ANALYSIS TO DATABASE to prevent re-running on refresh
         logger.info('💾 Saving analysis to database to lock it...');
         try {
+          const classification = analysis?.classification;
           await (supabaseAdmin as any)
             .from('complaints')
             .update({
               analysis: analysis,
               complaint_context: complaintContext,
               analysis_completed_at: new Date().toISOString(),
+              case_type: classification?.primary_type || 'complaint',
+              case_classification: classification || null,
+              penalty_details: classification?.penalty_details || null,
               updated_at: new Date().toISOString()
             })
             .eq('id', (document as any).complaint_id);
@@ -617,6 +653,75 @@ export const appRouter = router({
         // NOTE: Time logging is handled by frontend (page.tsx) which calculates
         // time based on letter page count. Don't duplicate here!
         
+        return { letter };
+      }),
+
+    // Generate penalty appeal letter (statutory appeal pipeline)
+    generateAppeal: protectedProcedure
+      .input(z.object({
+        complaintId: z.string(),
+        analysis: z.any(),
+        practiceLetterhead: z.string().optional(),
+        chargeOutRate: z.number().optional(),
+        userName: z.string().optional(),
+        userTitle: z.string().optional(),
+        userEmail: z.string().optional().nullable(),
+        userPhone: z.string().optional().nullable(),
+        additionalContext: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        logger.info('📝 Starting appeal letter generation for complaint:', input.complaintId);
+
+        const apiKey = process.env.OPENROUTER_API_KEY;
+        if (!apiKey) {
+          logger.error('❌ OPENROUTER_API_KEY is not configured!');
+          throw new Error('Letter generation service is not configured. Please contact support.');
+        }
+
+        const { data: complaint, error: fetchError } = await supabaseAdmin
+          .from('complaints')
+          .select('*')
+          .eq('id', input.complaintId)
+          .single();
+
+        if (fetchError || !complaint) {
+          throw new Error('Complaint not found');
+        }
+
+        const letter = await generateAppealLetterThreeStage(
+          input.analysis,
+          (complaint as any).complaint_reference,
+          (complaint as any).hmrc_department || 'HMRC',
+          input.practiceLetterhead,
+          input.chargeOutRate,
+          input.userName,
+          input.userTitle,
+          input.userEmail,
+          input.userPhone,
+          input.additionalContext
+        );
+
+        if (!letter || letter.length === 0) {
+          throw new Error('Appeal letter generation returned empty result');
+        }
+
+        logger.info('✅ Appeal letter generated successfully, length:', letter.length);
+
+        const { error: saveError } = await (supabaseAdmin as any)
+          .from('generated_letters')
+          .insert({
+            complaint_id: input.complaintId,
+            letter_type: 'penalty_appeal',
+            letter_content: letter,
+            notes: 'Auto-generated via appeal three-stage pipeline',
+          });
+
+        if (saveError) {
+          logger.error('❌ Failed to auto-save appeal letter:', saveError);
+        } else {
+          logger.info('✅ Appeal letter auto-saved to database');
+        }
+
         return { letter };
       }),
 
@@ -752,7 +857,10 @@ export const appRouter = router({
     save: protectedProcedure
       .input(z.object({
         complaintId: z.string(),
-        letterType: z.enum(['initial_complaint', 'tier2_escalation', 'adjudicator_escalation', 'rebuttal', 'acknowledgement']),
+        letterType: z.enum([
+          'initial_complaint', 'tier2_escalation', 'adjudicator_escalation', 'rebuttal', 'acknowledgement',
+          'penalty_appeal', 'penalty_appeal_follow_up', 'statutory_review_request', 'tribunal_appeal_notice', 'tribunal_appeal_grounds',
+        ]),
         letterContent: z.string(),
         notes: z.string().optional(),
       }))
@@ -2441,6 +2549,9 @@ export const appRouter = router({
             successRate: 0,
             totalRecovered: 0,
             avgResolutionDays: 0,
+            activeAppeals: 0,
+            penaltyValueAtStake: 0,
+            penaltiesCancelled: 0,
             trends: {
               activeChange: 0,
               successRateChange: 0,
@@ -2451,10 +2562,10 @@ export const appRouter = router({
         }
         
         try {
-          // Get complaint counts by status
+          // Get complaint counts by status (include case_type for appeal metrics)
           const { data: complaints, error: complaintsError } = await supabaseAdmin
             .from('complaints')
-            .select('id, status, created_at, resolved_at, recovered_amount')
+            .select('id, status, case_type, created_at, resolved_at, recovered_amount')
             .eq('organization_id', organizationId);
           
           if (complaintsError) {
@@ -2524,6 +2635,36 @@ export const appRouter = router({
               new Date(c.resolved_at) < oneMonthAgo
             )
             .reduce((sum: number, c: any) => sum + (parseFloat(c.recovered_amount) || 0), 0);
+
+          // Appeal-specific metrics (if penalty_assessments and case_type exist)
+          let activeAppeals = 0;
+          let penaltyValueAtStake = 0;
+          let penaltiesCancelled = 0;
+          try {
+            const appealComplaints = allComplaints.filter((c: any) =>
+              ['penalty_appeal', 'mixed'].includes(c.case_type || '') &&
+              !['resolved', 'closed'].includes(c.status)
+            );
+            activeAppeals = appealComplaints.length;
+
+            const complaintIds = allComplaints.map((c: any) => c.id);
+            if (complaintIds.length > 0) {
+              const { data: penalties } = await (supabaseAdmin as any)
+                .from('penalty_assessments')
+                .select('penalty_amount, appeal_status')
+                .in('complaint_id', complaintIds);
+              (penalties || []).forEach((p: any) => {
+                const amt = parseFloat(p.penalty_amount) || 0;
+                if (['pending', 'filed'].includes(p.appeal_status || '')) {
+                  penaltyValueAtStake += amt;
+                } else if (p.appeal_status === 'cancelled' || p.appeal_status === 'partially_cancelled') {
+                  penaltiesCancelled += amt;
+                }
+              });
+            }
+          } catch {
+            // penalty_assessments table may not exist yet
+          }
           
           return {
             activeComplaints,
@@ -2532,6 +2673,9 @@ export const appRouter = router({
             successRate,
             totalRecovered,
             avgResolutionDays,
+            activeAppeals,
+            penaltyValueAtStake,
+            penaltiesCancelled,
             trends: {
               activeChange: activeComplaints, // Just show current for now
               successRateChange: thisMonthResolved - lastMonthResolved,

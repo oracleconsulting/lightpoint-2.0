@@ -232,6 +232,9 @@ export default function DashboardPage() {
           avgResolutionDays={metrics?.avgResolutionDays ?? 0}
           totalRecovered={metrics?.totalRecovered ?? 0}
           trends={metrics?.trends}
+          activeAppeals={metrics?.activeAppeals}
+          penaltyValueAtStake={metrics?.penaltyValueAtStake}
+          penaltiesCancelled={metrics?.penaltiesCancelled}
           onMetricClick={(metric) => {
             if (metric === 'active') setStatusFilter('active');
             if (metric === 'success') setStatusFilter('resolved');

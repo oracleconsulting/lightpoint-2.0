@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, TrendingDown, Clock, DollarSign, Target, ArrowUpRight } from 'lucide-react';
+import { TrendingUp, TrendingDown, Clock, DollarSign, Target, ArrowUpRight, CheckCircle } from 'lucide-react';
 import { CountUp } from '@/components/CountUp';
 
 interface MetricCardProps {
@@ -106,6 +106,10 @@ interface HeroMetricsProps {
   totalRecovered: number;
   trends?: TrendData;
   onMetricClick?: (metric: string) => void;
+  /** Appeal-specific metrics (optional) */
+  activeAppeals?: number;
+  penaltyValueAtStake?: number;
+  penaltiesCancelled?: number;
 }
 
 function formatCurrency(amount: number): string {
@@ -124,6 +128,9 @@ export default function HeroMetrics({
   totalRecovered,
   trends,
   onMetricClick,
+  activeAppeals = 0,
+  penaltyValueAtStake = 0,
+  penaltiesCancelled = 0,
 }: HeroMetricsProps) {
   // Determine trend directions and values
   const successTrend = (trends?.successRateChange ?? 0) >= 0 ? 'up' : 'down';
@@ -143,8 +150,10 @@ export default function HeroMetrics({
     ? `${trends.recoveredChange >= 0 ? '+' : ''}${formatCurrency(trends.recoveredChange)}`
     : totalRecovered > 0 ? 'Total to date' : 'No recoveries yet';
 
+  const showAppealMetrics = activeAppeals > 0 || penaltyValueAtStake > 0 || penaltiesCancelled > 0;
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 ${showAppealMetrics ? 'xl:grid-cols-7' : ''} gap-6 mb-8`}>
       <MetricCard
         title="Active Complaints"
         value={activeComplaints}
@@ -195,6 +204,46 @@ export default function HeroMetrics({
         gradientTo="to-orange-600"
         onClick={() => onMetricClick?.('recovered')}
       />
+
+      {showAppealMetrics && (
+        <>
+          <MetricCard
+            title="Active Appeals"
+            value={activeAppeals}
+            trend={activeAppeals > 0 ? 'up' : 'neutral'}
+            trendValue={activeAppeals > 0 ? `${activeAppeals} ongoing` : 'None'}
+            icon={Target}
+            iconColor="text-amber-600"
+            gradientFrom="from-amber-600"
+            gradientTo="to-orange-700"
+            onClick={() => onMetricClick?.('appeals')}
+          />
+          <MetricCard
+            title="Penalties at Stake"
+            value={penaltyValueAtStake}
+            prefix={penaltyValueAtStake > 0 ? "£" : ""}
+            trend="neutral"
+            trendValue={penaltyValueAtStake > 0 ? formatCurrency(penaltyValueAtStake) : 'None'}
+            icon={DollarSign}
+            iconColor="text-red-500"
+            gradientFrom="from-red-500"
+            gradientTo="to-rose-600"
+            onClick={() => onMetricClick?.('penalties')}
+          />
+          <MetricCard
+            title="Penalties Cancelled"
+            value={penaltiesCancelled}
+            prefix={penaltiesCancelled > 0 ? "£" : ""}
+            trend={penaltiesCancelled > 0 ? 'up' : 'neutral'}
+            trendValue={penaltiesCancelled > 0 ? formatCurrency(penaltiesCancelled) : 'None'}
+            icon={CheckCircle}
+            iconColor="text-green-600"
+            gradientFrom="from-green-600"
+            gradientTo="to-emerald-700"
+            onClick={() => onMetricClick?.('cancelled')}
+          />
+        </>
+      )}
     </div>
   );
 }

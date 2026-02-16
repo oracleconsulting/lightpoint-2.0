@@ -4,6 +4,7 @@ import { TRPCError } from '@trpc/server';
 import { supabaseAdmin } from '@/lib/supabase/client';
 import { generateComplaintLetter } from '@/lib/openrouter/client';
 import { generateComplaintLetterThreeStage } from '@/lib/openrouter/three-stage-client';
+import { generateAppealLetterThreeStage } from '@/lib/openrouter/appeal-client';
 import { generateFollowUpLetter, determineFollowUpType, type FollowUpType } from '@/lib/openrouter/follow-up-client';
 import { logger } from '../../logger';
 
@@ -140,6 +141,96 @@ export const lettersRouter = router({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: `Letter generation failed: ${errorMessage}`,
+          cause: error,
+        });
+      }
+    }),
+
+  generateAppeal: protectedProcedure
+    .input(z.object({
+      complaintId: z.string(),
+      analysis: z.any(),
+      practiceLetterhead: z.string().optional(),
+      chargeOutRate: z.number().optional(),
+      userName: z.string().optional(),
+      userTitle: z.string().optional(),
+      userEmail: z.string().optional().nullable(),
+      userPhone: z.string().optional().nullable(),
+      additionalContext: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      logger.info('📝 Starting appeal letter generation for complaint:', input.complaintId);
+
+      const apiKey = process.env.OPENROUTER_API_KEY;
+      if (!apiKey) {
+        logger.error('❌ OPENROUTER_API_KEY is not configured!');
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Letter generation service is not configured. Please contact support.',
+        });
+      }
+
+      try {
+        const { data: complaint, error: fetchError } = await supabaseAdmin
+          .from('complaints')
+          .select('*')
+          .eq('id', input.complaintId)
+          .single();
+
+        if (fetchError || !complaint) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Complaint not found',
+          });
+        }
+
+        const letter = await generateAppealLetterThreeStage(
+          input.analysis,
+          (complaint as any).complaint_reference,
+          (complaint as any).hmrc_department || 'HMRC',
+          input.practiceLetterhead,
+          input.chargeOutRate,
+          input.userName,
+          input.userTitle,
+          input.userEmail,
+          input.userPhone,
+          input.additionalContext
+        );
+
+        if (!letter || letter.length === 0) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Appeal letter generation returned empty result. Please try again.',
+          });
+        }
+
+        logger.info('✅ Appeal letter generated successfully, length:', letter.length);
+
+        const { error: saveError } = await (supabaseAdmin as any)
+          .from('generated_letters')
+          .insert({
+            complaint_id: input.complaintId,
+            letter_type: 'penalty_appeal',
+            letter_content: letter,
+            notes: 'Auto-generated via appeal three-stage pipeline',
+          });
+
+        if (saveError) {
+          logger.error('❌ Failed to auto-save appeal letter:', saveError);
+        } else {
+          logger.info('✅ Appeal letter auto-saved to database');
+        }
+
+        return { letter };
+      } catch (error: any) {
+        if (error.code && error.message) {
+          throw error;
+        }
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        logger.error('❌ Appeal letter generation failed:', errorMessage);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Appeal letter generation failed: ${errorMessage}`,
           cause: error,
         });
       }
@@ -295,7 +386,10 @@ export const lettersRouter = router({
   save: protectedProcedure
     .input(z.object({
       complaintId: z.string(),
-      letterType: z.enum(['initial_complaint', 'tier2_escalation', 'adjudicator_escalation', 'rebuttal', 'acknowledgement']),
+      letterType: z.enum([
+        'initial_complaint', 'tier2_escalation', 'adjudicator_escalation', 'rebuttal', 'acknowledgement',
+        'penalty_appeal', 'penalty_appeal_follow_up', 'statutory_review_request', 'tribunal_appeal_notice', 'tribunal_appeal_grounds',
+      ]),
       letterContent: z.string(),
       notes: z.string().optional(),
     }))

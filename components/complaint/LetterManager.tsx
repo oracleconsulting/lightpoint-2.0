@@ -16,6 +16,7 @@ interface LetterManagerProps {
   complaintId: string;
   generatedLetter?: string;
   clientReference?: string;
+  letterTypeForSave?: 'initial_complaint' | 'penalty_appeal' | 'tier2_escalation' | 'adjudicator_escalation' | 'rebuttal' | 'acknowledgement' | 'penalty_appeal_follow_up' | 'statutory_review_request' | 'tribunal_appeal_notice' | 'tribunal_appeal_grounds';
   onLetterSaved?: () => void;
   onRegenerateLetter?: (letterId: string, currentContent: string, correctionContext: string) => void;
   analysisData?: any; // For re-analysis
@@ -30,6 +31,7 @@ export function LetterManager({
   complaintId, 
   generatedLetter, 
   clientReference, 
+  letterTypeForSave = 'initial_complaint',
   onLetterSaved, 
   onRegenerateLetter,
   analysisData,
@@ -116,7 +118,7 @@ export function LetterManager({
     
     saveLetter.mutate({
       complaintId,
-      letterType: 'initial_complaint',
+      letterType: letterTypeForSave,
       letterContent: generatedLetter,
       notes: 'Auto-saved from generator',
     });

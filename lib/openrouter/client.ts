@@ -158,6 +158,28 @@ Focus on identifying:
 5. Procedural violations (CRG6150, 5225, 3250 breaches)
 6. Breakthrough triggers (things that force HMRC escalation)
 
+**CASE CLASSIFICATION — You MUST include this in your JSON output:**
+
+Determine whether this case is:
+- "complaint" — HMRC service failure, delay, or Charter breach (no penalty at issue)
+- "penalty_appeal" — Statutory penalty that needs to be appealed on legal grounds
+- "statutory_review" — Request for HMRC to review their own decision under s49A
+- "mixed" — Both a service complaint AND a penalty that needs appealing
+- "tribunal_appeal" — Appeal to First-tier Tribunal after HMRC review
+
+CLASSIFICATION SIGNALS:
+- Penalty notice in documents → penalty_appeal or mixed
+- TMA 1970 / FA 2009 references → penalty_appeal or statutory_review
+- "Reasonable excuse" language → penalty_appeal
+- CRG/Charter violations detected → complaint or mixed
+- HMRC delay without penalty → complaint
+- Penalty AND service failure → mixed
+
+CRITICAL: If you detect a penalty situation, you MUST classify correctly.
+Setting case_type to "complaint" when the case is actually a penalty appeal
+will result in a letter sent to the wrong team citing the wrong legal framework.
+That is a WORSE outcome than no letter at all.
+
 Return ONLY valid JSON with no markdown:
 {
   "hasGrounds": boolean,
@@ -188,7 +210,28 @@ Return ONLY valid JSON with no markdown:
     "avoidArguments": ["weak points to exclude from letter"]
   },
   "escalationRequired": string,
-  "reasoning": string
+  "reasoning": string,
+  "classification": {
+    "primary_type": "complaint|penalty_appeal|statutory_review|mixed|tribunal_appeal",
+    "secondary_type": null or "complaint|penalty_appeal",
+    "confidence": 0.0-1.0,
+    "signals": ["array of reasons for classification"],
+    "penalty_details": {
+      "penalty_type": "late_filing|late_payment|inaccuracy|failure_to_notify|other",
+      "penalty_regime": "FA 2009 Sch 55|FA 2009 Sch 56|FA 2007 Sch 24|VATA 1994 s59|other",
+      "penalty_amount": number or null,
+      "tax_years": ["2022-23"],
+      "reasonable_excuse_grounds": ["array of identified grounds"],
+      "appeal_deadline": "YYYY-MM-DD" or null,
+      "appeal_statute": "TMA 1970 s118(2)" or relevant
+    },
+    "routing": {
+      "primary_letter_type": "initial_complaint|penalty_appeal",
+      "secondary_letter_type": null or letter type,
+      "recipient_team": "Complaints Resolution Team|HMRC Debt Management|Both",
+      "pipeline": "complaint_three_stage|appeal_three_stage|both"
+    }
+  }
 }`
       },
       {

@@ -20,6 +20,7 @@ export function ComplaintWizard({ organizationId, userId }: ComplaintWizardProps
   const [step, setStep] = useState(1);
   const [files, setFiles] = useState<File[]>([]);
   const [formData, setFormData] = useState({
+    caseContext: 'not_sure' as 'complaint' | 'penalty_appeal' | 'both' | 'not_sure',
     clientReference: '',
     complaintContext: '',
   });
@@ -87,12 +88,15 @@ export function ComplaintWizard({ organizationId, userId }: ComplaintWizardProps
     logger.info('Form data:', formData);
     logger.info('Files:', files.map(f => f.name));
     
+    const complaintTypeLabel = formData.caseContext === 'complaint' ? 'Service complaint' :
+      formData.caseContext === 'penalty_appeal' ? 'Penalty appeal' :
+      formData.caseContext === 'both' ? 'Both (complaint and appeal)' : 'To be determined';
     createComplaint.mutate({
       organizationId,
       createdBy: userId,
       clientReference: formData.clientReference,
       hmrcDepartment: 'To be determined',
-      complaintType: 'To be determined',
+      complaintType: complaintTypeLabel,
       context: formData.complaintContext,
     });
   };
@@ -102,11 +106,55 @@ export function ComplaintWizard({ organizationId, userId }: ComplaintWizardProps
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">New Complaint</h1>
         <div className="text-sm text-muted-foreground">
-          Step {step} of 2
+          Step {step} of 3
         </div>
       </div>
 
       {step === 1 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>What are you dealing with?</CardTitle>
+            <CardDescription>
+              This helps our AI route your case correctly and apply the right legal framework.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-3">
+              {[
+                { value: 'complaint' as const, label: 'Service complaint', desc: 'HMRC delays, errors, poor handling' },
+                { value: 'penalty_appeal' as const, label: 'Penalty appeal', desc: 'Penalty you want to challenge' },
+                { value: 'both' as const, label: 'Both', desc: 'Service issues and a penalty' },
+                { value: 'not_sure' as const, label: 'Not sure', desc: 'Let the AI decide after document analysis' },
+              ].map((opt) => (
+                <label
+                  key={opt.value}
+                  className={`flex items-start gap-3 p-4 rounded-lg border cursor-pointer transition-colors ${
+                    formData.caseContext === opt.value ? 'border-primary bg-primary/5' : 'border-muted hover:border-muted-foreground/50'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="caseContext"
+                    value={opt.value}
+                    checked={formData.caseContext === opt.value}
+                    onChange={() => setFormData({ ...formData, caseContext: opt.value })}
+                    className="mt-1"
+                  />
+                  <div>
+                    <p className="font-medium">{opt.label}</p>
+                    <p className="text-sm text-muted-foreground">{opt.desc}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+            <Button onClick={() => setStep(2)} className="w-full">
+              Continue
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {step === 2 && (
         <Card>
           <CardHeader>
             <CardTitle>Upload Documents & Provide Context</CardTitle>
@@ -167,20 +215,25 @@ Don't worry about identifying specific Charter violations or complaint types - o
               </ol>
             </div>
 
-            <Button
-              onClick={() => setStep(2)}
-              disabled={!formData.clientReference || !formData.complaintContext}
-              className="w-full"
-            >
-              Continue to Document Upload
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="ghost" onClick={() => setStep(1)} className="flex-1">
+                ← Back
+              </Button>
+              <Button
+                onClick={() => setStep(3)}
+                disabled={!formData.clientReference || !formData.complaintContext}
+                className="flex-1"
+              >
+                Continue to Document Upload
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
 
-      {step === 2 && (
+      {step === 3 && (
         <div className="space-y-4">
-          <Button variant="ghost" onClick={() => setStep(1)}>
+          <Button variant="ghost" onClick={() => setStep(2)}>
             ← Back
           </Button>
           

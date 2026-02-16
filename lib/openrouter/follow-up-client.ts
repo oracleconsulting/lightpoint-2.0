@@ -310,3 +310,5 @@ export const determineFollowUpType = (
 
 export default generateFollowUpLetter;
 
+
+

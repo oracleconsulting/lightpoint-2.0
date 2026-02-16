@@ -82,8 +82,10 @@ const RERANKER = process.env.COHERE_API_KEY ? 'cohere' :
 // Category mappings for smart routing
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
   'DMBM': ['payment', 'debt', 'allocation', 'arrears', 'collect', 'enforce', 'ttp', 'time to pay', 'repayment'],
-  'ARTG': ['appeal', 'tribunal', 'review', 'dispute', 'adjudicator', 'ftt', 'ut'],
-  'CH': ['penalty', 'penalt', 'compliance', 'careless', 'deliberate', 'disclosure', 'reasonable excuse'],
+  'ARTG': ['appeal', 'tribunal', 'review', 'dispute', 'adjudicator', 'ftt', 'ut', 'notice of appeal', 'penalty appeal', 'statutory review', 'offer of review'],
+  'CH': ['penalty', 'penalt', 'compliance', 'careless', 'deliberate', 'disclosure', 'reasonable excuse', 'late filing penalty', 'late payment penalty', 'inaccuracy penalty', 'special reduction'],
+  'Legislation': ['TMA 1970', 'FA 2009', 'VATA 1994', 'FA 2007', 'FA 2021', 's118', 's59', 's71', 's49A', 'schedule 55', 'schedule 56', 'schedule 24', 'schedule 26'],
+  'CaseLaw': ['tribunal found', 'FTT held', 'UT decision', 'appeal allowed', 'appeal dismissed', 'reasonable person', 'Perrin test', 'Rowland test', 'without unreasonable delay'],
   'SAM': ['self assessment', 'sa ', 'tax return', 'filing', 'amendment'],
   'EM': ['enquiry', 'investigation', 'check', 'aspect enquiry'],
   'CRG': ['crg', 'complaint', 'guidance', 'reimbursement', 'compensation', 'distress'],
@@ -577,6 +579,31 @@ function generateSearchQueries(originalQuery: string): string[] {
   if (/appeal|tribunal|ftt|review/i.test(lowerQuery)) {
     queries.push('ARTG appeals procedure tribunal');
     queries.push('appeal tribunal time limits');
+  }
+
+  // Appeal/penalty related -> CH + ARTG + Legislation + CaseLaw
+  if (/penalty appeal|reasonable excuse|appeal against penalty|statutory appeal/i.test(lowerQuery)) {
+    queries.push('reasonable excuse penalty TMA 1970 s118');
+    queries.push('ARTG penalty appeal procedure');
+    queries.push('CH penalty calculation regime');
+    queries.push('tribunal penalty appeal reasonable excuse');
+  }
+
+  // Specific penalty types
+  if (/late filing|schedule 55/i.test(lowerQuery)) {
+    queries.push('FA 2009 Schedule 55 late filing penalty');
+    queries.push('late filing penalty reasonable excuse');
+  }
+  if (/late payment|schedule 56/i.test(lowerQuery)) {
+    queries.push('FA 2009 Schedule 56 late payment penalty');
+    queries.push('late payment penalty reasonable excuse');
+  }
+
+  // Non-resident / NRL cases
+  if (/nrl|non.?resident|lived abroad|overseas/i.test(lowerQuery)) {
+    queries.push('non-resident landlord NRL penalty appeal');
+    queries.push('notices not received abroad reasonable excuse');
+    queries.push('s7 TMA 1970 obligation to notify');
   }
   
   // General complaint queries (always include)
