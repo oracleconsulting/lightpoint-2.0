@@ -1,355 +1,593 @@
 'use client';
 
+/**
+ * User Management Page
+ *
+ * Features:
+ * - Delete user (with confirmation modal)
+ * - Set temporary password (generates and displays it for the admin to share)
+ */
+
 import { useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { trpc } from '@/lib/trpc/Provider';
+import { useUser } from '@/contexts/UserContext';
+import {
+  UserPlus,
+  Trash2,
+  KeyRound,
+  Copy,
+  Check,
+  X,
+  Shield,
+  Briefcase,
+  User as UserIcon,
+  AlertTriangle,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { trpc } from '@/lib/trpc/Provider';
-import { useUser } from '@/contexts/UserContext';
-import { Users, UserPlus, Mail, Phone, Briefcase, Shield, Clock, Edit, Trash2, CheckCircle, XCircle } from 'lucide-react';
-import { format } from 'date-fns';
 
-interface UserFormData {
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface LightpointUser {
+  id: string;
   email: string;
   full_name: string;
   role: 'admin' | 'manager' | 'analyst' | 'viewer';
-  job_title: string;
-  phone: string;
+  is_active: boolean;
+  job_title?: string;
+  created_at: string;
+  updated_at?: string;
 }
 
-export default function UsersPage() {
-  const { currentUser, canManageUsers } = useUser();
-  const [isAddingUser, setIsAddingUser] = useState(false);
-  const [editingUserId, setEditingUserId] = useState<string | null>(null);
-  const [formData, setFormData] = useState<UserFormData>({
-    email: '',
-    full_name: '',
-    role: 'analyst',
-    job_title: '',
-    phone: '',
-  });
+// ─── Role badge ───────────────────────────────────────────────────────────────
 
-  const { data: users, isLoading, refetch } = trpc.users.list.useQuery();
-  const inviteUser = trpc.users.invite.useMutation({
-    onSuccess: () => {
-      refetch();
-      setIsAddingUser(false);
-      setFormData({ email: '', full_name: '', role: 'analyst', job_title: '', phone: '' });
-      alert('Invitation sent! User will receive an email to set their password.');
+function RoleBadge({ role }: { role: string }) {
+  const map: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
+    admin: {
+      label: 'Admin',
+      className: 'bg-pink-100 text-pink-700 border border-pink-200',
+      icon: <Shield size={11} />,
     },
-    onError: (error) => {
-      alert(`Failed to invite user: ${error.message}`);
+    manager: {
+      label: 'Manager',
+      className: 'bg-purple-100 text-purple-700 border border-purple-200',
+      icon: <Briefcase size={11} />,
     },
-  });
-  const updateUser = trpc.users.update.useMutation({
-    onSuccess: () => {
-      refetch();
-      setEditingUserId(null);
+    analyst: {
+      label: 'Analyst',
+      className: 'bg-blue-100 text-blue-700 border border-blue-200',
+      icon: <UserIcon size={11} />,
     },
-  });
-  const toggleUserStatus = trpc.users.toggleStatus.useMutation({
-    onSuccess: () => refetch(),
-  });
-
-  if (!canManageUsers) {
-    return (
-      <div className="container mx-auto py-8">
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-center text-muted-foreground">
-              You don't have permission to manage users. Contact your administrator.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  const getRoleBadgeColor = (role: string) => {
-    switch (role) {
-      case 'admin': return 'bg-red-100 text-red-700 border-red-300';
-      case 'manager': return 'bg-purple-100 text-purple-700 border-purple-300';
-      case 'analyst': return 'bg-blue-100 text-blue-700 border-blue-300';
-      case 'viewer': return 'bg-gray-100 text-gray-700 border-gray-300';
-      default: return 'bg-gray-100 text-gray-700';
-    }
+    viewer: {
+      label: 'Viewer',
+      className: 'bg-slate-100 text-slate-600 border border-slate-200',
+      icon: <UserIcon size={11} />,
+    },
   };
-
-  const getRoleIcon = (role: string) => {
-    switch (role) {
-      case 'admin': return <Shield className="h-3 w-3" />;
-      case 'manager': return <Briefcase className="h-3 w-3" />;
-      default: return <Users className="h-3 w-3" />;
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editingUserId) {
-      updateUser.mutate({ id: editingUserId, ...formData });
-    } else {
-      // Use invite for new users
-      inviteUser.mutate({
-        email: formData.email,
-        full_name: formData.full_name,
-        role: formData.role,
-        job_title: formData.job_title,
-      });
-    }
-  };
-
+  const cfg = map[role] ?? map.viewer;
   return (
-    <div className="container mx-auto py-8 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">User Management</h1>
-          <p className="text-muted-foreground mt-1">
-            Manage team members, roles, and permissions
-          </p>
-        </div>
-        {!isAddingUser && (
-          <Button onClick={() => setIsAddingUser(true)}>
-            <UserPlus className="h-4 w-4 mr-2" />
-            Add User
-          </Button>
-        )}
-      </div>
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${cfg.className}`}>
+      {cfg.icon}
+      {cfg.label}
+    </span>
+  );
+}
 
-      {/* Add/Edit User Form */}
-      {(isAddingUser || editingUserId) && (
-        <Card className="border-blue-200 bg-blue-50/30">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <UserPlus className="h-5 w-5 text-blue-600" />
-              {editingUserId ? 'Edit User' : 'Add New User'}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="user@example.com"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="full_name">Full Name *</Label>
-                  <Input
-                    id="full_name"
-                    placeholder="John Smith"
-                    value={formData.full_name}
-                    onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
+// ─── Confirmation modal ───────────────────────────────────────────────────────
 
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="role">Role *</Label>
-                  <Select
-                    value={formData.role}
-                    onValueChange={(value: any) => setFormData({ ...formData, role: value })}
-                  >
-                    <SelectTrigger id="role">
-                      <SelectValue placeholder="Select role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="viewer">
-                        <div className="flex items-center gap-2">
-                          <Users className="h-3 w-3" />
-                          Viewer - Read only
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="analyst">
-                        <div className="flex items-center gap-2">
-                          <Users className="h-3 w-3" />
-                          Analyst - Handle complaints
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="manager">
-                        <div className="flex items-center gap-2">
-                          <Briefcase className="h-3 w-3" />
-                          Manager - Oversight + users
-                        </div>
-                      </SelectItem>
-                      {currentUser?.role === 'admin' && (
-                        <SelectItem value="admin">
-                          <div className="flex items-center gap-2">
-                            <Shield className="h-3 w-3" />
-                            Admin - Full access
-                          </div>
-                        </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="job_title">Job Title</Label>
-                  <Input
-                    id="job_title"
-                    placeholder="Senior Analyst"
-                    value={formData.job_title}
-                    onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    placeholder="+44 20 1234 5678"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-4 border-t">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => {
-                    setIsAddingUser(false);
-                    setEditingUserId(null);
-                    setFormData({ email: '', full_name: '', role: 'analyst', job_title: '', phone: '' });
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={inviteUser.isPending || updateUser.isPending}
-                >
-                  {inviteUser.isPending || updateUser.isPending ? 'Saving...' : editingUserId ? 'Update User' : 'Send Invite'}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Users List */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Team Members ({users?.length || 0})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <p className="text-center py-8 text-muted-foreground">Loading users...</p>
-          ) : users && users.length > 0 ? (
-            <div className="space-y-2">
-              {users.map((user: any) => (
-                <div
-                  key={user.id}
-                  className="group flex items-center gap-4 p-4 border rounded-lg hover:bg-accent/50 transition-colors"
-                >
-                  {/* User Info */}
-                  <div className="flex-1 grid grid-cols-4 gap-4">
-                    <div>
-                      <p className="font-medium flex items-center gap-2">
-                        {user.full_name || user.email}
-                        {!user.is_active && (
-                          <Badge variant="outline" className="bg-gray-100 text-gray-500 text-xs">
-                            Inactive
-                          </Badge>
-                        )}
-                      </p>
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                        <Mail className="h-3 w-3" />
-                        {user.email}
-                      </div>
-                    </div>
-                    <div>
-                      <Badge variant="outline" className={`${getRoleBadgeColor(user.role)} flex items-center gap-1 w-fit`}>
-                        {getRoleIcon(user.role)}
-                        {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
-                      </Badge>
-                      {user.job_title && (
-                        <p className="text-xs text-muted-foreground mt-1">{user.job_title}</p>
-                      )}
-                    </div>
-                    <div>
-                      {user.phone && (
-                        <div className="flex items-center gap-1 text-sm">
-                          <Phone className="h-3 w-3 text-muted-foreground" />
-                          {user.phone}
-                        </div>
-                      )}
-                      {user.last_login && (
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                          <Clock className="h-3 w-3" />
-                          Last: {format(new Date(user.last_login), 'PP')}
-                        </div>
-                      )}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      <p>Created: {format(new Date(user.created_at), 'PP')}</p>
-                      {user.updated_at && user.updated_at !== user.created_at && (
-                        <p>Updated: {format(new Date(user.updated_at), 'PP')}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  {user.id !== currentUser?.id && (
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setEditingUserId(user.id);
-                          setFormData({
-                            email: user.email,
-                            full_name: user.full_name || '',
-                            role: user.role,
-                            job_title: user.job_title || '',
-                            phone: user.phone || '',
-                          });
-                        }}
-                        title="Edit user"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleUserStatus.mutate(user.id)}
-                        title={user.is_active ? 'Deactivate user' : 'Activate user'}
-                        className={user.is_active ? 'text-red-600 hover:text-red-700' : 'text-green-600 hover:text-green-700'}
-                      >
-                        {user.is_active ? (
-                          <XCircle className="h-4 w-4" />
-                        ) : (
-                          <CheckCircle className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-center py-8 text-muted-foreground">
-              No users found. Add your first team member above.
+function ConfirmModal({
+  user,
+  onConfirm,
+  onCancel,
+  loading,
+}: {
+  user: LightpointUser;
+  onConfirm: () => void;
+  onCancel: () => void;
+  loading: boolean;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
+        <div className="flex items-start gap-4 mb-5">
+          <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+            <AlertTriangle size={20} className="text-red-600" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">Remove user?</h2>
+            <p className="text-sm text-slate-500 mt-1">
+              This will permanently delete <strong>{user.full_name}</strong> ({user.email}) from
+              Lightpoint. Their complaints and time logs will be retained but the account will be
+              gone.
             </p>
-          )}
-        </CardContent>
-      </Card>
+          </div>
+        </div>
+        <div className="flex gap-3 justify-end">
+          <button
+            onClick={onCancel}
+            disabled={loading}
+            className="px-4 py-2 text-sm rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={loading}
+            className="px-4 py-2 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+          >
+            {loading ? (
+              <span className="animate-spin h-4 w-4 border-2 border-white/40 border-t-white rounded-full" />
+            ) : (
+              <Trash2 size={14} />
+            )}
+            {loading ? 'Removing…' : 'Remove user'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
 
+// ─── Password modal ───────────────────────────────────────────────────────────
+
+function PasswordModal({
+  user,
+  password,
+  onClose,
+}: {
+  user: LightpointUser;
+  password: string;
+  onClose: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(password);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
+        <div className="flex items-start justify-between mb-5">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">Temporary password set</h2>
+            <p className="text-sm text-slate-500 mt-1">
+              Send this to <strong>{user.full_name}</strong> — they should change it on first
+              login.
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-slate-600 transition-colors"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Password display */}
+        <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 mb-4">
+          <code className="flex-1 text-base font-mono text-slate-800 select-all tracking-wide">
+            {password}
+          </code>
+          <button
+            onClick={copyToClipboard}
+            className="flex-shrink-0 w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-700 hover:border-slate-300 transition-colors shadow-sm"
+            title="Copy to clipboard"
+          >
+            {copied ? (
+              <Check size={14} className="text-green-600" />
+            ) : (
+              <Copy size={14} />
+            )}
+          </button>
+        </div>
+
+        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-5">
+          This password will not be shown again. Copy it before closing.
+        </p>
+
+        <div className="flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm rounded-lg bg-slate-900 text-white hover:bg-slate-700 transition-colors"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────────
+
+export default function UsersPage() {
+  const { currentUser, canManageUsers } = useUser();
+
+  // Fetch users via tRPC (uses the existing users.list procedure)
+  const { data: users, isLoading, refetch } = trpc.users.list.useQuery();
+
+  // Local UI state
+  const [deleteTarget, setDeleteTarget] = useState<LightpointUser | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [passwordTarget, setPasswordTarget] = useState<LightpointUser | null>(null);
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [generatedPassword, setGeneratedPassword] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [showInviteForm, setShowInviteForm] = useState(false);
+  const [inviteForm, setInviteForm] = useState({
+    email: '',
+    full_name: '',
+    role: 'analyst' as 'admin' | 'manager' | 'analyst' | 'viewer',
+    job_title: '',
+  });
+
+  const inviteUser = trpc.users.invite.useMutation({
+    onSuccess: () => {
+      refetch();
+      setShowInviteForm(false);
+      setInviteForm({ email: '', full_name: '', role: 'analyst', job_title: '' });
+      setError(null);
+    },
+    onError: (e) => setError(e.message),
+  });
+
+  // ── Delete handler ──────────────────────────────────────────────────────────
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleteLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch('/api/users/manage', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: deleteTarget.id }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to delete user');
+
+      setDeleteTarget(null);
+      refetch();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to delete user');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  // ── Password reset handler ──────────────────────────────────────────────────
+
+  const handleSetPassword = async (user: LightpointUser) => {
+    setPasswordTarget(user);
+    setPasswordLoading(true);
+    setGeneratedPassword(null);
+    setError(null);
+
+    try {
+      const res = await fetch('/api/users/manage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to set password');
+
+      setGeneratedPassword(json.temporaryPassword);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to set password');
+      setPasswordTarget(null);
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────
+
+  if (!canManageUsers) {
+    return (
+      <div className="max-w-4xl mx-auto px-6 py-10">
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-4 py-6 text-center">
+          You don&apos;t have permission to manage users. Contact your administrator.
+        </div>
+      </div>
+    );
+  }
+
+  const activeUsers = (users as LightpointUser[] | undefined)?.filter((u) => u.is_active) ?? [];
+  const inactiveUsers = (users as LightpointUser[] | undefined)?.filter((u) => !u.is_active) ?? [];
+
+  return (
+    <div className="max-w-4xl mx-auto px-6 py-10">
+      {/* Header */}
+      <div className="flex items-start justify-between mb-8">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">User Management</h1>
+          <p className="text-sm text-slate-500 mt-1">Manage team members, roles, and access</p>
+        </div>
+        <Button
+          onClick={() => setShowInviteForm((v) => !v)}
+          className="gap-2 bg-amber-500 hover:bg-amber-600"
+        >
+          <UserPlus size={15} />
+          Add User
+        </Button>
+      </div>
+
+      {/* Invite form */}
+      {showInviteForm && (
+        <div className="mb-8 p-6 bg-slate-50 border border-slate-200 rounded-2xl">
+          <h2 className="text-sm font-semibold text-slate-700 mb-4">Invite team member</h2>
+          <form
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!inviteForm.email || !inviteForm.full_name) return;
+              inviteUser.mutate({
+                email: inviteForm.email,
+                full_name: inviteForm.full_name,
+                role: inviteForm.role,
+                job_title: inviteForm.job_title || undefined,
+              });
+            }}
+          >
+            <div className="space-y-2">
+              <Label htmlFor="invite-email">Email *</Label>
+              <Input
+                id="invite-email"
+                type="email"
+                placeholder="colleague@example.com"
+                value={inviteForm.email}
+                onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="invite-name">Full name *</Label>
+              <Input
+                id="invite-name"
+                placeholder="Jane Smith"
+                value={inviteForm.full_name}
+                onChange={(e) => setInviteForm({ ...inviteForm, full_name: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="invite-role">Role</Label>
+              <Select
+                value={inviteForm.role}
+                onValueChange={(v: 'admin' | 'manager' | 'analyst' | 'viewer') =>
+                  setInviteForm({ ...inviteForm, role: v })
+                }
+              >
+                <SelectTrigger id="invite-role">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="viewer">Viewer</SelectItem>
+                  <SelectItem value="analyst">Analyst</SelectItem>
+                  <SelectItem value="manager">Manager</SelectItem>
+                  {currentUser?.role === 'admin' && <SelectItem value="admin">Admin</SelectItem>}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="invite-title">Job title</Label>
+              <Input
+                id="invite-title"
+                placeholder="Senior Analyst"
+                value={inviteForm.job_title}
+                onChange={(e) => setInviteForm({ ...inviteForm, job_title: e.target.value })}
+              />
+            </div>
+            <div className="sm:col-span-2 lg:col-span-4 flex gap-2">
+              <Button type="submit" disabled={inviteUser.isPending}>
+                {inviteUser.isPending ? 'Sending…' : 'Send invite'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setShowInviteForm(false);
+                  setInviteForm({ email: '', full_name: '', role: 'analyst', job_title: '' });
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </form>
+          <p className="text-xs text-slate-500 mt-3">
+            They will receive an email to set their password and join your organisation.
+          </p>
+        </div>
+      )}
+
+      {/* Error banner */}
+      {error && (
+        <div className="mb-5 flex items-center gap-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">
+          <AlertTriangle size={15} />
+          {error}
+          <button
+            onClick={() => setError(null)}
+            className="ml-auto text-red-400 hover:text-red-600"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* Users table */}
+      {isLoading ? (
+        <div className="text-center text-slate-400 py-20">Loading…</div>
+      ) : (
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+          {/* Active users */}
+          <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
+            <span className="text-sm font-semibold text-slate-700">
+              Team Members ({activeUsers.length})
+            </span>
+          </div>
+
+          <ul className="divide-y divide-slate-100">
+            {activeUsers.map((u) => (
+              <UserRow
+                key={u.id}
+                user={u}
+                isSelf={u.id === currentUser?.id}
+                onDelete={() => setDeleteTarget(u)}
+                onSetPassword={() => handleSetPassword(u)}
+                passwordLoading={passwordLoading && passwordTarget?.id === u.id}
+              />
+            ))}
+          </ul>
+
+          {/* Inactive users */}
+          {inactiveUsers.length > 0 && (
+            <>
+              <div className="px-5 py-4 border-t border-slate-100 bg-slate-50">
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  Inactive ({inactiveUsers.length})
+                </span>
+              </div>
+              <ul className="divide-y divide-slate-100 bg-slate-50/50">
+                {inactiveUsers.map((u) => (
+                  <UserRow
+                    key={u.id}
+                    user={u}
+                    isSelf={u.id === currentUser?.id}
+                    onDelete={() => setDeleteTarget(u)}
+                    onSetPassword={() => handleSetPassword(u)}
+                    passwordLoading={passwordLoading && passwordTarget?.id === u.id}
+                    inactive
+                  />
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Modals */}
+      {deleteTarget && (
+        <ConfirmModal
+          user={deleteTarget}
+          onConfirm={handleDelete}
+          onCancel={() => setDeleteTarget(null)}
+          loading={deleteLoading}
+        />
+      )}
+
+      {passwordTarget && generatedPassword && (
+        <PasswordModal
+          user={passwordTarget}
+          password={generatedPassword}
+          onClose={() => {
+            setPasswordTarget(null);
+            setGeneratedPassword(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── User row ─────────────────────────────────────────────────────────────────
+
+function UserRow({
+  user,
+  isSelf,
+  onDelete,
+  onSetPassword,
+  passwordLoading,
+  inactive = false,
+}: {
+  user: LightpointUser;
+  isSelf: boolean;
+  onDelete: () => void;
+  onSetPassword: () => void;
+  passwordLoading: boolean;
+  inactive?: boolean;
+}) {
+  return (
+    <li
+      className={`flex items-center gap-4 px-5 py-4 group transition-colors hover:bg-slate-50 ${
+        isSelf ? 'bg-indigo-50/40' : ''
+      }`}
+    >
+      {/* Avatar */}
+      <div
+        className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 ${
+          inactive
+            ? 'bg-slate-200 text-slate-400'
+            : 'bg-gradient-to-br from-indigo-400 to-purple-500 text-white'
+        }`}
+      >
+        {user.full_name?.charAt(0)?.toUpperCase() ?? '?'}
+      </div>
+
+      {/* Info */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className={`text-sm font-medium ${inactive ? 'text-slate-400' : 'text-slate-800'}`}>
+            {user.full_name}
+          </span>
+          {inactive && (
+            <span className="text-xs text-slate-400 border border-slate-200 rounded-full px-2 py-0.5">
+              Inactive
+            </span>
+          )}
+          {isSelf && (
+            <span className="text-xs text-indigo-600 font-medium">(you)</span>
+          )}
+        </div>
+        <div className="text-xs text-slate-400 truncate mt-0.5">{user.email}</div>
+        {user.job_title && (
+          <div className="text-xs text-slate-400 mt-0.5">{user.job_title}</div>
+        )}
+      </div>
+
+      {/* Role */}
+      <RoleBadge role={user.role} />
+
+      {/* Created */}
+      <div className="text-xs text-slate-400 hidden sm:block w-28 text-right">
+        Created: {new Date(user.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+      </div>
+
+      {/* Actions — only show for non-self */}
+      {!isSelf && (
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          {/* Set password */}
+          <button
+            onClick={onSetPassword}
+            disabled={passwordLoading}
+            title="Set temporary password"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors disabled:opacity-50"
+          >
+            {passwordLoading ? (
+              <span className="animate-spin h-3.5 w-3.5 border-2 border-indigo-300 border-t-indigo-600 rounded-full" />
+            ) : (
+              <KeyRound size={15} />
+            )}
+          </button>
+
+          {/* Delete */}
+          <button
+            onClick={onDelete}
+            title="Remove user"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+          >
+            <Trash2 size={15} />
+          </button>
+        </div>
+      )}
+    </li>
+  );
+}

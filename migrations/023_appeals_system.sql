@@ -79,9 +79,9 @@ CREATE POLICY "Users can manage appeal grounds for their org complaints"
   ON appeal_grounds FOR ALL USING (
     EXISTS (
       SELECT 1 FROM complaints c
-      JOIN user_profiles up ON up.organization_id = c.organization_id
+      JOIN lightpoint_users lu ON lu.organization_id = c.organization_id
       WHERE c.id = appeal_grounds.complaint_id
-      AND up.id = auth.uid()
+      AND lu.id = auth.uid()
     )
   );
 
@@ -127,9 +127,9 @@ CREATE POLICY "Users can manage penalties for their org complaints"
   ON penalty_assessments FOR ALL USING (
     EXISTS (
       SELECT 1 FROM complaints c
-      JOIN user_profiles up ON up.organization_id = c.organization_id
+      JOIN lightpoint_users lu ON lu.organization_id = c.organization_id
       WHERE c.id = penalty_assessments.complaint_id
-      AND up.id = auth.uid()
+      AND lu.id = auth.uid()
     )
   );
 
@@ -170,7 +170,7 @@ CREATE POLICY "Everyone can read appeal precedents"
 CREATE POLICY "Admins can manage appeal precedents"
   ON appeal_precedents FOR ALL USING (
     EXISTS (
-      SELECT 1 FROM user_profiles
+      SELECT 1 FROM lightpoint_users
       WHERE id = auth.uid() AND role = 'admin'
     )
   );

@@ -67,7 +67,4 @@ export {
   ingestTMA1970KeySections,
   LEGISLATION_CONFIGS,
   TMA1970_SECTIONS,
-} from './legislationIngestionService';
-
-export { ingestCaseLaw, PRIORITY_CASES } from './caseLawIngestionService';
-
+} from './legislationIngestionService';export { ingestCaseLaw, PRIORITY_CASES } from './caseLawIngestionService';
