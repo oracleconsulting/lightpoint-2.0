@@ -2243,16 +2243,28 @@ export const appRouter = router({
         job_title: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
-        logger.info(`📧 Inviting user: ${input.email}`);
+        const emailLower = input.email.trim().toLowerCase();
+        logger.info(`📧 Inviting user: ${emailLower}`);
         
         const orgId = ctx.organizationId;
         if (!orgId) {
           throw new Error('You must belong to an organisation to invite users. Please contact support.');
         }
         
+        // Avoid duplicate: already in this org
+        const { data: existing } = await (supabaseAdmin as any)
+          .from('lightpoint_users')
+          .select('id')
+          .ilike('email', emailLower)
+          .eq('organization_id', orgId)
+          .maybeSingle();
+        if (existing) {
+          throw new Error('A user with this email is already in your organisation.');
+        }
+        
         // Create user in auth.users via admin API
         const { data: authData, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
-          input.email,
+          emailLower,
           {
             data: {
               full_name: input.full_name,
@@ -2274,20 +2286,26 @@ export const appRouter = router({
           .insert({
             id: authData.user.id,
             organization_id: orgId,
-            email: input.email,
+            email: emailLower,
             full_name: input.full_name,
             role: input.role,
-            job_title: input.job_title,
+            job_title: input.job_title ?? null,
             is_active: true,
           })
           .select()
           .single();
         
         if (profileError) {
-          logger.error('❌ Failed to create user profile:', profileError);
-          // Try to delete the auth user if profile creation failed
+          logger.error('❌ Failed to create user profile:', { code: profileError.code, message: profileError.message, details: profileError.details });
           await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
-          const msg = profileError.message || 'Database error saving new user';
+          const code = (profileError as any).code;
+          const msg = (profileError as any).message || 'Database error saving new user';
+          if (code === '23505' || msg.includes('unique') || msg.includes('duplicate')) {
+            throw new Error('A user with this email already exists. If you just tried to invite them, they may already be in the list.');
+          }
+          if (code === '23503') {
+            throw new Error('Invalid organisation. Please refresh and try again.');
+          }
           throw new Error(msg);
         }
         
