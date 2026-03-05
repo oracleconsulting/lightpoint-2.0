@@ -21,6 +21,7 @@ async function verifyAdminCaller(targetUserId: string): Promise<{
   ok: boolean;
   error?: string;
   callerOrgId?: string;
+  callerId?: string;
 }> {
   const cookieStore = await cookies();
 
@@ -67,7 +68,7 @@ async function verifyAdminCaller(targetUserId: string): Promise<{
     return { ok: false, error: 'Cannot perform this action on your own account' };
   }
 
-  return { ok: true, callerOrgId: caller.organization_id };
+  return { ok: true, callerOrgId: caller.organization_id, callerId: caller.id };
 }
 
 /**
@@ -82,8 +83,29 @@ export async function DELETE(req: NextRequest) {
     const auth = await verifyAdminCaller(userId);
     if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: 403 });
 
-    // 1. Remove from lightpoint_users (soft-deletes related FK data stays intact)
-    const { error: profileError } = await (supabaseAdmin as any)
+    const admin = supabaseAdmin as any;
+
+    // 0. Clear or reassign all FK references so the delete can succeed
+    // complaint_assignments: remove rows where user is assigned_to; clear assigned_by
+    await admin.from('complaint_assignments').delete().eq('assigned_to', userId);
+    await admin.from('complaint_assignments').update({ assigned_by: null }).eq('assigned_by', userId);
+
+    // complaints: clear assigned_to and created_by
+    await admin.from('complaints').update({ assigned_to: null }).eq('assigned_to', userId);
+    await admin.from('complaints').update({ created_by: null }).eq('created_by', userId);
+
+    // management_tickets: reassign raised_by to caller admin; clear assigned_to
+    if (auth.callerId) {
+      await admin.from('management_tickets').update({ raised_by: auth.callerId }).eq('raised_by', userId);
+      await admin.from('management_tickets').update({ assigned_to: null }).eq('assigned_to', userId);
+      await admin.from('ticket_comments').update({ user_id: auth.callerId }).eq('user_id', userId);
+    }
+
+    // time_logs: clear user_id
+    await admin.from('time_logs').update({ user_id: null }).eq('user_id', userId);
+
+    // 1. Remove from lightpoint_users
+    const { error: profileError } = await admin
       .from('lightpoint_users')
       .delete()
       .eq('id', userId);
