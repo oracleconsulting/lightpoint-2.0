@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
 import { trpc } from '@/lib/trpc/Provider';
+import { UpheldClosureChecklistModal } from './UpheldClosureChecklistModal';
 import { 
   CheckCircle, 
   XCircle, 
@@ -27,6 +28,7 @@ interface CloseComplaintDialogProps {
   complaintId: string;
   complaintRef: string;
   onSuccess?: () => void;
+  chargeOutRate?: number;
 }
 
 type OutcomeType = 
@@ -96,6 +98,7 @@ export function CloseComplaintDialog({
   complaintId,
   complaintRef,
   onSuccess,
+  chargeOutRate = 250,
 }: CloseComplaintDialogProps) {
   const [outcomeType, setOutcomeType] = useState<OutcomeType | ''>('');
   const [compensation, setCompensation] = useState('');
@@ -103,6 +106,7 @@ export function CloseComplaintDialog({
   const [penaltiesCancelled, setPenaltiesCancelled] = useState('');
   const [interestRefunded, setInterestRefunded] = useState('');
   const [notes, setNotes] = useState('');
+  const [showClosureChecklist, setShowClosureChecklist] = useState(false);
 
   const utils = trpc.useUtils();
   
@@ -122,9 +126,8 @@ export function CloseComplaintDialog({
     },
   });
 
-  const handleSubmit = () => {
+  const submitClose = () => {
     if (!outcomeType) return;
-
     closeMutation.mutate({
       complaintId,
       outcomeType,
@@ -136,9 +139,25 @@ export function CloseComplaintDialog({
     });
   };
 
+  const handleSubmit = () => {
+    if (!outcomeType) return;
+    const isUpheldOutcome = ['successful_full', 'successful_partial', 'settled'].includes(outcomeType);
+    if (isUpheldOutcome) {
+      setShowClosureChecklist(true);
+      return;
+    }
+    submitClose();
+  };
+
+  const handleClosureChecklistConfirmed = () => {
+    setShowClosureChecklist(false);
+    submitClose();
+  };
+
   const isSuccessful = outcomeType && ['successful_full', 'successful_partial', 'settled'].includes(outcomeType);
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -304,6 +323,14 @@ export function CloseComplaintDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    <UpheldClosureChecklistModal
+      open={showClosureChecklist}
+      onOpenChange={setShowClosureChecklist}
+      complaintId={complaintId}
+      chargeOutRate={chargeOutRate}
+      onAllConfirmed={handleClosureChecklistConfirmed}
+    />
+    </>
   );
 }
 

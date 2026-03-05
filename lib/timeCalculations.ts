@@ -25,13 +25,13 @@ export const TIME_BENCHMARKS = {
   
   // File Management
   FILE_OPENING: 12,           // Opening new complaint file (1 unit)
-  FILE_CLOSING: 12,           // Closing complaint file (1 unit)
-  FINAL_INVOICE: 12,          // Preparing final invoice (1 unit)
+  FILE_CLOSING: 24,           // Closing complaint file (2 units)
+  FINAL_INVOICE: 24,          // Preparing final invoice (2 units)
   
   // Client Communication
   CLIENT_CALL_SHORT: 12,      // Short call (< 15 min) (1 unit)
-  CLIENT_CALL_MEDIUM: 24,     // Medium call (15-30 min) (2 units)
-  CLIENT_CALL_LONG: 36,       // Long call (30+ min) (3 units)
+  CLIENT_CALL_MEDIUM: 36,     // Medium call (15-30 min, standard outcome call) (3 units)
+  CLIENT_CALL_LONG: 36,      // Long call (30+ min) (3 units)
   CLIENT_EMAIL: 12,           // Email correspondence (1 unit)
   
   // Response Handling
@@ -45,6 +45,12 @@ export const TIME_BENCHMARKS = {
   // Resolution
   RESOLUTION_REVIEW: 24,      // Reviewing final resolution (2 units)
   CLIENT_UPDATE: 12,          // Updating client on outcome (1 unit)
+  
+  // Complaint closure (upheld)
+  UPHELD_RESPONSE_LETTER: 84,   // 2-page formal acceptance letter to HMRC (7 units)
+  CLIENT_OUTCOME_CALL: 36,     // Call to explain uphold + reimbursement process (3 units)
+  HMRC_REIMBURSEMENT_PACK: 24, // Preparing receipted invoice + proof of payment for HMRC (2 units)
+  INVOICE_PREPARATION: 24,     // Itemised invoice preparation for client (2 units)
 } as const;
 
 // ============================================================================
@@ -210,6 +216,12 @@ export const ACTIVITY_TYPES = {
   RESOLUTION_REVIEW: 'Resolution Review',
   SETTLEMENT_NEGOTIATION: 'Settlement Negotiation',
   
+  // Complaint Closure (Billable)
+  UPHELD_RESPONSE_LETTER: 'Upheld Response Letter',
+  CLIENT_OUTCOME_CALL: 'Client Outcome Call',
+  INVOICE_PREPARATION: 'Invoice Preparation',
+  HMRC_REIMBURSEMENT_PACK: 'HMRC Reimbursement Pack',
+  
   // HMRC Response Review (NOT Billable - track for records)
   HMRC_RESPONSE_REVIEW: 'HMRC Response Review',
 } as const;
@@ -220,7 +232,8 @@ export const ACTIVITY_TYPES = {
 
 /**
  * Determines if an activity type is billable to client
- * HMRC no longer allows billing for reviewing their responses
+ * HMRC no longer allows billing for reviewing their responses.
+ * All complaint closure activities (upheld response letter, client call, invoice, reimbursement pack) are billable.
  */
 export function isBillableActivity(activityType: string): boolean {
   const nonBillableActivities = [
@@ -231,12 +244,54 @@ export function isBillableActivity(activityType: string): boolean {
 }
 
 // ============================================================================
+// UPHELD CLOSURE BUNDLE
+// ============================================================================
+
+/**
+ * Standard set of activities auto-logged or prompted when a complaint is closed as upheld.
+ * Used by the upheld closure checklist modal.
+ */
+export const UPHELD_CLOSURE_BUNDLE = [
+  {
+    activityType: ACTIVITY_TYPES.UPHELD_RESPONSE_LETTER,
+    minutes: TIME_BENCHMARKS.UPHELD_RESPONSE_LETTER,
+    description: 'Drafting and issuing acceptance letter to HMRC',
+    automated: true,
+  },
+  {
+    activityType: ACTIVITY_TYPES.CLIENT_OUTCOME_CALL,
+    minutes: TIME_BENCHMARKS.CLIENT_OUTCOME_CALL,
+    description: 'Client call: complaint upheld, invoice and reimbursement process explained',
+    automated: false,
+  },
+  {
+    activityType: ACTIVITY_TYPES.INVOICE_PREPARATION,
+    minutes: TIME_BENCHMARKS.INVOICE_PREPARATION,
+    description: 'Preparation of itemised invoice to client',
+    automated: true,
+  },
+  {
+    activityType: ACTIVITY_TYPES.HMRC_REIMBURSEMENT_PACK,
+    minutes: TIME_BENCHMARKS.HMRC_REIMBURSEMENT_PACK,
+    description: 'Preparation of receipted invoice and proof of payment for HMRC submission',
+    automated: true,
+  },
+  {
+    activityType: ACTIVITY_TYPES.FILE_CLOSING,
+    minutes: TIME_BENCHMARKS.FILE_CLOSING,
+    description: 'Case notes, archive, and file closure',
+    automated: true,
+  },
+] as const;
+
+// ============================================================================
 // EXPORT ALL
 // ============================================================================
 
 export default {
   TIME_BENCHMARKS,
   ACTIVITY_TYPES,
+  UPHELD_CLOSURE_BUNDLE,
   estimateLetterPageCount,
   calculateLetterTime,
   calculateAnalysisTime,

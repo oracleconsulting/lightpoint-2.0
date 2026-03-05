@@ -729,12 +729,13 @@ export const appRouter = router({
     generateFollowUp: protectedProcedure
       .input(z.object({
         complaintId: z.string(),
-        followUpType: z.enum(['chase', 'delayed_response', 'inadequate_response', 'rebuttal', 'tier2_escalation']).optional(),
+        followUpType: z.enum(['chase', 'delayed_response', 'inadequate_response', 'rebuttal', 'tier2_escalation', 'upheld_response']).optional(),
         originalLetterDate: z.string(),
         originalLetterRef: z.string().optional(),
         hmrcResponseDate: z.string().optional(),
         hmrcResponseSummary: z.string().optional(),
         hmrcIndicatedClosed: z.boolean().optional(),
+        hmrcUpheld: z.boolean().optional(),
         responseWasSubstantive: z.boolean().optional(),
         unaddressedPoints: z.array(z.string()).optional(),
         additionalContext: z.string().optional(),
@@ -786,13 +787,14 @@ export const appRouter = router({
         }
         
         // Determine follow-up type if not specified
-        type FollowUpType = 'chase' | 'delayed_response' | 'inadequate_response' | 'rebuttal' | 'tier2_escalation';
+        type FollowUpType = 'chase' | 'delayed_response' | 'inadequate_response' | 'rebuttal' | 'tier2_escalation' | 'upheld_response';
         const followUpType: FollowUpType = input.followUpType || determineFollowUpType(
           !!input.hmrcResponseDate,
           input.hmrcResponseDate || null,
           input.originalLetterDate,
           input.hmrcIndicatedClosed || false,
           input.responseWasSubstantive !== false,
+          input.hmrcUpheld === true,
         );
         
         logger.info(`📋 Follow-up type determined: ${followUpType}`);
@@ -825,8 +827,9 @@ export const appRouter = router({
         logger.info('✅ Follow-up letter generated, length:', letter.length);
         
         // Determine letter type for database
-        const letterType = followUpType === 'tier2_escalation' ? 'tier2_escalation' : 
-                          followUpType === 'rebuttal' ? 'rebuttal' : 
+        const letterType = followUpType === 'tier2_escalation' ? 'tier2_escalation' :
+                          followUpType === 'rebuttal' ? 'rebuttal' :
+                          followUpType === 'upheld_response' ? 'upheld_response' :
                           'initial_complaint'; // chase, delayed_response, inadequate_response are still Tier 1
         
         // Auto-save letter to database
@@ -845,6 +848,20 @@ export const appRouter = router({
           logger.info('✅ Follow-up letter auto-saved to database');
         }
         
+        // Auto-log upheld response letter time when applicable
+        if (followUpType === 'upheld_response') {
+          const { ACTIVITY_TYPES, TIME_BENCHMARKS } = await import('@/lib/timeCalculations');
+          await (supabaseAdmin as any)
+            .from('time_logs')
+            .insert({
+              complaint_id: input.complaintId,
+              activity_type: ACTIVITY_TYPES.UPHELD_RESPONSE_LETTER,
+              minutes_spent: TIME_BENCHMARKS.UPHELD_RESPONSE_LETTER,
+              automated: true,
+            });
+          logger.info('✅ Auto-logged UPHELD_RESPONSE_LETTER time');
+        }
+        
         return { 
           letter, 
           followUpType,
@@ -860,6 +877,7 @@ export const appRouter = router({
         letterType: z.enum([
           'initial_complaint', 'tier2_escalation', 'adjudicator_escalation', 'rebuttal', 'acknowledgement',
           'penalty_appeal', 'penalty_appeal_follow_up', 'statutory_review_request', 'tribunal_appeal_notice', 'tribunal_appeal_grounds',
+          'upheld_response',
         ]),
         letterContent: z.string(),
         notes: z.string().optional(),

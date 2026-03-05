@@ -581,6 +581,7 @@ This precedent was manually added because it represents a novel complaint type n
               onStatusChange={() => {
                 utils.complaints.getById.invalidate(params.id);
               }}
+              chargeOutRate={practiceSettings?.chargeOutRate || 250}
             />
 
             {/* Document Uploader - only for assessment/active */}

@@ -21,7 +21,8 @@ export type FollowUpType =
   | 'delayed_response'   // HMRC responded late
   | 'inadequate_response' // Placeholder/partial
   | 'rebuttal'           // Counter incorrect denial
-  | 'tier2_escalation';  // HMRC closed + we disagree
+  | 'tier2_escalation'   // HMRC closed + we disagree
+  | 'upheld_response';   // HMRC upheld complaint — acceptance letter, invoice, Adjudicator reserve
 
 interface FollowUpContext {
   type: FollowUpType;
@@ -95,6 +96,8 @@ const getFollowUpTypeDescription = (type: FollowUpType): string => {
       return 'HMRC denied or disputed points incorrectly - need to counter with evidence';
     case 'tier2_escalation':
       return 'HMRC has indicated they consider the complaint closed but we remain unsatisfied - escalate to Tier 2';
+    case 'upheld_response':
+      return 'HMRC has upheld the complaint (full or partial) — formal acceptance, note redress, confirm invoice will follow, reserve Adjudicator rights if fees not paid';
     default:
       return 'Follow-up correspondence';
   }
@@ -231,6 +234,19 @@ ${context.hmrcResponseSummary || 'HMRC considers complaint closed'}
 REASONS FOR ESCALATION:
 ${context.unaddressedPoints?.map(p => `  - ${p}`).join('\n') || '  - [Reasons for escalation]'}`;
 
+    case 'upheld_response':
+      return `**UPHELD RESPONSE LETTER SPECIFICS:**
+- HMRC has admitted liability and offered redress (full or partial). The complaint is substantively resolved.
+- This letter is NOT escalatory. Do NOT threaten further escalation within HMRC.
+- Tone: firm acknowledgement — professional, not grateful. Acknowledge and accept HMRC's findings.
+- Note any redress offer (compensation, tax correction, etc.) and acknowledge cash redress to the client separately from professional fees.
+- Confirm that a professional fees invoice will follow.
+- Reserve rights to refer to the Adjudicator if professional fees are not paid. The Adjudicator is the next step if fees are disputed — do not threaten Tier 2 or other HMRC escalation.
+- Structure: acknowledge findings, note redress, confirm invoice to follow, reserve Adjudicator rights for fees.
+
+HMRC RESPONSE SUMMARY (upheld):
+${context.hmrcResponseSummary || 'HMRC upheld the complaint and offered redress'}`;
+
     default:
       return '';
   }
@@ -279,7 +295,13 @@ export const determineFollowUpType = (
   originalLetterDate: string,
   hmrcIndicatedClosed: boolean = false,
   responseWasSubstantive: boolean = true,
+  hmrcUpheld: boolean = false,
 ): FollowUpType => {
+  // If HMRC upheld the complaint, use acceptance/invoice letter type
+  if (hmrcUpheld) {
+    return 'upheld_response';
+  }
+
   // If HMRC says closed and we disagree
   if (hmrcIndicatedClosed) {
     return 'tier2_escalation';

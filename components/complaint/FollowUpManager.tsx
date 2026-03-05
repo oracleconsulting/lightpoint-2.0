@@ -12,7 +12,7 @@ import { format, differenceInDays, addDays, parseISO } from 'date-fns';
 import { trpc } from '@/lib/trpc/Provider';
 import { logger } from '../../lib/logger';
 
-type FollowUpType = 'chase' | 'delayed_response' | 'inadequate_response' | 'rebuttal' | 'tier2_escalation';
+type FollowUpType = 'chase' | 'delayed_response' | 'inadequate_response' | 'rebuttal' | 'tier2_escalation' | 'upheld_response';
 
 interface FollowUpManagerProps {
   complaintId: string;
@@ -22,6 +22,7 @@ interface FollowUpManagerProps {
   hmrcResponseSummary?: string;
   hasResponse?: boolean;
   hmrcIndicatedClosed?: boolean;
+  hmrcUpheld?: boolean;
   onFollowUpGenerated?: (letter: string) => void;
   practiceLetterhead?: string;
   chargeOutRate?: number;
@@ -57,6 +58,11 @@ const FOLLOW_UP_TYPES: { value: FollowUpType; label: string; description: string
     label: 'Tier 2 Escalation', 
     description: 'HMRC closed complaint + we disagree - formal escalation' 
   },
+  { 
+    value: 'upheld_response', 
+    label: 'HMRC Upheld — Invoice & Acceptance', 
+    description: 'HMRC upheld complaint — acceptance letter, confirm invoice, reserve Adjudicator rights' 
+  },
 ];
 
 export function FollowUpManager({ 
@@ -67,6 +73,7 @@ export function FollowUpManager({
   hmrcResponseSummary,
   hasResponse = false,
   hmrcIndicatedClosed = false,
+  hmrcUpheld = false,
   onFollowUpGenerated,
   practiceLetterhead,
   chargeOutRate,
@@ -147,6 +154,7 @@ ${cleanedLetter.split('\r\n\r\n').map(para => `<p>${para.replace(/\r\n/g, '<br>'
 
   // Auto-suggest follow-up type based on context
   const getSuggestedType = (): FollowUpType => {
+    if (hmrcUpheld) return 'upheld_response';
     if (hmrcIndicatedClosed) return 'tier2_escalation';
     if (!hasResponse && !effectiveHmrcResponseDate) return 'chase';
     if (effectiveHmrcResponseDate && effectiveOriginalDate) {
@@ -202,6 +210,7 @@ ${cleanedLetter.split('\r\n\r\n').map(para => `<p>${para.replace(/\r\n/g, '<br>'
         hmrcResponseDate: effectiveHmrcResponseDate,
         hmrcResponseSummary,
         hmrcIndicatedClosed,
+        hmrcUpheld,
         responseWasSubstantive,
         unaddressedPoints: unaddressedPoints.split('\n').filter(p => p.trim()),
         additionalContext,
@@ -215,12 +224,14 @@ ${cleanedLetter.split('\r\n\r\n').map(para => `<p>${para.replace(/\r\n/g, '<br>'
       
       setGeneratedLetter(result.letter);
       
-      // Log time for preparing follow-up
-      await utils.client.time.logActivity.mutate({
-        complaintId,
-        activity: `${result.followUpType} Follow-up Letter Generation`,
-        duration: 20,
-      });
+      // Log time for preparing follow-up (upheld_response is auto-logged in backend)
+      if (result.followUpType !== 'upheld_response') {
+        await utils.time.logActivity.mutateAsync({
+          complaintId,
+          activity: `${result.followUpType} Follow-up Letter Generation`,
+          duration: 20,
+        });
+      }
 
       // Refresh letters list
       utils.letters.list.invalidate({ complaintId });

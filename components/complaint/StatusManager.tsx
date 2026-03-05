@@ -1,18 +1,22 @@
 'use client';
 
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, AlertTriangle, Clock, Send, ArrowRight } from 'lucide-react';
 import { trpc } from '@/lib/trpc/Provider';
+import { UpheldClosureChecklistModal } from './UpheldClosureChecklistModal';
 
 interface StatusManagerProps {
   complaintId: string;
   currentStatus: string;
   onStatusChange?: () => void;
+  chargeOutRate?: number;
 }
 
-export function StatusManager({ complaintId, currentStatus, onStatusChange }: StatusManagerProps) {
+export function StatusManager({ complaintId, currentStatus, onStatusChange, chargeOutRate = 250 }: StatusManagerProps) {
+  const [showClosureChecklist, setShowClosureChecklist] = useState(false);
   const utils = trpc.useUtils();
   
   const updateStatus = trpc.complaints.updateStatus.useMutation({
@@ -85,12 +89,22 @@ export function StatusManager({ complaintId, currentStatus, onStatusChange }: St
   const statusInfo = getStatusInfo(currentStatus);
 
   const handleStatusChange = () => {
-    if (statusInfo.nextStatus) {
-      updateStatus.mutate({
-        id: complaintId,
-        status: statusInfo.nextStatus as any,
-      });
+    if (!statusInfo.nextStatus) return;
+    if (statusInfo.nextStatus === 'resolved') {
+      setShowClosureChecklist(true);
+      return;
     }
+    updateStatus.mutate({
+      id: complaintId,
+      status: statusInfo.nextStatus as any,
+    });
+  };
+
+  const handleClosureConfirmed = () => {
+    updateStatus.mutate({
+      id: complaintId,
+      status: 'resolved',
+    });
   };
 
   return (
@@ -120,6 +134,14 @@ export function StatusManager({ complaintId, currentStatus, onStatusChange }: St
             {updateStatus.isPending ? 'Updating...' : statusInfo.nextAction}
           </Button>
         )}
+
+        <UpheldClosureChecklistModal
+          open={showClosureChecklist}
+          onOpenChange={setShowClosureChecklist}
+          complaintId={complaintId}
+          chargeOutRate={chargeOutRate}
+          onAllConfirmed={handleClosureConfirmed}
+        />
 
         {/* Status Timeline */}
         <div className="pt-4 border-t">
