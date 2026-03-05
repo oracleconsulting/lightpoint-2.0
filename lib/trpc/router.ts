@@ -2242,11 +2242,13 @@ export const appRouter = router({
         role: z.enum(['admin', 'manager', 'analyst', 'viewer']),
         job_title: z.string().optional(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         logger.info(`📧 Inviting user: ${input.email}`);
         
-        // Get default organization
-        const orgId = '00000000-0000-0000-0000-000000000001';
+        const orgId = ctx.organizationId;
+        if (!orgId) {
+          throw new Error('You must belong to an organisation to invite users. Please contact support.');
+        }
         
         // Create user in auth.users via admin API
         const { data: authData, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
@@ -2285,7 +2287,8 @@ export const appRouter = router({
           logger.error('❌ Failed to create user profile:', profileError);
           // Try to delete the auth user if profile creation failed
           await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
-          throw new Error(profileError.message);
+          const msg = profileError.message || 'Database error saving new user';
+          throw new Error(msg);
         }
         
         logger.info('✅ User invited successfully');
