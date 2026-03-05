@@ -43,6 +43,7 @@ export default function ComplaintDetailPage({ params }: { params: { id: string }
   const [showMixedLetterPicker, setShowMixedLetterPicker] = useState(false);
   const [additionalContext, setAdditionalContext] = useState('');
   const [lastGeneratedLetterType, setLastGeneratedLetterType] = useState<'initial_complaint' | 'penalty_appeal'>('initial_complaint');
+  const [hasUploadedResponse, setHasUploadedResponse] = useState(false);
 
   const { currentUser } = useUser();
   const utils = trpc.useUtils();
@@ -752,35 +753,48 @@ This precedent was manually added because it represents a novel complaint type n
                 complaintId={params.id}
                 onResponseUploaded={() => {
                   utils.documents.list.invalidate(params.id);
+                  utils.complaints.getById.invalidate(params.id);
                   utils.time.getComplaintTime.invalidate(params.id);
+                  utils.letters.list.invalidate({ complaintId: params.id });
+                  setHasUploadedResponse(true);
                 }}
               />
             )}
 
-            {/* Follow-Up Manager - for active/escalated complaints */}
-            {(complaintData.status === 'active' || complaintData.status === 'escalated') && savedLetters && (savedLetters as any[]).length > 0 && (
-              <FollowUpManager
-                complaintId={params.id}
-                lastLetterDate={(savedLetters as any[])[0]?.sent_at || (savedLetters as any[])[0]?.created_at}
-                lastLetterRef={(savedLetters as any[])[0]?.id}
-                hasResponse={documents && (documents as any[]).some((d: any) => d.document_type === 'hmrc_response')}
-                hmrcResponseDate={
-                  documents && (documents as any[])
-                    .filter((d: any) => d.document_type === 'hmrc_response')
-                    .sort((a: any, b: any) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime())[0]?.uploaded_at
-                }
-                practiceLetterhead={getPracticeLetterhead()}
-                chargeOutRate={practiceSettings?.chargeOutRate || 250}
-                userName={currentUser?.full_name || currentUser?.email?.split('@')[0]}
-                userTitle={currentUser?.job_title || 'Chartered Accountant'}
-                userEmail={currentUser?.email}
-                userPhone={currentUser?.phone}
-                onFollowUpGenerated={(letter) => {
-                  utils.letters.list.invalidate({ complaintId: params.id });
-                  utils.time.getComplaintTime.invalidate(params.id);
-                }}
-              />
-            )}
+            {/* Follow-Up Manager - show when active/escalated and (has saved letter or HMRC response uploaded) */}
+            {(() => {
+              const isActiveOrEscalated = complaintData.status === 'active' || complaintData.status === 'escalated';
+              const hasSavedLetters = savedLetters && (savedLetters as any[]).length > 0;
+              const hasHmrcResponse = documents && (documents as any[]).some((d: any) => d.document_type === 'hmrc_response');
+              const showFollowUp = isActiveOrEscalated && (hasSavedLetters || hasHmrcResponse || hasUploadedResponse);
+              const letters = (savedLetters as any[]) || [];
+              const firstLetter = letters.length > 0
+                ? [...letters].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0]
+                : null;
+              return showFollowUp ? (
+                <FollowUpManager
+                  complaintId={params.id}
+                  lastLetterDate={firstLetter ? (firstLetter.sent_at || firstLetter.created_at) : undefined}
+                  lastLetterRef={firstLetter?.id}
+                  hasResponse={hasHmrcResponse || hasUploadedResponse}
+                  hmrcResponseDate={
+                    documents && (documents as any[])
+                      .filter((d: any) => d.document_type === 'hmrc_response')
+                      .sort((a: any, b: any) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime())[0]?.uploaded_at
+                  }
+                  practiceLetterhead={getPracticeLetterhead()}
+                  chargeOutRate={practiceSettings?.chargeOutRate || 250}
+                  userName={currentUser?.full_name || currentUser?.email?.split('@')[0]}
+                  userTitle={currentUser?.job_title || 'Chartered Accountant'}
+                  userEmail={currentUser?.email}
+                  userPhone={currentUser?.phone}
+                  onFollowUpGenerated={(letter) => {
+                    utils.letters.list.invalidate({ complaintId: params.id });
+                    utils.time.getComplaintTime.invalidate(params.id);
+                  }}
+                />
+              ) : null;
+            })()}
 
             {/* Time Tracker */}
             <TimeTracker
