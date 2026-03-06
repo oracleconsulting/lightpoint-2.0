@@ -16,6 +16,7 @@ import { AssignComplaint } from '@/components/complaint/AssignComplaint';
 import { FlagToManagement, ComplaintTickets } from '@/components/tickets/FlagToManagement';
 import { ResponseUploader } from '@/components/complaint/ResponseUploader';
 import { FollowUpManager } from '@/components/complaint/FollowUpManager';
+import { InvoiceReviewModal } from '@/components/complaint/InvoiceReviewModal';
 import { ViolationChecker } from '@/components/analysis/ViolationChecker';
 import { CaseClassificationPanel } from '@/components/complaint/CaseClassificationPanel';
 import { PrecedentMatcher } from '@/components/analysis/PrecedentMatcher';
@@ -27,7 +28,7 @@ import { StartComplaint } from '@/components/complaint/StartComplaint';
 import { getPracticeLetterhead } from '@/lib/practiceSettings';
 import { calculateLetterTime, calculateAnalysisTime, TIME_BENCHMARKS } from '@/lib/timeCalculations';
 import Link from 'next/link';
-import { ArrowLeft, FileText, Sparkles, Send, Edit2, Check, X } from 'lucide-react';
+import { ArrowLeft, FileText, Sparkles, Send, Edit2, Check, X, Receipt } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { useUser } from '@/contexts/UserContext';
@@ -44,6 +45,7 @@ export default function ComplaintDetailPage({ params }: { params: { id: string }
   const [additionalContext, setAdditionalContext] = useState('');
   const [lastGeneratedLetterType, setLastGeneratedLetterType] = useState<'initial_complaint' | 'penalty_appeal'>('initial_complaint');
   const [hasUploadedResponse, setHasUploadedResponse] = useState(false);
+  const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
 
   const { currentUser } = useUser();
   const utils = trpc.useUtils();
@@ -582,6 +584,30 @@ This precedent was manually added because it represents a novel complaint type n
                 utils.complaints.getById.invalidate(params.id);
               }}
               chargeOutRate={practiceSettings?.chargeOutRate || 250}
+            />
+
+            {/* Close & Invoice - show when active, escalated, or resolved */}
+            {(complaintData.status === 'active' || complaintData.status === 'escalated' || complaintData.status === 'resolved') && (
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => setInvoiceModalOpen(true)}
+              >
+                <Receipt className="h-4 w-4 mr-2" />
+                Close & Invoice
+              </Button>
+            )}
+
+            <InvoiceReviewModal
+              open={invoiceModalOpen}
+              onOpenChange={setInvoiceModalOpen}
+              complaintId={params.id}
+              complaintReference={complaintData.complaint_reference}
+              chargeOutRate={practiceSettings?.chargeOutRate || 250}
+              onClosed={() => {
+                utils.complaints.getById.invalidate(params.id);
+                utils.time.getComplaintTime.invalidate(params.id);
+              }}
             />
 
             {/* Document Uploader - only for assessment/active */}

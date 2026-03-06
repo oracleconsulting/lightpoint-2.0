@@ -151,5 +151,77 @@ export const timeRouter = router({
       
       return data;
     }),
+
+  updateEntry: protectedProcedure
+    .input(z.object({
+      id: z.string(),
+      minutes: z.number().optional(),
+      rate: z.number().optional(),
+      description: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      logger.info(`✏️ Updating time entry: ${input.id}`);
+      const updates: Record<string, any> = {};
+      if (input.minutes !== undefined) updates.minutes_spent = input.minutes;
+      if (input.description !== undefined) updates.notes = input.description;
+      if (Object.keys(updates).length === 0) {
+        const { data } = await (supabaseAdmin as any)
+          .from('time_logs')
+          .select()
+          .eq('id', input.id)
+          .single();
+        return data;
+      }
+      const { data, error } = await (supabaseAdmin as any)
+        .from('time_logs')
+        .update(updates)
+        .eq('id', input.id)
+        .select()
+        .single();
+      if (error) throw new Error(error.message);
+      return data;
+    }),
+
+  deleteEntry: protectedProcedure
+    .input(z.string())
+    .mutation(async ({ input }) => {
+      const { error } = await (supabaseAdmin as any)
+        .from('time_logs')
+        .delete()
+        .eq('id', input);
+      if (error) {
+        logger.error('Time log delete error:', error);
+        throw new Error(error.message);
+      }
+      return { success: true };
+    }),
+
+  addEntry: protectedProcedure
+    .input(z.object({
+      complaintId: z.string(),
+      activityType: z.string(),
+      description: z.string().optional(),
+      minutes: z.number(),
+      rate: z.number().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      logger.info(`➕ Adding time entry: ${input.activityType}, ${input.minutes}m`);
+      const { data, error } = await (supabaseAdmin as any)
+        .from('time_logs')
+        .insert({
+          complaint_id: input.complaintId,
+          activity_type: input.activityType,
+          minutes_spent: input.minutes,
+          notes: input.description ?? null,
+          automated: false,
+        })
+        .select()
+        .single();
+      if (error) {
+        logger.error('Time log add error:', error);
+        throw new Error(error.message);
+      }
+      return data;
+    }),
 });
 
