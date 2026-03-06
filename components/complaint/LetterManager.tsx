@@ -12,6 +12,13 @@ import { Save, Lock, Send, FileText, CheckCircle2, Clock, RefreshCw, Edit2, Aler
 import { format } from 'date-fns';
 import { FormattedLetter } from './FormattedLetter';
 
+const CORRECTION_CONTEXT_MAX_LENGTH = 3000;
+
+/** Sanitise for tRPC/JSON payload only; display original in UI. */
+function sanitiseCorrectionContextForPayload(text: string): string {
+  return text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 interface LetterManagerProps {
   complaintId: string;
   generatedLetter?: string;
@@ -193,6 +200,10 @@ export function LetterManager({
       alert('Please provide correction context (e.g., "The dates should be 15 October 2024, not 15 November 2024")');
       return;
     }
+    if (correctionContext.length > CORRECTION_CONTEXT_MAX_LENGTH) {
+      alert('Context too long — please summarise the key corrections instead of pasting full emails (max 3,000 characters).');
+      return;
+    }
 
     if (!onRegenerateLetter) {
       alert('Re-analysis not available. Please use the Edit function for manual changes.');
@@ -202,15 +213,21 @@ export function LetterManager({
     setIsRegenerating(true);
     
     try {
-      // Call the parent's regeneration handler with the correction context
-      await onRegenerateLetter(selectedLetter.id, selectedLetter.letter_content, correctionContext);
+      // Sanitise for payload only; UI shows original text
+      const sanitised = sanitiseCorrectionContextForPayload(correctionContext);
+      await onRegenerateLetter(selectedLetter.id, selectedLetter.letter_content, sanitised);
       
       setShowReanalyzeDialog(false);
       setSelectedLetter(null);
       setCorrectionContext('');
       refetchLetters();
     } catch (error: any) {
-      alert(`Re-analysis failed: ${error.message}`);
+      const msg = error?.message ?? '';
+      const isEmptyOrJson = !msg || msg === '{}' || String(msg).trim() === '';
+      const message = isEmptyOrJson
+        ? 'Re-analysis failed — the correction text may contain special characters or be too long. Please summarise the changes needed in plain text.'
+        : `Re-analysis failed: ${msg}`;
+      alert(message);
     } finally {
       setIsRegenerating(false);
     }
@@ -604,6 +621,16 @@ export function LetterManager({
                   className="mt-1.5 min-h-[150px]"
                   rows={6}
                 />
+                <div className="mt-1.5 space-y-1">
+                  <div className={`text-sm tabular-nums ${correctionContext.length > CORRECTION_CONTEXT_MAX_LENGTH ? 'text-destructive' : 'text-muted-foreground'}`}>
+                    {correctionContext.length.toLocaleString()} / {CORRECTION_CONTEXT_MAX_LENGTH.toLocaleString()}
+                  </div>
+                  {correctionContext.length > CORRECTION_CONTEXT_MAX_LENGTH && (
+                    <p className="text-sm text-destructive font-medium">
+                      Context too long — summarise the key corrections instead of pasting full emails.
+                    </p>
+                  )}
+                </div>
               </div>
 
               {/* Current letter preview (collapsed) */}
@@ -633,7 +660,7 @@ export function LetterManager({
                 </Button>
                 <Button
                   onClick={handleReanalyzeWithAI}
-                  disabled={isRegenerating || !correctionContext.trim()}
+                  disabled={isRegenerating || !correctionContext.trim() || correctionContext.length > CORRECTION_CONTEXT_MAX_LENGTH}
                   className="gap-2 bg-purple-600 hover:bg-purple-700"
                 >
                   {isRegenerating ? (

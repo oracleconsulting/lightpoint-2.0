@@ -10,6 +10,7 @@ import { logTime } from '@/lib/timeTracking';
 import { sanitizeForLLM } from '@/lib/privacy';
 import { prepareAnalysisContext, estimateTokens } from '@/lib/contextManager';
 import { generateEmbedding } from '@/lib/embeddings';
+import { writeLetterToTimeline } from './letterTimeline';
 import { logger } from '../logger';
 
 // Domain-specific routers (extracted from monolithic router)
@@ -437,7 +438,9 @@ export const appRouter = router({
     analyzeDocument: protectedProcedure
       .input(z.object({
         documentId: z.string(),
-        additionalContext: z.string().optional(),
+        additionalContext: z.string().max(3200, {
+          message: 'Correction context must be 3,000 characters or less. Please summarise the key corrections instead of pasting full emails.',
+        }).optional(),
       }))
       .mutation(async ({ input }) => {
         // Get document
@@ -583,7 +586,9 @@ export const appRouter = router({
         userEmail: z.string().optional().nullable(), // User's email (can be null)
         userPhone: z.string().optional().nullable(), // User's phone (can be null)
         useThreeStage: z.boolean().optional(), // Optional: use three-stage pipeline (default: true)
-        additionalContext: z.string().optional(), // Optional: additional instructions/context for letter generation
+        additionalContext: z.string().max(3200, {
+          message: 'Correction context must be 3,000 characters or less. Please summarise the key corrections instead of pasting full emails.',
+        }).optional(),
       }))
       .mutation(async ({ input }) => {
         // Get complaint details
@@ -634,20 +639,23 @@ export const appRouter = router({
         
         // Auto-save letter to database (don't rely on client callback due to timeout)
         logger.info('💾 Auto-saving letter to database...');
-        const { error: saveError } = await (supabaseAdmin as any)
+        const { data: savedLetter, error: saveError } = await (supabaseAdmin as any)
           .from('generated_letters')
           .insert({
             complaint_id: input.complaintId,
             letter_type: 'initial_complaint',
             letter_content: letter,
             notes: 'Auto-generated via three-stage pipeline',
-          });
+          })
+          .select('id')
+          .single();
         
         if (saveError) {
           logger.error('❌ Failed to auto-save letter:', saveError);
           // Don't throw - still return the letter to client
         } else {
           logger.info('✅ Letter auto-saved to database');
+          if (savedLetter?.id) await writeLetterToTimeline(input.complaintId, savedLetter.id, 'initial_complaint');
         }
         
         // NOTE: Time logging is handled by frontend (page.tsx) which calculates
@@ -667,7 +675,9 @@ export const appRouter = router({
         userTitle: z.string().optional(),
         userEmail: z.string().optional().nullable(),
         userPhone: z.string().optional().nullable(),
-        additionalContext: z.string().optional(),
+        additionalContext: z.string().max(3200, {
+          message: 'Correction context must be 3,000 characters or less. Please summarise the key corrections instead of pasting full emails.',
+        }).optional(),
       }))
       .mutation(async ({ input }) => {
         logger.info('📝 Starting appeal letter generation for complaint:', input.complaintId);
@@ -707,19 +717,22 @@ export const appRouter = router({
 
         logger.info('✅ Appeal letter generated successfully, length:', letter.length);
 
-        const { error: saveError } = await (supabaseAdmin as any)
+        const { data: savedLetter, error: saveError } = await (supabaseAdmin as any)
           .from('generated_letters')
           .insert({
             complaint_id: input.complaintId,
             letter_type: 'penalty_appeal',
             letter_content: letter,
             notes: 'Auto-generated via appeal three-stage pipeline',
-          });
+          })
+          .select('id')
+          .single();
 
         if (saveError) {
           logger.error('❌ Failed to auto-save appeal letter:', saveError);
         } else {
           logger.info('✅ Appeal letter auto-saved to database');
+          if (savedLetter?.id) await writeLetterToTimeline(input.complaintId, savedLetter.id, 'penalty_appeal');
         }
 
         return { letter };
@@ -738,7 +751,9 @@ export const appRouter = router({
         hmrcUpheld: z.boolean().optional(),
         responseWasSubstantive: z.boolean().optional(),
         unaddressedPoints: z.array(z.string()).optional(),
-        additionalContext: z.string().optional(),
+        additionalContext: z.string().max(3200, {
+          message: 'Correction context must be 3,000 characters or less. Please summarise the key corrections instead of pasting full emails.',
+        }).optional(),
         practiceLetterhead: z.string().optional(),
         chargeOutRate: z.number().optional(),
         userName: z.string().optional(),
@@ -833,19 +848,22 @@ export const appRouter = router({
                           'initial_complaint'; // chase, delayed_response, inadequate_response are still Tier 1
         
         // Auto-save letter to database
-        const { error: saveError } = await (supabaseAdmin as any)
+        const { data: savedLetter, error: saveError } = await (supabaseAdmin as any)
           .from('generated_letters')
           .insert({
             complaint_id: input.complaintId,
             letter_type: letterType,
             letter_content: letter,
             notes: `Auto-generated ${followUpType} follow-up letter`,
-          });
+          })
+          .select('id')
+          .single();
         
         if (saveError) {
           logger.error('❌ Failed to auto-save letter:', saveError);
         } else {
           logger.info('✅ Follow-up letter auto-saved to database');
+          if (savedLetter?.id) await writeLetterToTimeline(input.complaintId, savedLetter.id, letterType);
         }
         
         // Auto-log upheld response letter time when applicable
@@ -895,6 +913,7 @@ export const appRouter = router({
           .single();
         
         if (error) throw new Error(error.message);
+        if (data?.id) await writeLetterToTimeline(input.complaintId, data.id, input.letterType);
         return data;
       }),
 
@@ -1461,6 +1480,70 @@ export const appRouter = router({
         }
         
         logger.info(`✅ Updated time log`);
+        return data;
+      }),
+
+    updateEntry: protectedProcedure
+      .input(z.object({
+        id: z.string(),
+        minutes: z.number().optional(),
+        rate: z.number().optional(),
+        description: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const updates: Record<string, any> = {};
+        if (input.minutes !== undefined) updates.minutes_spent = input.minutes;
+        if (input.description !== undefined) updates.notes = input.description;
+        if (Object.keys(updates).length === 0) {
+          const { data } = await (supabaseAdmin as any)
+            .from('time_logs')
+            .select()
+            .eq('id', input.id)
+            .single();
+          return data;
+        }
+        const { data, error } = await (supabaseAdmin as any)
+          .from('time_logs')
+          .update(updates)
+          .eq('id', input.id)
+          .select()
+          .single();
+        if (error) throw new Error(error.message);
+        return data;
+      }),
+
+    deleteEntry: protectedProcedure
+      .input(z.string())
+      .mutation(async ({ input }) => {
+        const { error } = await (supabaseAdmin as any)
+          .from('time_logs')
+          .delete()
+          .eq('id', input);
+        if (error) throw new Error(error.message);
+        return { success: true };
+      }),
+
+    addEntry: protectedProcedure
+      .input(z.object({
+        complaintId: z.string(),
+        activityType: z.string(),
+        description: z.string().optional(),
+        minutes: z.number(),
+        rate: z.number().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { data, error } = await (supabaseAdmin as any)
+          .from('time_logs')
+          .insert({
+            complaint_id: input.complaintId,
+            activity_type: input.activityType,
+            minutes_spent: input.minutes,
+            notes: input.description ?? null,
+            automated: false,
+          })
+          .select()
+          .single();
+        if (error) throw new Error(error.message);
         return data;
       }),
   }),

@@ -6,6 +6,7 @@ import { generateComplaintLetter } from '@/lib/openrouter/client';
 import { generateComplaintLetterThreeStage } from '@/lib/openrouter/three-stage-client';
 import { generateAppealLetterThreeStage } from '@/lib/openrouter/appeal-client';
 import { generateFollowUpLetter, determineFollowUpType, type FollowUpType } from '@/lib/openrouter/follow-up-client';
+import { writeLetterToTimeline } from '../letterTimeline';
 import { logger } from '../../logger';
 
 export const lettersRouter = router({
@@ -20,7 +21,9 @@ export const lettersRouter = router({
       userEmail: z.string().optional().nullable(),
       userPhone: z.string().optional().nullable(),
       useThreeStage: z.boolean().optional(),
-      additionalContext: z.string().optional(),
+      additionalContext: z.string().max(3200, {
+        message: 'Correction context must be 3,000 characters or less. Please summarise the key corrections instead of pasting full emails.',
+      }).optional(),
     }))
     .mutation(async ({ input }) => {
       logger.info('📝 Starting letter generation for complaint:', input.complaintId);
@@ -106,20 +109,23 @@ export const lettersRouter = router({
         
         // Auto-save letter to database
         logger.info('💾 Auto-saving letter to database...');
-        const { error: saveError } = await (supabaseAdmin as any)
+        const { data: savedLetter, error: saveError } = await (supabaseAdmin as any)
           .from('generated_letters')
           .insert({
             complaint_id: input.complaintId,
             letter_type: 'initial_complaint',
             letter_content: letter,
             notes: 'Auto-generated via three-stage pipeline',
-          });
+          })
+          .select('id')
+          .single();
         
         if (saveError) {
           logger.error('❌ Failed to auto-save letter:', saveError);
           // Don't throw here - letter was generated successfully
         } else {
           logger.info('✅ Letter auto-saved to database');
+          if (savedLetter?.id) await writeLetterToTimeline(input.complaintId, savedLetter.id, 'initial_complaint');
         }
         
         return { letter };
@@ -156,7 +162,9 @@ export const lettersRouter = router({
       userTitle: z.string().optional(),
       userEmail: z.string().optional().nullable(),
       userPhone: z.string().optional().nullable(),
-      additionalContext: z.string().optional(),
+      additionalContext: z.string().max(3200, {
+        message: 'Correction context must be 3,000 characters or less. Please summarise the key corrections instead of pasting full emails.',
+      }).optional(),
     }))
     .mutation(async ({ input }) => {
       logger.info('📝 Starting appeal letter generation for complaint:', input.complaintId);
@@ -206,19 +214,22 @@ export const lettersRouter = router({
 
         logger.info('✅ Appeal letter generated successfully, length:', letter.length);
 
-        const { error: saveError } = await (supabaseAdmin as any)
+        const { data: savedLetter, error: saveError } = await (supabaseAdmin as any)
           .from('generated_letters')
           .insert({
             complaint_id: input.complaintId,
             letter_type: 'penalty_appeal',
             letter_content: letter,
             notes: 'Auto-generated via appeal three-stage pipeline',
-          });
+          })
+          .select('id')
+          .single();
 
         if (saveError) {
           logger.error('❌ Failed to auto-save appeal letter:', saveError);
         } else {
           logger.info('✅ Appeal letter auto-saved to database');
+          if (savedLetter?.id) await writeLetterToTimeline(input.complaintId, savedLetter.id, 'penalty_appeal');
         }
 
         return { letter };
@@ -248,7 +259,9 @@ export const lettersRouter = router({
       hmrcUpheld: z.boolean().optional(),
       responseWasSubstantive: z.boolean().optional(),
       unaddressedPoints: z.array(z.string()).optional(),
-      additionalContext: z.string().optional(),
+      additionalContext: z.string().max(3200, {
+        message: 'Correction context must be 3,000 characters or less. Please summarise the key corrections instead of pasting full emails.',
+      }).optional(),
       practiceLetterhead: z.string().optional(),
       chargeOutRate: z.number().optional(),
       userName: z.string().optional(),
@@ -349,19 +362,22 @@ export const lettersRouter = router({
                           'initial_complaint'; // chase, delayed_response, inadequate_response are still Tier 1
         
         // Auto-save letter to database
-        const { error: saveError } = await (supabaseAdmin as any)
+        const { data: savedLetter, error: saveError } = await (supabaseAdmin as any)
           .from('generated_letters')
           .insert({
             complaint_id: input.complaintId,
             letter_type: letterType,
             letter_content: letter,
             notes: `Auto-generated ${followUpType} follow-up letter`,
-          });
+          })
+          .select('id')
+          .single();
         
         if (saveError) {
           logger.error('❌ Failed to auto-save letter:', saveError);
         } else {
           logger.info('✅ Follow-up letter auto-saved to database');
+          if (savedLetter?.id) await writeLetterToTimeline(input.complaintId, savedLetter.id, letterType);
         }
         
         // Auto-log upheld response letter time when applicable
@@ -424,6 +440,7 @@ export const lettersRouter = router({
         .single();
       
       if (error) throw new Error(error.message);
+      if (data?.id) await writeLetterToTimeline(input.complaintId, data.id, input.letterType);
       return data;
     }),
 
