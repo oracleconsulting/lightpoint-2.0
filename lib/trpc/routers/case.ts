@@ -67,7 +67,8 @@ async function syncComplaintIntoCase(caseId: string, complaint: any, userId: str
     .from('case_events')
     .delete()
     .eq('case_id', caseId)
-    .eq('source', 'complaint_import');
+    .eq('source', 'manual')
+    .contains('metadata', { imported_from_complaint_id: complaintId });
   throwIfSupabaseError(deleteEventsError, 'clearing previous imported timeline events');
 
   const timeline = Array.isArray(complaint.timeline) ? complaint.timeline : [];
@@ -81,9 +82,10 @@ async function syncComplaintIntoCase(caseId: string, complaint: any, userId: str
         complaint.complaint_context || null,
         complaint.analysis ? `Analysis available. Summary: ${String(stringifyContext(complaint.analysis)).slice(0, 1500)}` : null,
       ].filter(Boolean).join('\n\n') || 'Complaint imported into the case workspace for discussion.',
-      source: 'complaint_import',
+      source: 'manual',
       metadata: {
         imported_from_complaint_id: complaintId,
+        original_source: 'complaint_import',
         original_event_type: 'complaint_imported',
       },
       created_by: userId,
@@ -94,9 +96,10 @@ async function syncComplaintIntoCase(caseId: string, complaint: any, userId: str
       event_type: 'note',
       title: event.summary ? String(event.summary).slice(0, 120) : `Imported complaint event ${index + 1}`,
       description: event.notes || event.summary || JSON.stringify(event),
-      source: 'complaint_import',
+      source: 'manual',
       metadata: {
         original_event: event,
+        original_source: 'complaint_import',
         original_event_type: event.type || 'complaint_timeline',
         imported_from_complaint_id: complaintId,
       },
@@ -108,9 +111,10 @@ async function syncComplaintIntoCase(caseId: string, complaint: any, userId: str
       event_type: 'note',
       title: 'Original complaint context',
       description: complaint.complaint_context,
-      source: 'complaint_import',
+      source: 'manual',
       metadata: {
         imported_from_complaint_id: complaintId,
+        original_source: 'complaint_import',
         original_event_type: 'complaint_context',
       },
       created_by: userId,

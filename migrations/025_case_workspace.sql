@@ -106,6 +106,16 @@ ALTER TABLE case_events ADD CONSTRAINT case_events_event_type_check
     'other'
   ));
 
+ALTER TABLE case_events DROP CONSTRAINT IF EXISTS case_events_source_check;
+ALTER TABLE case_events ADD CONSTRAINT case_events_source_check
+  CHECK (source IN (
+    'manual',
+    'ai',
+    'document_intake',
+    'complaint_import',
+    'system'
+  ));
+
 CREATE INDEX IF NOT EXISTS idx_case_events_case_date
   ON case_events(case_id, event_date ASC);
 CREATE INDEX IF NOT EXISTS idx_case_events_deadline
