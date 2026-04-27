@@ -303,14 +303,30 @@ export const caseRouter = router({
       if (linkError) {
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: linkError.message });
       }
-      if (!link?.complaint_id) {
+
+      let complaintId = link?.complaint_id;
+      if (!complaintId) {
+        const { data: caseRecord, error: caseError } = await (supabaseAdmin as any)
+          .from('cases')
+          .select('metadata')
+          .eq('id', input.caseId)
+          .eq('organization_id', organizationId)
+          .single();
+
+        if (caseError) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: caseError.message });
+        }
+        complaintId = caseRecord?.metadata?.imported_from_complaint_id;
+      }
+
+      if (!complaintId) {
         throw new TRPCError({ code: 'NOT_FOUND', message: 'No linked complaint found for this workspace' });
       }
 
       const { data: complaint, error: complaintError } = await (supabaseAdmin as any)
         .from('complaints')
         .select('*')
-        .eq('id', link.complaint_id)
+        .eq('id', complaintId)
         .eq('organization_id', organizationId)
         .single();
 
@@ -319,7 +335,18 @@ export const caseRouter = router({
       }
 
       await syncComplaintIntoCase(input.caseId, complaint, ctx.userId);
-      return { success: true, complaintId: link.complaint_id };
+
+      if (!link?.complaint_id) {
+        await (supabaseAdmin as any)
+          .from('case_complaint_links')
+          .upsert({
+            case_id: input.caseId,
+            complaint_id: complaintId,
+            link_type: 'imported_from',
+          }, { onConflict: 'case_id,complaint_id' });
+      }
+
+      return { success: true, complaintId };
     }),
 
   create: protectedProcedure
@@ -487,5 +514,24 @@ export const caseRouter = router({
       }
 
       return data;
+    }),
+
+  delete: protectedProcedure
+    .input(z.string().uuid())
+    .mutation(async ({ input, ctx }) => {
+      const organizationId = requireOrg(ctx.organizationId);
+      await ensureCaseAccess(input, organizationId);
+
+      const { error } = await (supabaseAdmin as any)
+        .from('cases')
+        .delete()
+        .eq('id', input)
+        .eq('organization_id', organizationId);
+
+      if (error) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      }
+
+      return { success: true };
     }),
 });

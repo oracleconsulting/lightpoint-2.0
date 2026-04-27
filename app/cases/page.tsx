@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc/Provider';
 import { Button } from '@/components/ui/button';
@@ -13,9 +13,14 @@ import { TierBadge } from '@/components/cases/TierBadge';
 export default function CasesPage() {
   const [status, setStatus] = useState('all');
   const [tier, setTier] = useState('all');
+  const utils = trpc.useUtils();
   const { data: cases = [], isLoading, error } = trpc.case.list.useQuery({
     status: status as any,
     tier: tier === 'all' ? 'all' : Number(tier) as any,
+  });
+  const deleteCase = trpc.case.delete.useMutation({
+    onSuccess: () => utils.case.list.invalidate(),
+    onError: (error) => alert(`Failed to delete case: ${error.message}`),
   });
 
   return (
@@ -93,6 +98,22 @@ export default function CasesPage() {
                       <Badge variant={caseRecord.status === 'closed' ? 'secondary' : 'default'}>
                         {String(caseRecord.status).replace(/_/g, ' ')}
                       </Badge>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                        disabled={deleteCase.isPending}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          if (confirm(`Delete case "${caseRecord.title}"? This cannot be undone.`)) {
+                            deleteCase.mutate(caseRecord.id);
+                          }
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                 </CardHeader>
