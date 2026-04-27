@@ -196,6 +196,28 @@ UPDATE case_documents
 SET file_name = COALESCE(file_name, document_name, 'Imported document')
 WHERE file_name IS NULL;
 
+ALTER TABLE case_documents DROP CONSTRAINT IF EXISTS case_documents_document_type_check;
+ALTER TABLE case_documents ADD CONSTRAINT case_documents_document_type_check
+  CHECK (
+    document_type IS NULL OR document_type IN (
+      'hmrc_letter',
+      'complaint_draft',
+      'response',
+      'evidence',
+      'final_outcome',
+      'complaint_analysis',
+      'SA316_s8_notice',
+      'schedule_36_notice',
+      'penalty_notice',
+      'closure_notice',
+      'hmrc_response',
+      'agent_letter',
+      'bank_statement',
+      'schedule',
+      'other'
+    )
+  );
+
 CREATE INDEX IF NOT EXISTS idx_case_documents_case
   ON case_documents(case_id, uploaded_at DESC);
 CREATE INDEX IF NOT EXISTS idx_case_documents_embedding
