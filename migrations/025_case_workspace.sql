@@ -406,6 +406,10 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
 
+-- Required when rerunning after a partially-created function with a different
+-- OUT row type or vector dimension. CREATE OR REPLACE cannot change OUT params.
+DROP FUNCTION IF EXISTS match_case_documents(vector, uuid, double precision, integer);
+
 CREATE OR REPLACE FUNCTION match_case_documents(
   query_embedding VECTOR(3072),
   case_id_filter UUID,
