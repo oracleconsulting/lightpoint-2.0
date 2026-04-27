@@ -95,6 +95,7 @@ export function FollowUpManager({
 
   const utils = trpc.useUtils();
   const generateFollowUp = trpc.letters.generateFollowUp.useMutation();
+  const logActivity = trpc.time.logActivity.useMutation();
 
   // Use custom date if provided, otherwise fall back to system date
   const effectiveOriginalDate = customOriginalDate || lastLetterDate;
@@ -226,7 +227,7 @@ ${cleanedLetter.split('\r\n\r\n').map(para => `<p>${para.replace(/\r\n/g, '<br>'
       
       // Log time for preparing follow-up (upheld_response is auto-logged in backend)
       if (result.followUpType !== 'upheld_response') {
-        await utils.time.logActivity.mutateAsync({
+        await logActivity.mutateAsync({
           complaintId,
           activity: `${result.followUpType} Follow-up Letter Generation`,
           duration: 20,

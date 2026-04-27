@@ -1,4 +1,5 @@
 import { router, publicProcedure, protectedProcedure } from './trpc';
+import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { supabaseAdmin } from '@/lib/supabase/client';
 import { processDocument } from '@/lib/documentProcessor';
@@ -30,6 +31,11 @@ import { timeRouter } from './routers/time';
 import { ticketsRouter } from './routers/tickets';
 import { dashboardRouter, managementRouter } from './routers/dashboard';
 import { appealsRouter } from './routers/appeals';
+import { caseRouter } from './routers/case';
+import { caseEventRouter } from './routers/caseEvent';
+import { casePartyRouter } from './routers/caseParty';
+import { caseDecisionRouter } from './routers/caseDecision';
+import { caseDocumentRouter } from './routers/caseDocument';
 
 export const appRouter = router({
   // Pilot onboarding & activation
@@ -64,6 +70,13 @@ export const appRouter = router({
   
   // Appeals (penalty appeals, grounds, precedents)
   appeals: appealsRouter,
+
+  // Case Workspace (complex HMRC dispute cases)
+  case: caseRouter,
+  caseEvent: caseEventRouter,
+  caseParty: casePartyRouter,
+  caseDecision: caseDecisionRouter,
+  caseDocument: caseDocumentRouter,
   
   // Existing routes
   // Complaints
@@ -591,77 +604,120 @@ export const appRouter = router({
         }).optional(),
       }))
       .mutation(async ({ input }) => {
-        // Get complaint details
-        const { data: complaint } = await supabaseAdmin
-          .from('complaints')
-          .select('*')
-          .eq('id', input.complaintId)
-          .single();
-        
-        if (!complaint) throw new Error('Complaint not found');
-        
-        // Use three-stage pipeline by default, or single-stage if specified
-        const useThreeStage = input.useThreeStage !== false; // Default to true
-        
-        let letter: string;
-        
-        if (useThreeStage) {
-          logger.info('🚀 Using THREE-STAGE pipeline for letter generation');
-          if (input.additionalContext) {
-            logger.info('📝 Additional context provided:', input.additionalContext.substring(0, 100) + '...');
-          }
-          letter = await generateComplaintLetterThreeStage(
-            input.analysis,
-            (complaint as any).complaint_reference,
-            (complaint as any).hmrc_department || 'HMRC',
-            input.practiceLetterhead,
-            input.chargeOutRate,
-            input.userName,
-            input.userTitle,
-            input.userEmail,
-            input.userPhone,
-            input.additionalContext // Pass additional context
-          );
+        const isReanalysis = !!input.additionalContext?.trim();
+        if (isReanalysis) {
+          logger.info('🔄 Re-analysis started for letter (additionalContext provided)');
         } else {
-          logger.info('📝 Using SINGLE-STAGE letter generation (legacy)');
-          if (input.additionalContext) {
-            logger.info('📝 Additional context provided:', input.additionalContext.substring(0, 100) + '...');
+          logger.info('📝 Letter generation started for complaint:', input.complaintId);
+        }
+
+        try {
+          // Get complaint details
+          const { data: complaint, error: fetchError } = await supabaseAdmin
+            .from('complaints')
+            .select('*')
+            .eq('id', input.complaintId)
+            .single();
+
+          if (fetchError || !complaint) {
+            throw new TRPCError({
+              code: 'NOT_FOUND',
+              message: 'Complaint not found',
+            });
           }
-          letter = await generateComplaintLetter(
-            input.analysis,
-            (complaint as any).complaint_reference,
-            (complaint as any).hmrc_department || 'HMRC',
-            input.practiceLetterhead,
-            input.chargeOutRate,
-            input.additionalContext // Pass additional context
-          );
+
+          // Use three-stage pipeline by default, or single-stage if specified
+          const useThreeStage = input.useThreeStage !== false; // Default to true
+
+          let letter: string;
+
+          try {
+            if (useThreeStage) {
+              logger.info('🚀 Using THREE-STAGE pipeline for letter generation');
+              if (input.additionalContext) {
+                logger.info('📝 Additional context provided:', (input.additionalContext as string).substring(0, 100) + '...');
+              }
+              letter = await generateComplaintLetterThreeStage(
+                input.analysis,
+                (complaint as any).complaint_reference,
+                (complaint as any).hmrc_department || 'HMRC',
+                input.practiceLetterhead,
+                input.chargeOutRate,
+                input.userName,
+                input.userTitle,
+                input.userEmail,
+                input.userPhone,
+                input.additionalContext as string | undefined
+              );
+            } else {
+              logger.info('📝 Using SINGLE-STAGE letter generation (legacy)');
+              if (input.additionalContext) {
+                logger.info('📝 Additional context provided:', (input.additionalContext as string).substring(0, 100) + '...');
+              }
+              letter = await generateComplaintLetter(
+                input.analysis,
+                (complaint as any).complaint_reference,
+                (complaint as any).hmrc_department || 'HMRC',
+                input.practiceLetterhead,
+                input.chargeOutRate,
+                input.additionalContext as string | undefined
+              );
+            }
+          } catch (openRouterError: any) {
+            const msg = openRouterError instanceof Error ? openRouterError.message : 'OpenRouter request failed';
+            logger.error('❌ OpenRouter letter generation failed:', msg);
+            throw new TRPCError({
+              code: 'INTERNAL_SERVER_ERROR',
+              message: `Letter generation failed: ${msg}`,
+              cause: openRouterError,
+            });
+          }
+
+          if (!letter || letter.length === 0) {
+            throw new TRPCError({
+              code: 'INTERNAL_SERVER_ERROR',
+              message: 'Letter generation returned empty result. Please try again.',
+            });
+          }
+
+          // Auto-save letter to database (don't rely on client callback due to timeout)
+          logger.info('💾 Auto-saving letter to database...');
+          const { data: savedLetter, error: saveError } = await (supabaseAdmin as any)
+            .from('generated_letters')
+            .insert({
+              complaint_id: input.complaintId,
+              letter_type: 'initial_complaint',
+              letter_content: letter,
+              notes: 'Auto-generated via three-stage pipeline',
+            })
+            .select('id')
+            .single();
+
+          if (saveError) {
+            logger.error('❌ Failed to auto-save letter:', saveError);
+            // Don't throw - still return the letter to client
+          } else {
+            logger.info('✅ Letter auto-saved to database');
+            if (savedLetter?.id) await writeLetterToTimeline(input.complaintId, savedLetter.id, 'initial_complaint');
+          }
+
+          if (isReanalysis) {
+            logger.info('✅ Re-analysis complete');
+          } else {
+            logger.info('✅ Letter generation complete');
+          }
+
+          return { letter };
+        } catch (error: any) {
+          if (error instanceof TRPCError) throw error;
+          const msg = error instanceof Error ? error.message : 'Unknown error';
+          logger.error('❌ letters.generateComplaint failed:', msg);
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: `Letter generation failed: ${msg}`,
+            cause: error,
+          });
         }
-        
-        // Auto-save letter to database (don't rely on client callback due to timeout)
-        logger.info('💾 Auto-saving letter to database...');
-        const { data: savedLetter, error: saveError } = await (supabaseAdmin as any)
-          .from('generated_letters')
-          .insert({
-            complaint_id: input.complaintId,
-            letter_type: 'initial_complaint',
-            letter_content: letter,
-            notes: 'Auto-generated via three-stage pipeline',
-          })
-          .select('id')
-          .single();
-        
-        if (saveError) {
-          logger.error('❌ Failed to auto-save letter:', saveError);
-          // Don't throw - still return the letter to client
-        } else {
-          logger.info('✅ Letter auto-saved to database');
-          if (savedLetter?.id) await writeLetterToTimeline(input.complaintId, savedLetter.id, 'initial_complaint');
-        }
-        
-        // NOTE: Time logging is handled by frontend (page.tsx) which calculates
-        // time based on letter page count. Don't duplicate here!
-        
-        return { letter };
       }),
 
     // Generate penalty appeal letter (statutory appeal pipeline)
@@ -1024,47 +1080,74 @@ export const appRouter = router({
         reason: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
-        // Get the original letter
-        const { data: originalLetter, error: fetchError } = await (supabaseAdmin as any)
-          .from('generated_letters')
-          .select('*')
-          .eq('id', input.letterId)
-          .single();
-        
-        if (fetchError || !originalLetter) {
-          throw new Error('Original letter not found');
+        logger.info('🔄 Re-analysis started for letter:', input.letterId);
+
+        try {
+          // Get the original letter
+          const { data: originalLetter, error: fetchError } = await (supabaseAdmin as any)
+            .from('generated_letters')
+            .select('*')
+            .eq('id', input.letterId)
+            .single();
+
+          if (fetchError || !originalLetter) {
+            throw new TRPCError({
+              code: 'NOT_FOUND',
+              message: 'Original letter not found',
+            });
+          }
+
+          // Mark original as superseded
+          const { error: updateError } = await (supabaseAdmin as any)
+            .from('generated_letters')
+            .update({
+              superseded_at: new Date().toISOString(),
+              superseded_reason: input.reason || 'Replaced with updated version',
+            })
+            .eq('id', input.letterId);
+
+          if (updateError) {
+            throw new TRPCError({
+              code: 'INTERNAL_SERVER_ERROR',
+              message: updateError.message ?? 'Failed to supersede original letter',
+            });
+          }
+
+          // Create new letter as a regeneration (no time tracking)
+          const { data: newLetter, error: insertError } = await (supabaseAdmin as any)
+            .from('generated_letters')
+            .insert({
+              complaint_id: originalLetter.complaint_id,
+              letter_type: originalLetter.letter_type,
+              letter_content: input.newContent,
+              replaces_letter_id: input.letterId,
+              is_regeneration: true,
+              notes: `Regenerated from letter ${input.letterId.substring(0, 8)}... - ${input.reason || 'Content update'}`,
+            })
+            .select()
+            .single();
+
+          if (insertError) {
+            throw new TRPCError({
+              code: 'INTERNAL_SERVER_ERROR',
+              message: insertError.message ?? 'Failed to save regenerated letter',
+            });
+          }
+
+          logger.info('✅ Re-analysis complete');
+          logger.info(`🔄 Letter regenerated: ${input.letterId} → ${newLetter.id} (no time logged)`);
+
+          return newLetter;
+        } catch (error: any) {
+          if (error instanceof TRPCError) throw error;
+          const msg = error instanceof Error ? error.message : 'Unknown error';
+          logger.error('❌ letters.regenerate failed:', msg);
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: `Letter regeneration failed: ${msg}`,
+            cause: error,
+          });
         }
-        
-        // Mark original as superseded
-        const { error: updateError } = await (supabaseAdmin as any)
-          .from('generated_letters')
-          .update({
-            superseded_at: new Date().toISOString(),
-            superseded_reason: input.reason || 'Replaced with updated version',
-          })
-          .eq('id', input.letterId);
-        
-        if (updateError) throw new Error(updateError.message);
-        
-        // Create new letter as a regeneration (no time tracking)
-        const { data: newLetter, error: insertError } = await (supabaseAdmin as any)
-          .from('generated_letters')
-          .insert({
-            complaint_id: originalLetter.complaint_id,
-            letter_type: originalLetter.letter_type,
-            letter_content: input.newContent,
-            replaces_letter_id: input.letterId,
-            is_regeneration: true,
-            notes: `Regenerated from letter ${input.letterId.substring(0, 8)}... - ${input.reason || 'Content update'}`,
-          })
-          .select()
-          .single();
-        
-        if (insertError) throw new Error(insertError.message);
-        
-        logger.info(`🔄 Letter regenerated: ${input.letterId} → ${newLetter.id} (no time logged)`);
-        
-        return newLetter;
       }),
 
     // Update letter content in place (for minor edits, no new letter created)

@@ -70,7 +70,7 @@ export function InvoiceReviewModal({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editMinutes, setEditMinutes] = useState<string>('');
   const [showAddRow, setShowAddRow] = useState(false);
-  const [newActivityType, setNewActivityType] = useState(ACTIVITY_TYPES.INITIAL_ANALYSIS);
+  const [newActivityType, setNewActivityType] = useState<string>(ACTIVITY_TYPES.INITIAL_ANALYSIS);
   const [newDescription, setNewDescription] = useState('');
   const [newMinutes, setNewMinutes] = useState(12);
 
