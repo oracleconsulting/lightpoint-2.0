@@ -36,6 +36,7 @@ import { caseEventRouter } from './routers/caseEvent';
 import { casePartyRouter } from './routers/caseParty';
 import { caseDecisionRouter } from './routers/caseDecision';
 import { caseDocumentRouter } from './routers/caseDocument';
+import { caseChatRouter } from './routers/caseChat';
 
 export const appRouter = router({
   // Pilot onboarding & activation
@@ -77,6 +78,7 @@ export const appRouter = router({
   caseParty: casePartyRouter,
   caseDecision: caseDecisionRouter,
   caseDocument: caseDocumentRouter,
+  caseChat: caseChatRouter,
   
   // Existing routes
   // Complaints

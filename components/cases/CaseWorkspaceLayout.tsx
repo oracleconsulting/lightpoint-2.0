@@ -22,7 +22,7 @@ export function CaseWorkspaceLayout({ workspace }: CaseWorkspaceLayoutProps) {
           <PartiesPanel caseId={caseRecord.id} parties={workspace?.parties || []} />
         </div>
         <div className="space-y-6">
-          <ConversationPanel />
+          <ConversationPanel caseId={caseRecord.id} />
           <DecisionLogPanel caseId={caseRecord.id} decisions={workspace?.decisions || []} />
         </div>
         <div className="space-y-6">
