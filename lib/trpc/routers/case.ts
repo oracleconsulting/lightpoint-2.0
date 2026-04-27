@@ -9,6 +9,160 @@ const caseStatus = z.enum(['open', 'active', 'on_hold', 'closed']);
 const caseTier = z.union([z.literal(1), z.literal(2), z.literal(3)]);
 
 export const caseRouter = router({
+  importFromComplaint: protectedProcedure
+    .input(z.object({
+      complaintId: z.string().uuid(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const organizationId = requireOrg(ctx.organizationId);
+
+      const { data: existingLink, error: linkLookupError } = await (supabaseAdmin as any)
+        .from('case_complaint_links')
+        .select('case_id')
+        .eq('complaint_id', input.complaintId)
+        .maybeSingle();
+
+      if (linkLookupError) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: linkLookupError.message });
+      }
+
+      if (existingLink?.case_id) {
+        await ensureCaseAccess(existingLink.case_id, organizationId);
+        return { caseId: existingLink.case_id, created: false };
+      }
+
+      const { data: complaint, error: complaintError } = await (supabaseAdmin as any)
+        .from('complaints')
+        .select('*')
+        .eq('id', input.complaintId)
+        .eq('organization_id', organizationId)
+        .single();
+
+      if (complaintError || !complaint) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Complaint not found or access denied',
+        });
+      }
+
+      const caseReference = `CASE-${complaint.complaint_reference || input.complaintId.slice(0, 8)}`;
+      const { data: caseRecord, error: caseError } = await (supabaseAdmin as any)
+        .from('cases')
+        .insert({
+          organization_id: organizationId,
+          created_by: ctx.userId,
+          case_reference: caseReference,
+          title: `Workspace for ${complaint.complaint_reference || 'complaint'}`,
+          client_name: complaint.client_name_encrypted || null,
+          hmrc_reference: complaint.hmrc_reference || null,
+          hmrc_department: complaint.hmrc_department || null,
+          case_type: complaint.case_type || 'imported_complaint',
+          status: complaint.status === 'closed' ? 'closed' : 'active',
+          tier: 3,
+          priority: complaint.status === 'escalated' ? 'high' : 'normal',
+          summary: [
+            `Imported from complaint ${complaint.complaint_reference || input.complaintId}.`,
+            complaint.complaint_type ? `Complaint type: ${complaint.complaint_type}.` : null,
+            complaint.complaint_context || null,
+          ].filter(Boolean).join('\n'),
+          metadata: {
+            imported_from_complaint_id: input.complaintId,
+            complaint_status: complaint.status,
+            complaint_case_type: complaint.case_type || null,
+          },
+        })
+        .select()
+        .single();
+
+      if (caseError || !caseRecord) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: caseError?.message || 'Failed to create case workspace',
+        });
+      }
+
+      const timeline = Array.isArray(complaint.timeline) ? complaint.timeline : [];
+      if (timeline.length) {
+        await (supabaseAdmin as any)
+          .from('case_events')
+          .insert(timeline.map((event: any, index: number) => ({
+            case_id: caseRecord.id,
+            event_date: event.date ? new Date(event.date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
+            event_type: event.type || 'complaint_timeline',
+            title: event.summary ? String(event.summary).slice(0, 120) : `Imported complaint event ${index + 1}`,
+            description: event.notes || event.summary || JSON.stringify(event),
+            source: 'complaint_import',
+            metadata: {
+              original_event: event,
+              imported_from_complaint_id: input.complaintId,
+            },
+            created_by: ctx.userId,
+          })));
+      }
+
+      const { data: documents } = await (supabaseAdmin as any)
+        .from('documents')
+        .select('*')
+        .eq('complaint_id', input.complaintId);
+
+      if (documents?.length) {
+        await (supabaseAdmin as any)
+          .from('case_documents')
+          .insert(documents.map((document: any) => ({
+            case_id: caseRecord.id,
+            file_name: document.filename || document.file_name || 'Imported complaint document',
+            storage_path: document.file_path || document.storage_path || `complaint-import/${input.complaintId}/${document.id}`,
+            mime_type: document.mime_type || null,
+            file_size: document.file_size || null,
+            document_type: document.document_type || null,
+            extraction_status: document.processed_data ? 'complete' : 'pending',
+            extracted_text: document.extracted_text || document.processed_data?.text || document.processed_data?.anonymized_text || null,
+            extracted_metadata: {
+              imported_from_document_id: document.id,
+              processed_data: document.processed_data || null,
+            },
+            uploaded_by: ctx.userId,
+          })));
+      }
+
+      const { data: letters } = await (supabaseAdmin as any)
+        .from('generated_letters')
+        .select('*')
+        .eq('complaint_id', input.complaintId)
+        .order('created_at', { ascending: true });
+
+      if (letters?.length) {
+        await (supabaseAdmin as any)
+          .from('case_outputs')
+          .insert(letters.map((letter: any) => ({
+            case_id: caseRecord.id,
+            output_type: letter.letter_type || 'complaint_letter',
+            title: `Imported ${String(letter.letter_type || 'letter').replace(/_/g, ' ')}`,
+            content: letter.letter_content || null,
+            status: 'draft',
+            metadata: {
+              imported_from_letter_id: letter.id,
+              imported_from_complaint_id: input.complaintId,
+            },
+            created_by: ctx.userId,
+          })));
+      }
+
+      const { error: linkError } = await (supabaseAdmin as any)
+        .from('case_complaint_links')
+        .insert({
+          case_id: caseRecord.id,
+          complaint_id: input.complaintId,
+          link_type: 'imported_from',
+        });
+
+      if (linkError) {
+        logger.error('Failed to link imported complaint to case:', linkError);
+      }
+
+      return { caseId: caseRecord.id, created: true };
+    }),
+
   create: protectedProcedure
     .input(z.object({
       caseReference: z.string().min(1),

@@ -28,7 +28,8 @@ import { StartComplaint } from '@/components/complaint/StartComplaint';
 import { getPracticeLetterhead } from '@/lib/practiceSettings';
 import { calculateLetterTime, calculateAnalysisTime, TIME_BENCHMARKS } from '@/lib/timeCalculations';
 import Link from 'next/link';
-import { ArrowLeft, FileText, Sparkles, Send, Edit2, Check, X, Receipt } from 'lucide-react';
+import { ArrowLeft, FileText, Sparkles, Send, Edit2, Check, X, Receipt, MessagesSquare } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { useUser } from '@/contexts/UserContext';
@@ -36,6 +37,7 @@ import { logger } from '../../../lib/logger';
 
 
 export default function ComplaintDetailPage({ params }: { params: { id: string } }) {
+  const router = useRouter();
   const [analysisData, setAnalysisData] = useState<any>(null);
   const [generatedLetter, setGeneratedLetter] = useState<string | null>(null);
   const [isEditingReference, setIsEditingReference] = useState(false);
@@ -90,6 +92,15 @@ export default function ComplaintDetailPage({ params }: { params: { id: string }
     onError: (error) => {
       alert(`Failed to update reference: ${error.message}`);
     }
+  });
+
+  const importToCaseWorkspace = trpc.case.importFromComplaint.useMutation({
+    onSuccess: (result) => {
+      router.push(`/cases/${result.caseId}`);
+    },
+    onError: (error) => {
+      alert(`Failed to import complaint to case workspace: ${error.message}`);
+    },
   });
 
   const retryOCR = trpc.documents.retryOCR.useMutation({
@@ -585,6 +596,16 @@ This precedent was manually added because it represents a novel complaint type n
               }}
               chargeOutRate={practiceSettings?.chargeOutRate || 250}
             />
+
+            <Button
+              variant="outline"
+              className="w-full border-[#2B80FF]/30 text-[#2B80FF] hover:bg-blue-50"
+              onClick={() => importToCaseWorkspace.mutate({ complaintId: params.id })}
+              disabled={importToCaseWorkspace.isPending}
+            >
+              <MessagesSquare className="h-4 w-4 mr-2" />
+              {importToCaseWorkspace.isPending ? 'Opening workspace...' : 'Discuss in Case Workspace'}
+            </Button>
 
             {/* Close & Invoice - show when active, escalated, or resolved */}
             {(complaintData.status === 'active' || complaintData.status === 'escalated' || complaintData.status === 'resolved') && (
