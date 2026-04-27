@@ -194,6 +194,12 @@ export default function DashboardPage() {
                 </Link>
               </>
             )}
+            <Link href="/cases">
+              <Button variant="outline">
+                <FileText className="h-4 w-4 mr-2" />
+                Case Workspace
+              </Button>
+            </Link>
             <Link href="/complaints/new">
               <Button>
                 <Plus className="h-4 w-4 mr-2" />
