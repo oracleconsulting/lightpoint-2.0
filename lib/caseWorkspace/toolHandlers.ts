@@ -2,6 +2,8 @@ import { TRPCError } from '@trpc/server';
 import { supabaseAdmin } from '@/lib/supabase/client';
 import { searchKnowledgeBaseMultiAngle } from '@/lib/vectorSearch';
 import type { StructuredOutput } from './structuredOutputs';
+import { verifyCitation } from '@/lib/citationVerification/verifier';
+import { extractCitationsFromText } from '@/lib/citationVerification/parser';
 
 export async function searchWorkspaceKnowledge(query: string) {
   return searchKnowledgeBaseMultiAngle(query, 0.72, 6);
@@ -43,13 +45,20 @@ export async function commitStructuredOutput(
       return data;
     }
     case 'propose_research': {
+      const citation = extractCitationsFromText(`${output.query}\n${output.reasoning}`)[0];
+      const verification = citation
+        ? await verifyCitation(citation.raw, output.query)
+        : null;
       const { data, error } = await (supabaseAdmin as any)
         .from('case_research')
         .insert({
           case_id: caseId,
           title: output.query,
           proposition: output.reasoning,
-          verification_status: 'pending',
+          citation: verification?.citation || null,
+          source_url: verification?.sourceUrl || null,
+          verification_status: verification?.status || 'pending',
+          verification_notes: verification?.notes || 'No citation found in proposal; verification pending manual research.',
           created_by: userId,
         })
         .select()
