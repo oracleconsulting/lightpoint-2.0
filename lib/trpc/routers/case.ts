@@ -157,6 +157,7 @@ async function syncComplaintIntoCase(caseId: string, complaint: any, userId: str
       return {
         case_id: caseId,
         file_name: document.filename || document.file_name || 'Imported complaint document',
+        document_name: document.filename || document.file_name || document.document_name || 'Imported complaint document',
         storage_path: document.file_path || document.storage_path || `complaint-import/${complaintId}/${document.id}`,
         mime_type: document.mime_type || null,
         file_size: document.file_size || null,
@@ -176,6 +177,7 @@ async function syncComplaintIntoCase(caseId: string, complaint: any, userId: str
     docsToInsert.push({
       case_id: caseId,
       file_name: 'Imported complaint analysis',
+      document_name: 'Imported complaint analysis',
       storage_path: `complaint-import/${complaintId}/analysis.json`,
       mime_type: 'application/json',
       file_size: null,

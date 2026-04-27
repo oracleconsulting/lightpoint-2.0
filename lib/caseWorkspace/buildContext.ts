@@ -87,7 +87,7 @@ export async function buildWorkspaceContext(caseId: string): Promise<WorkspaceCo
         ? Object.entries(groupedParties).map(([role, names]) => `${role}: ${names.join(', ')}`).join('\n')
         : 'No parties recorded.',
       documents: documents.length
-        ? documents.map((doc) => `- ${doc.file_name}: ${doc.extraction_status}${doc.extracted_text ? `; summary text available (${String(doc.extracted_text).slice(0, 400)})` : '; extraction pending'}`).join('\n')
+        ? documents.map((doc) => `- ${doc.file_name || doc.document_name || 'Document'}: ${doc.extraction_status}${doc.extracted_text ? `; summary text available (${String(doc.extracted_text).slice(0, 400)})` : '; extraction pending'}`).join('\n')
         : 'No documents uploaded.',
       decisions: decisions.length
         ? decisions.map((decision) => `- ${formatDate(decision.created_at)}: ${decision.decision_text}. Reasoning: ${decision.reasoning || 'Not recorded.'}`).join('\n')

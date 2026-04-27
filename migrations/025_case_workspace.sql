@@ -157,6 +157,7 @@ CREATE TABLE IF NOT EXISTS case_documents (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   case_id UUID NOT NULL REFERENCES cases(id) ON DELETE CASCADE,
   file_name TEXT NOT NULL,
+  document_name TEXT,
   storage_path TEXT NOT NULL,
   mime_type TEXT,
   file_size BIGINT,
@@ -174,6 +175,7 @@ CREATE TABLE IF NOT EXISTS case_documents (
 ALTER TABLE case_documents
   ADD COLUMN IF NOT EXISTS case_id UUID REFERENCES cases(id) ON DELETE CASCADE,
   ADD COLUMN IF NOT EXISTS file_name TEXT,
+  ADD COLUMN IF NOT EXISTS document_name TEXT,
   ADD COLUMN IF NOT EXISTS storage_path TEXT,
   ADD COLUMN IF NOT EXISTS mime_type TEXT,
   ADD COLUMN IF NOT EXISTS file_size BIGINT,
@@ -185,6 +187,14 @@ ALTER TABLE case_documents
   ADD COLUMN IF NOT EXISTS uploaded_by UUID REFERENCES lightpoint_users(id) ON DELETE SET NULL,
   ADD COLUMN IF NOT EXISTS uploaded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+UPDATE case_documents
+SET document_name = COALESCE(document_name, file_name, 'Imported document')
+WHERE document_name IS NULL;
+
+UPDATE case_documents
+SET file_name = COALESCE(file_name, document_name, 'Imported document')
+WHERE file_name IS NULL;
 
 CREATE INDEX IF NOT EXISTS idx_case_documents_case
   ON case_documents(case_id, uploaded_at DESC);

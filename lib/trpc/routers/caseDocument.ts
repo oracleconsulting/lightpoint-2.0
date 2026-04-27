@@ -23,6 +23,7 @@ export const caseDocumentRouter = router({
         .insert({
           case_id: input.caseId,
           file_name: input.fileName,
+          document_name: input.fileName,
           storage_path: input.storagePath,
           mime_type: input.mimeType || null,
           file_size: input.fileSize || null,
