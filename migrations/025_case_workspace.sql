@@ -86,6 +86,26 @@ ALTER TABLE case_events
   ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
+ALTER TABLE case_events DROP CONSTRAINT IF EXISTS case_events_event_type_check;
+ALTER TABLE case_events ADD CONSTRAINT case_events_event_type_check
+  CHECK (event_type IN (
+    'note',
+    'deadline',
+    'document_date',
+    'complaint_timeline',
+    'complaint_imported',
+    'complaint_context',
+    'context_provided',
+    'letter_generated',
+    'letter_sent',
+    'manual_activity',
+    'hmrc_response',
+    'document_uploaded',
+    'decision',
+    'research',
+    'other'
+  ));
+
 CREATE INDEX IF NOT EXISTS idx_case_events_case_date
   ON case_events(case_id, event_date ASC);
 CREATE INDEX IF NOT EXISTS idx_case_events_deadline
