@@ -8,6 +8,180 @@ import { logger } from '../../logger';
 const caseStatus = z.enum(['open', 'active', 'on_hold', 'closed']);
 const caseTier = z.union([z.literal(1), z.literal(2), z.literal(3)]);
 
+function safeDate(value: unknown): string {
+  const date = value ? new Date(String(value)) : new Date();
+  if (Number.isNaN(date.getTime())) return new Date().toISOString().slice(0, 10);
+  return date.toISOString().slice(0, 10);
+}
+
+function stringifyContext(value: unknown): string | null {
+  if (!value) return null;
+  if (typeof value === 'string') return value;
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
+}
+
+async function syncComplaintIntoCase(caseId: string, complaint: any, userId: string | null) {
+  const complaintId = complaint.id;
+
+  await (supabaseAdmin as any)
+    .from('cases')
+    .update({
+      summary: [
+        `Imported from complaint ${complaint.complaint_reference || complaintId}.`,
+        complaint.complaint_type ? `Complaint type: ${complaint.complaint_type}.` : null,
+        complaint.complaint_context || null,
+      ].filter(Boolean).join('\n'),
+      metadata: {
+        imported_from_complaint_id: complaintId,
+        complaint_status: complaint.status,
+        complaint_case_type: complaint.case_type || null,
+        complaint_analysis_completed_at: complaint.analysis_completed_at || null,
+        last_import_sync_at: new Date().toISOString(),
+      },
+    })
+    .eq('id', caseId);
+
+  const { data: existingEvents } = await (supabaseAdmin as any)
+    .from('case_events')
+    .select('id')
+    .eq('case_id', caseId)
+    .eq('source', 'complaint_import');
+
+  const timeline = Array.isArray(complaint.timeline) ? complaint.timeline : [];
+  const importedEvents = [
+    ...timeline.map((event: any, index: number) => ({
+      case_id: caseId,
+      event_date: safeDate(event.date),
+      event_type: event.type || 'complaint_timeline',
+      title: event.summary ? String(event.summary).slice(0, 120) : `Imported complaint event ${index + 1}`,
+      description: event.notes || event.summary || JSON.stringify(event),
+      source: 'complaint_import',
+      metadata: {
+        original_event: event,
+        imported_from_complaint_id: complaintId,
+      },
+      created_by: userId,
+    })),
+    ...(complaint.complaint_context ? [{
+      case_id: caseId,
+      event_date: safeDate(complaint.created_at),
+      event_type: 'complaint_context',
+      title: 'Original complaint context',
+      description: complaint.complaint_context,
+      source: 'complaint_import',
+      metadata: { imported_from_complaint_id: complaintId },
+      created_by: userId,
+    }] : []),
+  ];
+
+  if (!existingEvents?.length && importedEvents.length) {
+    await (supabaseAdmin as any).from('case_events').insert(importedEvents);
+  }
+
+  const { data: existingDocs } = await (supabaseAdmin as any)
+    .from('case_documents')
+    .select('id, extracted_metadata')
+    .eq('case_id', caseId);
+  const existingDocImports = new Set(
+    (existingDocs || []).map((doc: any) => doc.extracted_metadata?.imported_from_document_id || doc.extracted_metadata?.imported_virtual_document)
+  );
+
+  const { data: documents } = await (supabaseAdmin as any)
+    .from('documents')
+    .select('*')
+    .eq('complaint_id', complaintId);
+
+  const docsToInsert = (documents || [])
+    .filter((document: any) => !existingDocImports.has(document.id))
+    .map((document: any) => {
+      const processed = document.processed_data || {};
+      const extractedText =
+        document.extracted_text ||
+        processed.text ||
+        processed.anonymized_text ||
+        processed.detailed_analysis ||
+        stringifyContext(processed) ||
+        null;
+
+      return {
+        case_id: caseId,
+        file_name: document.filename || document.file_name || 'Imported complaint document',
+        storage_path: document.file_path || document.storage_path || `complaint-import/${complaintId}/${document.id}`,
+        mime_type: document.mime_type || null,
+        file_size: document.file_size || null,
+        document_type: document.document_type || null,
+        extraction_status: extractedText ? 'complete' : 'pending',
+        extracted_text: extractedText,
+        extracted_metadata: {
+          imported_from_complaint_id: complaintId,
+          imported_from_document_id: document.id,
+          processed_data: processed || null,
+        },
+        uploaded_by: userId,
+      };
+    });
+
+  if (complaint.analysis && !existingDocImports.has('complaint_analysis')) {
+    docsToInsert.push({
+      case_id: caseId,
+      file_name: 'Imported complaint analysis',
+      storage_path: `complaint-import/${complaintId}/analysis.json`,
+      mime_type: 'application/json',
+      file_size: null,
+      document_type: 'complaint_analysis',
+      extraction_status: 'complete',
+      extracted_text: stringifyContext(complaint.analysis),
+      extracted_metadata: {
+        imported_from_complaint_id: complaintId,
+        imported_virtual_document: 'complaint_analysis',
+        analysis_completed_at: complaint.analysis_completed_at || null,
+      },
+      uploaded_by: userId,
+    });
+  }
+
+  if (docsToInsert.length) {
+    await (supabaseAdmin as any).from('case_documents').insert(docsToInsert);
+  }
+
+  const { data: existingOutputs } = await (supabaseAdmin as any)
+    .from('case_outputs')
+    .select('id, metadata')
+    .eq('case_id', caseId);
+  const existingLetterImports = new Set(
+    (existingOutputs || []).map((output: any) => output.metadata?.imported_from_letter_id)
+  );
+
+  const { data: letters } = await (supabaseAdmin as any)
+    .from('generated_letters')
+    .select('*')
+    .eq('complaint_id', complaintId)
+    .order('created_at', { ascending: true });
+
+  const outputsToInsert = (letters || [])
+    .filter((letter: any) => !existingLetterImports.has(letter.id))
+    .map((letter: any) => ({
+      case_id: caseId,
+      output_type: letter.letter_type || 'complaint_letter',
+      title: `Imported ${String(letter.letter_type || 'letter').replace(/_/g, ' ')}`,
+      content: letter.letter_content || null,
+      status: 'draft',
+      metadata: {
+        imported_from_letter_id: letter.id,
+        imported_from_complaint_id: complaintId,
+      },
+      created_by: userId,
+    }));
+
+  if (outputsToInsert.length) {
+    await (supabaseAdmin as any).from('case_outputs').insert(outputsToInsert);
+  }
+}
+
 export const caseRouter = router({
   importFromComplaint: protectedProcedure
     .input(z.object({
@@ -26,11 +200,6 @@ export const caseRouter = router({
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: linkLookupError.message });
       }
 
-      if (existingLink?.case_id) {
-        await ensureCaseAccess(existingLink.case_id, organizationId);
-        return { caseId: existingLink.case_id, created: false };
-      }
-
       const { data: complaint, error: complaintError } = await (supabaseAdmin as any)
         .from('complaints')
         .select('*')
@@ -43,6 +212,12 @@ export const caseRouter = router({
           code: 'NOT_FOUND',
           message: 'Complaint not found or access denied',
         });
+      }
+
+      if (existingLink?.case_id) {
+        await ensureCaseAccess(existingLink.case_id, organizationId);
+        await syncComplaintIntoCase(existingLink.case_id, complaint, ctx.userId);
+        return { caseId: existingLink.case_id, created: false, synced: true };
       }
 
       const caseReference = `CASE-${complaint.complaint_reference || input.complaintId.slice(0, 8)}`;
@@ -81,72 +256,7 @@ export const caseRouter = router({
         });
       }
 
-      const timeline = Array.isArray(complaint.timeline) ? complaint.timeline : [];
-      if (timeline.length) {
-        await (supabaseAdmin as any)
-          .from('case_events')
-          .insert(timeline.map((event: any, index: number) => ({
-            case_id: caseRecord.id,
-            event_date: event.date ? new Date(event.date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
-            event_type: event.type || 'complaint_timeline',
-            title: event.summary ? String(event.summary).slice(0, 120) : `Imported complaint event ${index + 1}`,
-            description: event.notes || event.summary || JSON.stringify(event),
-            source: 'complaint_import',
-            metadata: {
-              original_event: event,
-              imported_from_complaint_id: input.complaintId,
-            },
-            created_by: ctx.userId,
-          })));
-      }
-
-      const { data: documents } = await (supabaseAdmin as any)
-        .from('documents')
-        .select('*')
-        .eq('complaint_id', input.complaintId);
-
-      if (documents?.length) {
-        await (supabaseAdmin as any)
-          .from('case_documents')
-          .insert(documents.map((document: any) => ({
-            case_id: caseRecord.id,
-            file_name: document.filename || document.file_name || 'Imported complaint document',
-            storage_path: document.file_path || document.storage_path || `complaint-import/${input.complaintId}/${document.id}`,
-            mime_type: document.mime_type || null,
-            file_size: document.file_size || null,
-            document_type: document.document_type || null,
-            extraction_status: document.processed_data ? 'complete' : 'pending',
-            extracted_text: document.extracted_text || document.processed_data?.text || document.processed_data?.anonymized_text || null,
-            extracted_metadata: {
-              imported_from_document_id: document.id,
-              processed_data: document.processed_data || null,
-            },
-            uploaded_by: ctx.userId,
-          })));
-      }
-
-      const { data: letters } = await (supabaseAdmin as any)
-        .from('generated_letters')
-        .select('*')
-        .eq('complaint_id', input.complaintId)
-        .order('created_at', { ascending: true });
-
-      if (letters?.length) {
-        await (supabaseAdmin as any)
-          .from('case_outputs')
-          .insert(letters.map((letter: any) => ({
-            case_id: caseRecord.id,
-            output_type: letter.letter_type || 'complaint_letter',
-            title: `Imported ${String(letter.letter_type || 'letter').replace(/_/g, ' ')}`,
-            content: letter.letter_content || null,
-            status: 'draft',
-            metadata: {
-              imported_from_letter_id: letter.id,
-              imported_from_complaint_id: input.complaintId,
-            },
-            created_by: ctx.userId,
-          })));
-      }
+      await syncComplaintIntoCase(caseRecord.id, complaint, ctx.userId);
 
       const { error: linkError } = await (supabaseAdmin as any)
         .from('case_complaint_links')
