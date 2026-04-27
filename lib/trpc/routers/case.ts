@@ -45,14 +45,27 @@ async function syncComplaintIntoCase(caseId: string, complaint: any, userId: str
     })
     .eq('id', caseId);
 
-  const { data: existingEvents } = await (supabaseAdmin as any)
+  await (supabaseAdmin as any)
     .from('case_events')
-    .select('id')
+    .delete()
     .eq('case_id', caseId)
     .eq('source', 'complaint_import');
 
   const timeline = Array.isArray(complaint.timeline) ? complaint.timeline : [];
   const importedEvents = [
+    {
+      case_id: caseId,
+      event_date: safeDate(complaint.created_at),
+      event_type: 'complaint_imported',
+      title: `Imported complaint ${complaint.complaint_reference || complaintId}`,
+      description: [
+        complaint.complaint_context || null,
+        complaint.analysis ? `Analysis available. Summary: ${String(stringifyContext(complaint.analysis)).slice(0, 1500)}` : null,
+      ].filter(Boolean).join('\n\n') || 'Complaint imported into the case workspace for discussion.',
+      source: 'complaint_import',
+      metadata: { imported_from_complaint_id: complaintId },
+      created_by: userId,
+    },
     ...timeline.map((event: any, index: number) => ({
       case_id: caseId,
       event_date: safeDate(event.date),
@@ -78,7 +91,7 @@ async function syncComplaintIntoCase(caseId: string, complaint: any, userId: str
     }] : []),
   ];
 
-  if (!existingEvents?.length && importedEvents.length) {
+  if (importedEvents.length) {
     await (supabaseAdmin as any).from('case_events').insert(importedEvents);
   }
 
@@ -271,6 +284,42 @@ export const caseRouter = router({
       }
 
       return { caseId: caseRecord.id, created: true };
+    }),
+
+  syncFromLinkedComplaint: protectedProcedure
+    .input(z.object({
+      caseId: z.string().uuid(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const organizationId = requireOrg(ctx.organizationId);
+      await ensureCaseAccess(input.caseId, organizationId);
+
+      const { data: link, error: linkError } = await (supabaseAdmin as any)
+        .from('case_complaint_links')
+        .select('complaint_id')
+        .eq('case_id', input.caseId)
+        .maybeSingle();
+
+      if (linkError) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: linkError.message });
+      }
+      if (!link?.complaint_id) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'No linked complaint found for this workspace' });
+      }
+
+      const { data: complaint, error: complaintError } = await (supabaseAdmin as any)
+        .from('complaints')
+        .select('*')
+        .eq('id', link.complaint_id)
+        .eq('organization_id', organizationId)
+        .single();
+
+      if (complaintError || !complaint) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Linked complaint not found or access denied' });
+      }
+
+      await syncComplaintIntoCase(input.caseId, complaint, ctx.userId);
+      return { success: true, complaintId: link.complaint_id };
     }),
 
   create: protectedProcedure

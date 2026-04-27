@@ -1,3 +1,8 @@
+'use client';
+
+import { RefreshCw } from 'lucide-react';
+import { trpc } from '@/lib/trpc/Provider';
+import { Button } from '@/components/ui/button';
 import { AnomalyBanner } from './AnomalyBanner';
 import { TimelinePanel } from './TimelinePanel';
 import { PartiesPanel } from './PartiesPanel';
@@ -13,9 +18,31 @@ interface CaseWorkspaceLayoutProps {
 
 export function CaseWorkspaceLayout({ workspace }: CaseWorkspaceLayoutProps) {
   const caseRecord = workspace?.case;
+  const utils = trpc.useUtils();
+  const syncComplaint = trpc.case.syncFromLinkedComplaint.useMutation({
+    onSuccess: () => utils.case.get.invalidate(caseRecord.id),
+  });
+  const hasLinkedComplaint = Boolean(caseRecord?.metadata?.imported_from_complaint_id);
 
   return (
     <div className="space-y-6">
+      {hasLinkedComplaint && (
+        <div className="flex justify-end">
+          <Button
+            variant="outline"
+            onClick={() => syncComplaint.mutate({ caseId: caseRecord.id })}
+            disabled={syncComplaint.isPending}
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${syncComplaint.isPending ? 'animate-spin' : ''}`} />
+            {syncComplaint.isPending ? 'Syncing complaint context...' : 'Sync from linked complaint'}
+          </Button>
+        </div>
+      )}
+      {syncComplaint.error && (
+        <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          {syncComplaint.error.message}
+        </p>
+      )}
       <AnomalyBanner anomalies={workspace?.anomalies || []} />
       <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)_360px]">
         <div className="space-y-6">
