@@ -5,6 +5,7 @@ import { DocumentsPanel } from './DocumentsPanel';
 import { DecisionLogPanel } from './DecisionLogPanel';
 import { ConversationPanel } from './ConversationPanel';
 import { ResearchPanel } from './ResearchPanel';
+import { OutputsPanel } from './OutputsPanel';
 
 interface CaseWorkspaceLayoutProps {
   workspace: any;
@@ -24,6 +25,7 @@ export function CaseWorkspaceLayout({ workspace }: CaseWorkspaceLayoutProps) {
         <div className="space-y-6">
           <ConversationPanel caseId={caseRecord.id} />
           <DecisionLogPanel caseId={caseRecord.id} decisions={workspace?.decisions || []} />
+          <OutputsPanel caseId={caseRecord.id} outputs={workspace?.outputs || []} />
         </div>
         <div className="space-y-6">
           <DocumentsPanel caseId={caseRecord.id} documents={workspace?.documents || []} />

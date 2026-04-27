@@ -38,6 +38,7 @@ import { caseDecisionRouter } from './routers/caseDecision';
 import { caseDocumentRouter } from './routers/caseDocument';
 import { caseChatRouter } from './routers/caseChat';
 import { citationVerificationRouter } from './routers/citationVerification';
+import { caseOutputRouter } from './routers/caseOutput';
 
 export const appRouter = router({
   // Pilot onboarding & activation
@@ -81,6 +82,7 @@ export const appRouter = router({
   caseDocument: caseDocumentRouter,
   caseChat: caseChatRouter,
   verification: citationVerificationRouter,
+  caseOutput: caseOutputRouter,
   
   // Existing routes
   // Complaints
