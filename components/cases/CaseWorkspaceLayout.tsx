@@ -1,6 +1,7 @@
 'use client';
 
 import { RefreshCw } from 'lucide-react';
+import { useState } from 'react';
 import { trpc } from '@/lib/trpc/Provider';
 import { Button } from '@/components/ui/button';
 import { AnomalyBanner } from './AnomalyBanner';
@@ -19,8 +20,12 @@ interface CaseWorkspaceLayoutProps {
 export function CaseWorkspaceLayout({ workspace }: CaseWorkspaceLayoutProps) {
   const caseRecord = workspace?.case;
   const utils = trpc.useUtils();
+  const [syncResult, setSyncResult] = useState<any>(null);
   const syncComplaint = trpc.case.syncFromLinkedComplaint.useMutation({
-    onSuccess: () => utils.case.get.invalidate(caseRecord.id),
+    onSuccess: async (result) => {
+      setSyncResult(result);
+      await utils.case.get.invalidate(caseRecord.id);
+    },
   });
   const hasLinkedComplaint = Boolean(caseRecord?.metadata?.imported_from_complaint_id);
 
@@ -41,6 +46,11 @@ export function CaseWorkspaceLayout({ workspace }: CaseWorkspaceLayoutProps) {
       {syncComplaint.error && (
         <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
           {syncComplaint.error.message}
+        </p>
+      )}
+      {syncResult?.sync && (
+        <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
+          Sync complete: {syncResult.sync.eventsImported} timeline events, {syncResult.sync.documentsImported} documents/context records, {syncResult.sync.outputsImported} outputs imported.
         </p>
       )}
       <AnomalyBanner anomalies={workspace?.anomalies || []} />

@@ -24,10 +24,27 @@ function stringifyContext(value: unknown): string | null {
   }
 }
 
+function throwIfSupabaseError(error: any, action: string): void {
+  if (error) {
+    logger.error(`Case workspace sync failed during ${action}:`, error);
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: `${action} failed: ${error.message || JSON.stringify(error)}`,
+    });
+  }
+}
+
 async function syncComplaintIntoCase(caseId: string, complaint: any, userId: string | null) {
   const complaintId = complaint.id;
 
-  await (supabaseAdmin as any)
+  const syncStats = {
+    eventsImported: 0,
+    documentsImported: 0,
+    outputsImported: 0,
+    analysisImported: false,
+  };
+
+  const { error: caseUpdateError } = await (supabaseAdmin as any)
     .from('cases')
     .update({
       summary: [
@@ -44,12 +61,14 @@ async function syncComplaintIntoCase(caseId: string, complaint: any, userId: str
       },
     })
     .eq('id', caseId);
+  throwIfSupabaseError(caseUpdateError, 'updating case import metadata');
 
-  await (supabaseAdmin as any)
+  const { error: deleteEventsError } = await (supabaseAdmin as any)
     .from('case_events')
     .delete()
     .eq('case_id', caseId)
     .eq('source', 'complaint_import');
+  throwIfSupabaseError(deleteEventsError, 'clearing previous imported timeline events');
 
   const timeline = Array.isArray(complaint.timeline) ? complaint.timeline : [];
   const importedEvents = [
@@ -92,21 +111,25 @@ async function syncComplaintIntoCase(caseId: string, complaint: any, userId: str
   ];
 
   if (importedEvents.length) {
-    await (supabaseAdmin as any).from('case_events').insert(importedEvents);
+    const { error: eventsError } = await (supabaseAdmin as any).from('case_events').insert(importedEvents);
+    throwIfSupabaseError(eventsError, 'importing complaint timeline events');
+    syncStats.eventsImported = importedEvents.length;
   }
 
-  const { data: existingDocs } = await (supabaseAdmin as any)
+  const { data: existingDocs, error: existingDocsError } = await (supabaseAdmin as any)
     .from('case_documents')
     .select('id, extracted_metadata')
     .eq('case_id', caseId);
+  throwIfSupabaseError(existingDocsError, 'checking existing imported documents');
   const existingDocImports = new Set(
     (existingDocs || []).map((doc: any) => doc.extracted_metadata?.imported_from_document_id || doc.extracted_metadata?.imported_virtual_document)
   );
 
-  const { data: documents } = await (supabaseAdmin as any)
+  const { data: documents, error: documentsError } = await (supabaseAdmin as any)
     .from('documents')
     .select('*')
     .eq('complaint_id', complaintId);
+  throwIfSupabaseError(documentsError, 'loading complaint documents');
 
   const docsToInsert = (documents || [])
     .filter((document: any) => !existingDocImports.has(document.id))
@@ -155,25 +178,30 @@ async function syncComplaintIntoCase(caseId: string, complaint: any, userId: str
       },
       uploaded_by: userId,
     });
+    syncStats.analysisImported = true;
   }
 
   if (docsToInsert.length) {
-    await (supabaseAdmin as any).from('case_documents').insert(docsToInsert);
+    const { error: docsError } = await (supabaseAdmin as any).from('case_documents').insert(docsToInsert);
+    throwIfSupabaseError(docsError, 'importing complaint documents and analysis');
+    syncStats.documentsImported = docsToInsert.length;
   }
 
-  const { data: existingOutputs } = await (supabaseAdmin as any)
+  const { data: existingOutputs, error: existingOutputsError } = await (supabaseAdmin as any)
     .from('case_outputs')
     .select('id, metadata')
     .eq('case_id', caseId);
+  throwIfSupabaseError(existingOutputsError, 'checking existing imported outputs');
   const existingLetterImports = new Set(
     (existingOutputs || []).map((output: any) => output.metadata?.imported_from_letter_id)
   );
 
-  const { data: letters } = await (supabaseAdmin as any)
+  const { data: letters, error: lettersError } = await (supabaseAdmin as any)
     .from('generated_letters')
     .select('*')
     .eq('complaint_id', complaintId)
     .order('created_at', { ascending: true });
+  throwIfSupabaseError(lettersError, 'loading generated complaint letters');
 
   const outputsToInsert = (letters || [])
     .filter((letter: any) => !existingLetterImports.has(letter.id))
@@ -191,8 +219,12 @@ async function syncComplaintIntoCase(caseId: string, complaint: any, userId: str
     }));
 
   if (outputsToInsert.length) {
-    await (supabaseAdmin as any).from('case_outputs').insert(outputsToInsert);
+    const { error: outputsError } = await (supabaseAdmin as any).from('case_outputs').insert(outputsToInsert);
+    throwIfSupabaseError(outputsError, 'importing generated letters');
+    syncStats.outputsImported = outputsToInsert.length;
   }
+
+  return syncStats;
 }
 
 export const caseRouter = router({
@@ -229,8 +261,8 @@ export const caseRouter = router({
 
       if (existingLink?.case_id) {
         await ensureCaseAccess(existingLink.case_id, organizationId);
-        await syncComplaintIntoCase(existingLink.case_id, complaint, ctx.userId);
-        return { caseId: existingLink.case_id, created: false, synced: true };
+        const sync = await syncComplaintIntoCase(existingLink.case_id, complaint, ctx.userId);
+        return { caseId: existingLink.case_id, created: false, synced: true, sync };
       }
 
       const caseReference = `CASE-${complaint.complaint_reference || input.complaintId.slice(0, 8)}`;
@@ -269,7 +301,7 @@ export const caseRouter = router({
         });
       }
 
-      await syncComplaintIntoCase(caseRecord.id, complaint, ctx.userId);
+      const sync = await syncComplaintIntoCase(caseRecord.id, complaint, ctx.userId);
 
       const { error: linkError } = await (supabaseAdmin as any)
         .from('case_complaint_links')
@@ -283,7 +315,7 @@ export const caseRouter = router({
         logger.error('Failed to link imported complaint to case:', linkError);
       }
 
-      return { caseId: caseRecord.id, created: true };
+      return { caseId: caseRecord.id, created: true, sync };
     }),
 
   syncFromLinkedComplaint: protectedProcedure
@@ -334,7 +366,7 @@ export const caseRouter = router({
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Linked complaint not found or access denied' });
       }
 
-      await syncComplaintIntoCase(input.caseId, complaint, ctx.userId);
+      const sync = await syncComplaintIntoCase(input.caseId, complaint, ctx.userId);
 
       if (!link?.complaint_id) {
         await (supabaseAdmin as any)
@@ -346,7 +378,7 @@ export const caseRouter = router({
           }, { onConflict: 'case_id,complaint_id' });
       }
 
-      return { success: true, complaintId };
+      return { success: true, complaintId, sync };
     }),
 
   create: protectedProcedure
