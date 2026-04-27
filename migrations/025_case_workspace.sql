@@ -73,6 +73,18 @@ CREATE TABLE IF NOT EXISTS case_parties (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Safe rerun support: earlier failed/manual versions of this table may exist
+-- without the Phase 1 columns. CREATE TABLE IF NOT EXISTS will not add them.
+ALTER TABLE case_parties
+  ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'other',
+  ADD COLUMN IF NOT EXISTS organisation TEXT,
+  ADD COLUMN IF NOT EXISTS email TEXT,
+  ADD COLUMN IF NOT EXISTS phone TEXT,
+  ADD COLUMN IF NOT EXISTS notes TEXT,
+  ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
 CREATE INDEX IF NOT EXISTS idx_case_parties_case_role
   ON case_parties(case_id, role);
 
@@ -88,7 +100,7 @@ CREATE TABLE IF NOT EXISTS case_documents (
     CHECK (extraction_status IN ('pending', 'processing', 'complete', 'failed')),
   extracted_text TEXT,
   extracted_metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
-  embedding VECTOR(1536),
+  embedding VECTOR(3072),
   uploaded_by UUID REFERENCES lightpoint_users(id) ON DELETE SET NULL,
   uploaded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -147,6 +159,15 @@ CREATE TABLE IF NOT EXISTS case_messages (
   created_by UUID REFERENCES lightpoint_users(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE case_messages
+  ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user',
+  ADD COLUMN IF NOT EXISTS content TEXT NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS structured_outputs JSONB NOT NULL DEFAULT '[]'::jsonb,
+  ADD COLUMN IF NOT EXISTS model TEXT,
+  ADD COLUMN IF NOT EXISTS token_usage JSONB,
+  ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES lightpoint_users(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 CREATE INDEX IF NOT EXISTS idx_case_messages_case_created
   ON case_messages(case_id, created_at ASC);
@@ -273,7 +294,7 @@ END;
 $$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
 
 CREATE OR REPLACE FUNCTION match_case_documents(
-  query_embedding VECTOR(1536),
+  query_embedding VECTOR(3072),
   case_id_filter UUID,
   match_threshold FLOAT DEFAULT 0.75,
   match_count INT DEFAULT 10
@@ -365,6 +386,19 @@ ALTER TABLE case_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE case_anomalies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE case_outputs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE case_complaint_links ENABLE ROW LEVEL SECURITY;
+ALTER TABLE citation_verification_cache ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can manage their org cases" ON cases;
+DROP POLICY IF EXISTS "Users can manage case events for their org" ON case_events;
+DROP POLICY IF EXISTS "Users can manage case parties for their org" ON case_parties;
+DROP POLICY IF EXISTS "Users can manage case documents for their org" ON case_documents;
+DROP POLICY IF EXISTS "Users can manage case research for their org" ON case_research;
+DROP POLICY IF EXISTS "Users can manage case decisions for their org" ON case_decisions;
+DROP POLICY IF EXISTS "Users can manage case messages for their org" ON case_messages;
+DROP POLICY IF EXISTS "Users can manage case anomalies for their org" ON case_anomalies;
+DROP POLICY IF EXISTS "Users can manage case outputs for their org" ON case_outputs;
+DROP POLICY IF EXISTS "Users can manage complaint links for their org" ON case_complaint_links;
+DROP POLICY IF EXISTS "Users can read citation verification cache" ON citation_verification_cache;
 
 CREATE POLICY "Users can manage their org cases"
   ON cases FOR ALL USING (
