@@ -109,6 +109,8 @@ CREATE TABLE IF NOT EXISTS case_parties (
 -- Safe rerun support: earlier failed/manual versions of this table may exist
 -- without the Phase 1 columns. CREATE TABLE IF NOT EXISTS will not add them.
 ALTER TABLE case_parties
+  ADD COLUMN IF NOT EXISTS case_id UUID REFERENCES cases(id) ON DELETE CASCADE,
+  ADD COLUMN IF NOT EXISTS name TEXT,
   ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'other',
   ADD COLUMN IF NOT EXISTS organisation TEXT,
   ADD COLUMN IF NOT EXISTS email TEXT,
@@ -391,7 +393,7 @@ BEGIN
   SELECT jsonb_build_object(
     'case', to_jsonb(c),
     'events', COALESCE((SELECT jsonb_agg(to_jsonb(e) ORDER BY e.event_date ASC, e.created_at ASC) FROM case_events e WHERE e.case_id = c.id), '[]'::jsonb),
-    'parties', COALESCE((SELECT jsonb_agg(to_jsonb(p) ORDER BY p.role ASC, p.name ASC) FROM case_parties p WHERE p.case_id = c.id), '[]'::jsonb),
+    'parties', COALESCE((SELECT jsonb_agg(to_jsonb(p) ORDER BY p.role ASC, p.created_at ASC) FROM case_parties p WHERE p.case_id = c.id), '[]'::jsonb),
     'documents', COALESCE((SELECT jsonb_agg(to_jsonb(d) ORDER BY d.uploaded_at DESC) FROM case_documents d WHERE d.case_id = c.id), '[]'::jsonb),
     'research', COALESCE((SELECT jsonb_agg(to_jsonb(r) ORDER BY r.created_at DESC) FROM case_research r WHERE r.case_id = c.id), '[]'::jsonb),
     'decisions', COALESCE((SELECT jsonb_agg(to_jsonb(dec) ORDER BY dec.created_at DESC) FROM case_decisions dec WHERE dec.case_id = c.id AND dec.superseded_at IS NULL), '[]'::jsonb),
