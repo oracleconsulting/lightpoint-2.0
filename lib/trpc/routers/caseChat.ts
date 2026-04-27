@@ -11,6 +11,7 @@ import { parseStructuredOutputs, structuredOutputSchema } from '@/lib/caseWorksp
 
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const CASE_CHAT_MODEL = process.env.CASE_CHAT_MODEL || 'anthropic/claude-opus-4.1';
+const CASE_CHAT_MESSAGE_MAX_CHARS = 30000;
 
 async function callOpenRouter(system: string, messages: Array<{ role: 'user' | 'assistant'; content: string }>) {
   const apiKey = process.env.OPENROUTER_API_KEY;
@@ -102,7 +103,9 @@ export const caseChatRouter = router({
   send: protectedProcedure
     .input(z.object({
       caseId: z.string().uuid(),
-      message: z.string().min(1).max(8000),
+      message: z.string().min(1).max(CASE_CHAT_MESSAGE_MAX_CHARS, {
+        message: `Case chat messages must be ${CASE_CHAT_MESSAGE_MAX_CHARS.toLocaleString()} characters or less.`,
+      }),
     }))
     .mutation(async ({ input, ctx }) => {
       const organizationId = requireOrg(ctx.organizationId);
@@ -176,7 +179,9 @@ export const caseChatRouter = router({
   stream: protectedProcedure
     .input(z.object({
       caseId: z.string().uuid(),
-      message: z.string().min(1).max(8000),
+      message: z.string().min(1).max(CASE_CHAT_MESSAGE_MAX_CHARS, {
+        message: `Case chat messages must be ${CASE_CHAT_MESSAGE_MAX_CHARS.toLocaleString()} characters or less.`,
+      }),
     }))
     .mutation(async () => {
       throw new TRPCError({
