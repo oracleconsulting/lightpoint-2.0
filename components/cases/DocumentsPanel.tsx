@@ -24,6 +24,12 @@ export function DocumentsPanel({ caseId, documents = [] }: DocumentsPanelProps) 
   const createRecord = trpc.caseDocument.createRecord.useMutation({
     onSuccess: () => utils.case.get.invalidate(caseId),
   });
+  const reprocess = trpc.caseDocument.reprocess.useMutation({
+    onSuccess: () => utils.case.get.invalidate(caseId),
+  });
+  const confirmExtraction = trpc.caseDocument.confirmExtraction.useMutation({
+    onSuccess: () => utils.case.get.invalidate(caseId),
+  });
 
   const uploadFile = async (file: File) => {
     setUploading(true);
@@ -104,14 +110,49 @@ export function DocumentsPanel({ caseId, documents = [] }: DocumentsPanelProps) 
             </p>
           )}
           {documents.map((document) => (
-            <div key={document.id} className="flex items-center justify-between rounded-lg border bg-white p-3">
-              <div>
-                <p className="text-sm font-semibold text-gray-900">{document.file_name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {document.file_size ? `${(Number(document.file_size) / 1024 / 1024).toFixed(2)} MB` : 'Stored'} · {document.mime_type || 'unknown type'}
-                </p>
+            <div key={document.id} className="rounded-lg border bg-white p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">{document.file_name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {document.file_size ? `${(Number(document.file_size) / 1024 / 1024).toFixed(2)} MB` : 'Stored'} · {document.mime_type || 'unknown type'}
+                  </p>
+                  {document.document_type && (
+                    <p className="mt-1 text-xs text-[#2B80FF]">
+                      {String(document.document_type).replace(/_/g, ' ')}
+                      {document.extracted_metadata?.classification?.confidence
+                        ? ` · ${Math.round(document.extracted_metadata.classification.confidence * 100)}% confidence`
+                        : ''}
+                    </p>
+                  )}
+                </div>
+                <Badge variant="outline">{document.extraction_status || 'pending'}</Badge>
               </div>
-              <Badge variant="outline">{document.extraction_status || 'pending'}</Badge>
+              {document.extracted_metadata?.proposedEvents?.length > 0 && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {document.extracted_metadata.proposedEvents.length} proposed timeline events and{' '}
+                  {document.extracted_metadata.proposedParties?.length || 0} proposed parties available for confirmation.
+                </p>
+              )}
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={reprocess.isPending}
+                  onClick={() => reprocess.mutate({ documentId: document.id, caseId })}
+                >
+                  Reprocess
+                </Button>
+                {document.extraction_status === 'complete' && !document.extracted_metadata?.confirmed && (
+                  <Button
+                    size="sm"
+                    disabled={confirmExtraction.isPending}
+                    onClick={() => confirmExtraction.mutate({ documentId: document.id, caseId })}
+                  >
+                    Confirm extracted items
+                  </Button>
+                )}
+              </div>
             </div>
           ))}
         </div>
